@@ -21,7 +21,9 @@ if (process.platform === 'win32') app.setAppUserModelId(APP_ID);
 if (isE2E && process.env.CDV_USER_DATA) app.setPath('userData', process.env.CDV_USER_DATA);
 // Software WebGL for GPU-less CI runners, opt-in and test-only (Chromium: not for untrusted content).
 if (isE2E && process.env.CDV_SWIFTSHADER === '1') {
-  app.commandLine.appendSwitch('use-angle', 'swiftshader-webgl');
+  // Force ANGLE's SwiftShader backend (the "swiftshader-webgl" fallback mode is not enough on GPU-less macOS VMs).
+  app.commandLine.appendSwitch('use-gl', 'angle');
+  app.commandLine.appendSwitch('use-angle', 'swiftshader');
   app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 }
 

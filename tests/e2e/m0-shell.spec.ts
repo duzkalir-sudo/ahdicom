@@ -81,6 +81,14 @@ test('launches with hardened renderer and no console errors', async () => {
     });
     expect(prefs).toEqual({ sandboxed: true, ctx: true, node: false });
 
+    // Diagnostics for CI logs: which WebGL renderer the app got (no patient data involved).
+    const gpu = await page.evaluate(() => {
+      const c = document.createElement('canvas').getContext('webgl2');
+      const e = c?.getExtension('WEBGL_debug_renderer_info');
+      return c ? (e ? String(c.getParameter(e.UNMASKED_RENDERER_WEBGL)) : 'webgl2 (renderer hidden)') : 'no webgl2';
+    });
+    const features = await s.app.evaluate(({ app }) => app.getGPUFeatureStatus());
+    console.log(`GPU renderer: ${gpu}; webgl2 status: ${features.webgl2}; gpu_compositing: ${features.gpu_compositing}`);
     // WebGL path is used (not the CPU fallback).
     expect(await page.evaluate(() => (window as unknown as { __cdv: { cpuRendering(): boolean } }).__cdv.cpuRendering())).toBe(false);
 

@@ -494,7 +494,7 @@ test('malformed files never crash the app and show readable errors', async () =>
     // zero-byte, text and PNG files are silently ignored as non-DICOM; files with a DICM prefix are reported.
     expect(st.lastSummary!.notDicom).toBe(3);
     expect(Object.values(st.lastSummary!.errors).reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(5);
-    await expect(s.page.getByTestId('notice-warning')).toBeVisible();
+    await expect(s.page.getByTestId('notice-warning').filter({ hasText: 'could not be read as DICOM' })).toBeVisible();
     const bad = st.studies.flatMap((x) => x.series).filter((x) => /^BAD|TRUNCATED/.test(x.description ?? ''));
     expect(bad.length).toBeGreaterThanOrEqual(6);
     for (const b of bad) {
