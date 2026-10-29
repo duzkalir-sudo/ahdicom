@@ -22,7 +22,7 @@ import {
   formatPersonName,
   planeKind,
   spacingBasis,
-} from '@clinic/dicom-core';
+} from '@ahdicom/dicom-core';
 import { useStore } from '../state/store';
 import { controllerAt } from '../viewer/registry';
 import { fileIdOf } from '../viewer/cornerstone';

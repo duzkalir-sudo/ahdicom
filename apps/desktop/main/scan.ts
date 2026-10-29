@@ -2,7 +2,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Worker } from 'node:worker_threads';
 import type { WebContents } from 'electron';
-import type { InstanceRecord } from '@clinic/dicom-core';
+import type { InstanceRecord } from '@ahdicom/dicom-core';
 import createScanWorker from './scan-worker?nodeWorker';
 import type { ScanWorkerInput, ScanWorkerMessage } from './scan-worker';
 import type { FileRegistry } from './files';

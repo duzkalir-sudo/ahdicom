@@ -1,10 +1,10 @@
 {
-  "name": "@clinic/desktop",
-  "productName": "Clinic DICOM Viewer",
+  "name": "@ahdicom/desktop",
+  "productName": "AHDicom",
   "version": "0.1.0",
   "private": true,
-  "description": "Clinic DICOM Viewer — for image review, measurement and research. Not for primary diagnosis.",
-  "author": "Clinic DICOM Viewer project",
+  "description": "AHDicom — for image review, measurement and research. Not for primary diagnosis.",
+  "author": "AHDicom",
   "license": "UNLICENSED",
   "main": "./out/main/index.js",
   "scripts": {
@@ -13,7 +13,7 @@
     "dist": "electron-builder --config electron-builder.yml --publish never"
   },
   "devDependencies": {
-    "@clinic/dicom-core": "0.1.0",
+    "@ahdicom/dicom-core": "0.1.0",
     "@cornerstonejs/core": "5.14.0",
     "@cornerstonejs/dicom-image-loader": "5.14.0",
     "@cornerstonejs/metadata": "5.14.0",

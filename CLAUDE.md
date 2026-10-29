@@ -1,4 +1,4 @@
-# CLAUDE.md — Clinic DICOM Viewer (working name; replace `APP_NAME` everywhere once chosen)
+# CLAUDE.md — AHDicom (product name chosen by the user on 2026-10-29; see docs/DECISIONS.md D-001)
 
 ## Mission
 A cross-platform desktop DICOM viewer for a neurosurgery / Gamma Knife clinic. Functional scope is modeled on

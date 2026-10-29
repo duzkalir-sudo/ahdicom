@@ -1,7 +1,7 @@
 /** Türkçe (varsayılan) arayüz metinleri. */
 export const tr = {
   app: {
-    name: 'Clinic DICOM Viewer',
+    name: 'AHDicom',
     intendedUseShort: 'Tanısal amaçlı değildir',
     intendedUseFull: 'Görüntü inceleme, ölçüm ve araştırma amaçlıdır. Tanısal amaçlı değildir.',
     intendedUseOther: 'For image review, measurement and research. Not for primary diagnosis.',

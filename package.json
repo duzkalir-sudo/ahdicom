@@ -1,5 +1,5 @@
 {
-  "name": "clinic-dicom-viewer-monorepo",
+  "name": "ahdicom-monorepo",
   "private": true,
   "version": "0.1.0",
   "description": "Cross-platform desktop DICOM viewer (working name). Not for primary diagnosis.",
@@ -14,7 +14,7 @@
     "apps/desktop"
   ],
   "scripts": {
-    "dev": "npm run dev -w @clinic/desktop",
+    "dev": "npm run dev -w @ahdicom/desktop",
     "typecheck": "tsc -p packages/dicom-core --noEmit && tsc -p apps/desktop/tsconfig.node.json --noEmit && tsc -p apps/desktop/tsconfig.web.json --noEmit && tsc -p tsconfig.scripts.json --noEmit",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
@@ -23,8 +23,8 @@
     "fixtures": "tsx scripts/fixtures/generate.ts",
     "license:check": "tsx scripts/license-check.ts",
     "audit": "npm audit --audit-level=high",
-    "build": "npm run build -w @clinic/desktop",
-    "dist": "npm run build && npm run license:check && npm run dist -w @clinic/desktop",
+    "build": "npm run build -w @ahdicom/desktop",
+    "dist": "npm run build && npm run license:check && npm run dist -w @ahdicom/desktop",
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:e2e && npm run fixtures && npm run license:check && npm run audit && npm run build"
   },
   "overrides": {

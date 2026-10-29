@@ -26,7 +26,6 @@ _Last updated: 2026-10-29_
 | CI matrix (Windows, macOS arm64/x64) | **Not run** |
 
 ## Open questions for the user
-- Final application name (D-001).
 - GitHub remote for CI (R-007).
 - UX review of the M1 screenshot set.
 

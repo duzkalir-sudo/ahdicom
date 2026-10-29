@@ -10,7 +10,7 @@ import {
   formatPersonName,
   niceScaleLength,
   sliceLocation,
-} from '@clinic/dicom-core';
+} from '@ahdicom/dicom-core';
 import { applyPreset, commandById, formatShortcut, MOD } from '../app/commands';
 import { MAX_VIEWPORTS, useStore, viewportCount } from '../state/store';
 import { ViewportController, type ViewState } from '../viewer/controller';

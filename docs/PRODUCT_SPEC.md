@@ -1,4 +1,4 @@
-# Product Specification — Clinic DICOM Viewer (working name)
+# Product Specification — AHDicom (working name)
 
 Status: living document. Source: initial project brief (sections 1–6). Roadmap and milestones: `docs/PLAN.md`.
 Binding engineering rules: `CLAUDE.md`.

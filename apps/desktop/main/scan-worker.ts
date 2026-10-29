@@ -10,7 +10,7 @@ import path from 'node:path';
 import { parentPort, workerData } from 'node:worker_threads';
 import { inflateRawSync } from 'node:zlib';
 import { BlobReader, ZipReader, configure, type Entry, type FileEntry } from '@zip.js/zip.js';
-import { hasDicmPrefix, parseInstance, readDicomdir, type InstanceRecord } from '@clinic/dicom-core';
+import { hasDicmPrefix, parseInstance, readDicomdir, type InstanceRecord } from '@ahdicom/dicom-core';
 import type { ScanErrorCode, ScanSummary } from '../shared/api';
 import { safeZipPath } from './zip-path';
 

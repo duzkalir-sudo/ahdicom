@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import dicomParser from 'dicom-parser';
 import { describe, expect, it } from 'vitest';
 import { inflateRawSync } from 'node:zlib';
-import { buildStudies, decodeText, parseSpecificCharacterSet, splitDeflatedPart10 } from '@clinic/dicom-core';
+import { buildStudies, decodeText, parseSpecificCharacterSet, splitDeflatedPart10 } from '@ahdicom/dicom-core';
 import { FIXTURES, ROOT, filesIn, inflater, manifest, parseFile } from './helpers/fixtures.js';
 
 describe('deflated transfer syntax rewrite (used before Cornerstone ingestion)', () => {

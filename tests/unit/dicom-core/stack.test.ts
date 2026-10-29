@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeStack, parseDicomTime, sortImages, type DisplayImage } from '@clinic/dicom-core';
+import { analyzeStack, parseDicomTime, sortImages, type DisplayImage } from '@ahdicom/dicom-core';
 
 const AX: [number, number, number, number, number, number] = [1, 0, 0, 0, 1, 0];
 
@@ -150,7 +150,7 @@ describe('parseDicomTime', () => {
 
 describe('pixel ↔ patient mapping with anisotropic pixels (PS3.3 C.7.6.2.1.1)', () => {
   it('uses column spacing along the row direction and row spacing along the column direction', async () => {
-    const { pixelToPatient, patientToPixel, parseImageOrientation } = await import('@clinic/dicom-core');
+    const { pixelToPatient, patientToPixel, parseImageOrientation } = await import('@ahdicom/dicom-core');
     const o = parseImageOrientation([1, 0, 0, 0, 1, 0])!;
     const ps: [number, number] = [1.0, 0.5]; // rows 1.0 mm apart, columns 0.5 mm apart
     const p = pixelToPatient([10, 20, 30], o, ps, 4, 2); // column 4, row 2
@@ -161,7 +161,7 @@ describe('pixel ↔ patient mapping with anisotropic pixels (PS3.3 C.7.6.2.1.1)'
 
 describe('1-bit native pixel data length', () => {
   it('accepts packed multi-frame 1-bit data whose frame size is not a multiple of 8 bits', async () => {
-    const { parseInstance } = await import('@clinic/dicom-core');
+    const { parseInstance } = await import('@ahdicom/dicom-core');
     const { writePart10, tag, TSUID } = await import('../../../scripts/fixtures/lib/writer.js');
     const rows = 3;
     const cols = 3;

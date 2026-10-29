@@ -14,7 +14,7 @@ import {
   readDicomdir,
   rleHeaderValid,
   splitDeflatedPart10,
-} from '@clinic/dicom-core';
+} from '@ahdicom/dicom-core';
 import { safeZipPath } from '../../apps/desktop/main/zip-path';
 import { FIXTURES, filesIn, inflater } from '../unit/helpers/fixtures.js';
 

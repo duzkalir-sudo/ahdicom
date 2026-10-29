@@ -8,7 +8,7 @@ import path from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { z } from 'zod';
 import dcmjs from 'dcmjs';
-import { buildTagTree, extractOverlays, type DictEntry } from '@clinic/dicom-core';
+import { buildTagTree, extractOverlays, type DictEntry } from '@ahdicom/dicom-core';
 import { APP_NAME, IPC } from '../shared/channels';
 import pkg from '../package.json';
 import {

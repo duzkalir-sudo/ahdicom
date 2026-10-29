@@ -4,7 +4,7 @@
  * - VOI LUT: exposed for the viewport controller, which applies it as an exact transfer function.
  */
 import type { Types } from '@cornerstonejs/core';
-import { applyLut, parseLutSequences, type LutSequences } from '@clinic/dicom-core';
+import { applyLut, parseLutSequences, type LutSequences } from '@ahdicom/dicom-core';
 
 const lutsByBase = new Map<string, LutSequences>();
 /** Decoded image objects whose pixels already hold Modality LUT output (re-decoded images are new objects). */

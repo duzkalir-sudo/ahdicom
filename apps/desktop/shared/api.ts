@@ -1,5 +1,5 @@
 /** Type of `window.api` exposed by the preload script. Types only — no runtime code. */
-import type { InstanceRecord, OverlayLayer, TagNode } from '@clinic/dicom-core';
+import type { InstanceRecord, OverlayLayer, TagNode } from '@ahdicom/dicom-core';
 import type { OpenKind, RecentEntryPublic, Settings, SettingsPatch } from './schemas';
 
 export interface AppInfo {
@@ -57,7 +57,7 @@ export interface ZipPasswordRequest {
   retry: boolean;
 }
 
-export type { TagNode, OverlayLayer } from '@clinic/dicom-core';
+export type { TagNode, OverlayLayer } from '@ahdicom/dicom-core';
 
 export type OpenResult = { started: true; scanId: string } | { started: false };
 

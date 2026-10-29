@@ -12,7 +12,7 @@ import {
   planeKind,
   niceScaleLength,
   sliceLocation,
-} from '@clinic/dicom-core';
+} from '@ahdicom/dicom-core';
 
 const AXIAL = parseImageOrientation([1, 0, 0, 0, 1, 0])!;
 const SAGITTAL = parseImageOrientation([0, 1, 0, 0, 0, -1])!;

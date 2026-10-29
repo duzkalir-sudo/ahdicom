@@ -30,7 +30,7 @@ including two real bugs (HiDPI 1:1 zoom; Modality LUT lost after cache eviction)
 | Tag browser (search, sequences, pin, copy, location) | Done (OS clipboard UNVERIFIED in this environment) | E2E |
 | Series sorting + fallback indicator; geometry warnings | Done | unit + E2E |
 | Full screen, distraction-free, cheat sheet, settings | Done | E2E |
-| Installer | Done (Windows NSIS); macOS DMG UNVERIFIED | `apps/desktop/release/ClinicDICOMViewer-0.1.0-win-x64.exe` |
+| Installer | Done (Windows NSIS); macOS DMG UNVERIFIED | `apps/desktop/release/AHDicom-0.1.0-win-x64.exe` |
 
 ## 3. Verification results
 | Protocol step | Result | Notes |

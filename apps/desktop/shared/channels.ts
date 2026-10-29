@@ -31,6 +31,6 @@ export const EVENTS = {
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
 
 /** Product identity — the working name lives here only (see docs/DECISIONS.md D-001). */
-export const APP_NAME = 'Clinic DICOM Viewer';
-export const APP_ID = 'org.clinic.dicomviewer';
+export const APP_NAME = 'AHDicom';
+export const APP_ID = 'org.ahdicom.viewer';
 export const RENDERER_ORIGIN = 'app://bundle';

@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { parseInstance, type ParseResult } from '@clinic/dicom-core';
+import { parseInstance, type ParseResult } from '@ahdicom/dicom-core';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 export const FIXTURES = path.join(ROOT, 'tests', 'fixtures', 'generated');

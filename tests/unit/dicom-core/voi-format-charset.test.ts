@@ -10,7 +10,7 @@ import {
   rangeToWindow,
   rescale,
   windowToRange,
-} from '@clinic/dicom-core';
+} from '@ahdicom/dicom-core';
 
 describe('VOI LUT functions (PS3.3 C.11.2.1.2)', () => {
   it('LINEAR window → range uses c − 0.5 ± (w − 1)/2', () => {

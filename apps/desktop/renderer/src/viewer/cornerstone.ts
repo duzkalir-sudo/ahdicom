@@ -25,7 +25,7 @@ import {
 } from '@cornerstonejs/tools';
 import { init as dicomLoaderInit, wadouri } from '@cornerstonejs/dicom-image-loader';
 import { Enums as MetadataEnums, metaData as metadataStore, utilities as metadataUtils } from '@cornerstonejs/metadata';
-import { normalizeVoiLutFunction, rleHeaderValid, splitDeflatedPart10, type DisplayImage, type DisplaySet } from '@clinic/dicom-core';
+import { normalizeVoiLutFunction, rleHeaderValid, splitDeflatedPart10, type DisplayImage, type DisplaySet } from '@ahdicom/dicom-core';
 import dcmjs from 'dcmjs';
 import { applyLutSequences, forgetLuts, registerLuts } from './lut';
 

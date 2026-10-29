@@ -5,7 +5,7 @@ type Shape<T> = { [K in keyof T]?: T[K] extends string ? string : Shape<T[K]> } 
 /** English UI strings (same keys as Turkish; plural forms use i18next _one/_other suffixes). */
 export const en: Shape<Resources> = {
   app: {
-    name: 'Clinic DICOM Viewer',
+    name: 'AHDicom',
     intendedUseShort: 'Not for primary diagnosis',
     intendedUseFull: 'For image review, measurement and research. Not for primary diagnosis.',
     intendedUseOther: 'Görüntü inceleme, ölçüm ve araştırma amaçlıdır. Tanısal amaçlı değildir.',

@@ -73,7 +73,7 @@ function main(): void {
   for (const file of readdirSync(manifestDir).filter((f) => f.endsWith('.json'))) {
     const bundle = path.basename(file, '.json');
     for (const e of JSON.parse(readFileSync(path.join(manifestDir, file), 'utf8')) as ManifestEntry[]) {
-      if (e.name.startsWith('@clinic/')) continue;
+      if (e.name.startsWith('@ahdicom/')) continue;
       const key = `${e.name}@${e.version}`;
       const cur = shipped.get(key);
       if (cur) cur.bundles.push(bundle);
@@ -109,7 +109,7 @@ function main(): void {
 
 /** Writes THIRD_PARTY_NOTICES.txt (packaged with the app) from the shipped packages' license files. */
 function writeNotices(entries: ManifestEntry[]): void {
-  const parts: string[] = ['Third-party software included in Clinic DICOM Viewer', ''];
+  const parts: string[] = ['Third-party software included in AHDicom', ''];
   for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     let text = '';
     try {

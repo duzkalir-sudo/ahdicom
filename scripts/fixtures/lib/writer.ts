@@ -244,7 +244,7 @@ export function writePart10(dataset: Element[], opts: Part10Options): Uint8Array
     { tag: tag(0x0002, 0x0002), vr: 'UI', value: ids.mediaStorageSopClassUid },
     { tag: tag(0x0002, 0x0003), vr: 'UI', value: ids.mediaStorageSopInstanceUid },
     { tag: tag(0x0002, 0x0010), vr: 'UI', value: ts },
-    { tag: tag(0x0002, 0x0012), vr: 'UI', value: uid('clinic-dicom-viewer-fixture-generator') },
+    { tag: tag(0x0002, 0x0012), vr: 'UI', value: uid('ahdicom-fixture-generator') },
     { tag: tag(0x0002, 0x0013), vr: 'SH', value: 'CDV_FIXTURES' },
   ];
   const metaBody = encodeDataset(meta, { explicit: true, littleEndian: true });

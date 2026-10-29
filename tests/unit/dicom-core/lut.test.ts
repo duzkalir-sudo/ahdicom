@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { applyLut, lutDomain, lutToNormalizedCurve, parseLutSequences } from '@clinic/dicom-core';
+import { applyLut, lutDomain, lutToNormalizedCurve, parseLutSequences } from '@ahdicom/dicom-core';
 import { FIXTURES } from '../helpers/fixtures.js';
 
 const load = (id: string) => new Uint8Array(readFileSync(path.join(FIXTURES, id, 'IMG.dcm')));
@@ -35,7 +35,7 @@ describe('LUT sequences', () => {
 
 describe('RLE header validation', () => {
   it('accepts the RLE fixture header and rejects corrupt ones', async () => {
-    const { rleHeaderValid } = await import('@clinic/dicom-core');
+    const { rleHeaderValid } = await import('@ahdicom/dicom-core');
     const dicomParser = (await import('dicom-parser')).default;
     const ds = dicomParser.parseDicom(load('ts-rle'));
     const frag = ds.elements.x7fe00010!.fragments![0]!;

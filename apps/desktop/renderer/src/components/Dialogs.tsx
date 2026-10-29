@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { rangeToWindow, windowToRange } from '@clinic/dicom-core';
+import { rangeToWindow, windowToRange } from '@ahdicom/dicom-core';
 import { COMMANDS, formatShortcut } from '../app/commands';
 import { setLanguage } from '../i18n';
 import { useStore } from '../state/store';

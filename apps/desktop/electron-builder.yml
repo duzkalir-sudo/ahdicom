@@ -1,6 +1,6 @@
 # electron-builder 26.x configuration (v26 syntax). Unsigned builds; no update feeds.
-appId: org.clinic.dicomviewer
-productName: Clinic DICOM Viewer
+appId: org.ahdicom.viewer
+productName: AHDicom
 electronVersion: 45.1.0
 directories:
   output: release
@@ -28,7 +28,7 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  artifactName: ClinicDICOMViewer-${version}-win-${arch}.${ext}
+  artifactName: AHDicom-${version}-win-${arch}.${ext}
 nsis:
   oneClick: false
   perMachine: false
@@ -40,6 +40,6 @@ mac:
   category: public.app-category.medical
   identity: null
   hardenedRuntime: false
-  artifactName: ClinicDICOMViewer-${version}-mac-${arch}.${ext}
+  artifactName: AHDicom-${version}-mac-${arch}.${ext}
 dmg:
   writeUpdateInfo: false

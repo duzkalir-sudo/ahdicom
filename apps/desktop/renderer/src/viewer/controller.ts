@@ -1,6 +1,6 @@
 /**
  * One stack viewport: wraps a Cornerstone StackViewport and derives everything the overlay shows.
- * Clinical math (labels, spacing basis, VOI formulas, pixel mapping) comes from @clinic/dicom-core.
+ * Clinical math (labels, spacing basis, VOI formulas, pixel mapping) comes from @ahdicom/dicom-core.
  */
 import { Enums, cache, eventTarget, imageLoader, metaData, utilities as csUtils, type Types } from '@cornerstonejs/core';
 import { utilities as toolUtils } from '@cornerstonejs/tools';
@@ -23,7 +23,7 @@ import {
   vec3,
   viewLabels,
   windowToRange,
-} from '@clinic/dicom-core';
+} from '@ahdicom/dicom-core';
 import { RENDERING_ENGINE_ID, TOOL_GROUP_ID, frameOf, fileIdOf, getEngine, getToolGroup, imageIdsFor } from './cornerstone';
 import { lutsFor, modalityLutApplied } from './lut';
 

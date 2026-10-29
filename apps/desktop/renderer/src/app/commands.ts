@@ -2,7 +2,7 @@
  * Command table: every user action with its default keyboard shortcut.
  * Used by the keyboard handler, toolbar tooltips, the context menu and the cheat sheet.
  */
-import { CT_PRESETS } from '@clinic/dicom-core';
+import { CT_PRESETS } from '@ahdicom/dicom-core';
 import { i18next } from '../i18n';
 import { displaySetAt, useStore } from '../state/store';
 import { purgeAll, setLeftTool, type LeftTool } from '../viewer/cornerstone';

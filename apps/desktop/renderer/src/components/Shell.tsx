@@ -2,7 +2,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive, Disc3, FileArchive, FilePlus2, FolderOpen, Info, Network, ShieldAlert, Trash2, X } from 'lucide-react';
-import { formatDicomDate, formatPersonName } from '@clinic/dicom-core';
+import { formatDicomDate, formatPersonName } from '@ahdicom/dicom-core';
 import { openKind } from '../app/commands';
 import { useStore } from '../state/store';
 import { cacheUsage } from '../viewer/cornerstone';
@@ -188,7 +188,7 @@ export function Splash(): ReactNode {
   return (
     <div className="splash" data-testid="splash">
       <div className="splash-card">
-        <div className="brand-mark">C</div>
+        <div className="brand-mark">A</div>
         <h1>{t('app.name')}</h1>
         <div className="intended-box" style={{ textAlign: 'left' }}>
           <p>

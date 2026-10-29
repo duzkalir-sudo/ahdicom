@@ -36,7 +36,7 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { CT_PRESETS, PET_PERCENT_PRESETS, percentRange } from '@clinic/dicom-core';
+import { CT_PRESETS, PET_PERCENT_PRESETS, percentRange } from '@ahdicom/dicom-core';
 import { applyPreset, closeAll, commandById, formatShortcut, openKind, selectTool, toggleCine, toggleFullscreen, tooltip } from '../app/commands';
 import { displaySetAt, useStore, type LayoutSpec } from '../state/store';
 import { controllerAt } from '../viewer/registry';
@@ -198,7 +198,7 @@ export function Toolbar(): ReactNode {
     <header className="toolbar" data-testid="toolbar">
       <div className="brand">
         <span className="brand-mark" aria-hidden>
-          C
+          A
         </span>
         <span className="brand-name">{t('app.name')}</span>
       </div>

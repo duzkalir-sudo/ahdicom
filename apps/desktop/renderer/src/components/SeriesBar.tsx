@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, FileText, ImageOff, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { utilities as csUtils } from '@cornerstonejs/core';
-import { type DisplaySet, type StudyNode, formatDicomDate, formatPersonName } from '@clinic/dicom-core';
+import { type DisplaySet, type StudyNode, formatDicomDate, formatPersonName } from '@ahdicom/dicom-core';
 import { useStore, viewportCount } from '../state/store';
 import { imageIdFor } from '../viewer/cornerstone';
 import { IconButton } from './ui';
