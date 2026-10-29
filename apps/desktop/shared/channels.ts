@@ -17,6 +17,7 @@ export const IPC = {
   recentRemove: 'recent:remove',
   windowFullscreen: 'window:fullscreen',
   sessionClear: 'session:clear',
+  clipboardWrite: 'clipboard:write',
 } as const;
 
 export const EVENTS = {

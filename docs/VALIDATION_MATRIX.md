@@ -20,7 +20,7 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | HU from rescale | HU = SV × slope + intercept | `voi-format-charset.test.ts`; E2E probe at 3 sphere centres = 1000 / 100 / −100 HU, air = −1000 HU | Pass (exact) |
 | VOI LINEAR / LINEAR_EXACT / SIGMOID | PS3.3 C.11.2.1.2 formulas | `voi-format-charset.test.ts`; E2E presets: Brain 80/40, Bone 2000/500, Lung 1500/−600 exact; SIGMOID applied | Pass |
 | Modality LUT Sequence | output = LUT[SV − first] | `lut.test.ts`; E2E probe 8190 at stored 4095 | Pass |
-| VOI LUT Sequence | gamma 0.5 LUT: 25 % input → ~50 % grey | `lut.test.ts`; E2E luminance 105–150 at 25 % of ramp | Pass |
+| VOI LUT Sequence (256-point piecewise-linear approximation) | gamma 0.5 LUT: 25 % input → ~50 % grey | `lut.test.ts`; E2E luminance 105–150 at 25 % of ramp | Pass |
 | Pixel Padding Value (signed) | padding flagged in probe | E2E probe (1,1) = −2000 HU, padding | Pass |
 | Lossless transfer syntaxes decode identically | reference pattern | unit: JPEG-LS, J2K, HTJ2K, JPEG lossless, RLE bit-exact vs explicit LE; E2E: probe 4035 and 1208 in 9 TS | Pass |
 | Photometric (RGB planar 0/1, YBR_FULL, PALETTE) | known colours | E2E probe colours [255,0,255], palette [235,20,40], YBR ±6 | Pass |
@@ -37,7 +37,7 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | ZIP plain / AES-256 / ZipCrypto with password prompt, wrong password retry | E2E "DICOMDIR, ZIP…" | Pass |
 | ZIP bomb (256 MiB zeros, ratio ≈ 1000) refused | E2E, notice shown | Pass |
 | ZIP path traversal refused | E2E (`zipTraversal`, nothing extracted), fuzz `safeZipPath` (2000 random names) | Pass |
-| Malformed corpus never crashes; readable errors | E2E "malformed files…" (7 corrupt codec streams → error state; app still opens a good series) | Pass |
+| Malformed corpus never crashes; readable errors | E2E "malformed files…" (7 corrupt codec streams → error state; only the exact decoder diagnostics are allowed on the console; app still opens a good series) | Pass |
 | Parsers never throw on mutated input | `tests/fuzz/parsers.fuzz.test.ts` (60 seeds × 14 sources in CI; 400 seeds run locally) | Pass |
 | Deflated TS ingestion | `fixtures.test.ts` (rewrite bit-exact), E2E probe values | Pass |
 | Every valid fixture opens (≥ 45 display sets) | E2E "every fixture opens…" | Pass |
@@ -59,7 +59,16 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Requirement | Test / evidence | Result |
 |---|---|---|
 | Layouts 1×1…5×5, 1+2, 2+1, maximize | E2E core flow (cell bounds inside grid), `layout-5x5-*.png` | Pass |
-| Scroll (wheel, keys, PgUp/PgDn, Home/End), W/L drag, zoom, pan, Ctrl+wheel, fit, 1:1, rotate, flip, invert, reset, context menu, numeric W/L | E2E core flow | Pass |
+| Scroll (wheel, keys, PgUp/PgDn, Home/End), W/L drag, zoom, pan, Ctrl+wheel, fit, rotate, flip, invert, reset, context menu, numeric W/L | E2E core flow | Pass |
+| 1:1 = one image pixel per device pixel; zoom % in device pixels | `m1-coverage` (pixel-centre spacing on screen = 100 / dpr CSS px for 100 columns; mm per CSS px = 0.5 × dpr) | Pass |
+| Left-button tools (scroll drag, pan, zoom) do not change W/L | `m1-coverage` | Pass |
+| Slice slider, PageUp, sort key/direction (first image z = 0 asc, 87 desc) | `m1-coverage` | Pass |
+| PET Units label (BQML), PET % presets, user W/L preset save + apply | `m1-coverage` | Pass |
+| Hide patient data: overlay, series bar, tag browser masked | `m1-coverage` | Pass |
+| Tag pin and copy-all (text handed to Electron clipboard) | `m1-coverage` | Pass (OS clipboard itself UNVERIFIED: not accessible in this environment) |
+| Settings at runtime: language, theme, overlay content, cine bounce, persisted | `m1-coverage` | Pass |
+| Scan cancel | `m1-coverage` (cancel via the button's IPC call) | Pass |
+| Drag & drop from the OS | — | UNVERIFIED (manual QA) |
 | Cine | E2E (index advances while playing) | Pass |
 | DICOM overlays incl. per-frame, toggle | E2E (overlay colour at frame line, hidden after toggle) | Pass |
 | Tag browser search, location | E2E core flow | Pass |

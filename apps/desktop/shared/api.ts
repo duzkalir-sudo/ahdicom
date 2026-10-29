@@ -80,6 +80,8 @@ export interface Api {
   recentRemove(id: string): Promise<RecentEntryPublic[]>;
   setFullscreen(on: boolean): Promise<void>;
   clearSession(): Promise<void>;
+  /** Writes plain text to the OS clipboard (tag browser copy). */
+  copyText(text: string): Promise<void>;
   on(event: 'scan:progress', cb: (p: ScanProgress) => void): () => void;
   on(event: 'scan:batch', cb: (b: ScanBatch) => void): () => void;
   on(event: 'scan:done', cb: (s: ScanSummary) => void): () => void;

@@ -252,9 +252,10 @@ export function parseInstance(bytes: Uint8Array, opts: ParseOptions): ParseResul
     }
     const frameBytes = Math.ceil((rows * columns * samplesPerPixel * bitsAllocated) / 8);
     if (frameBytes > PARSE_LIMITS.maxFrameBytes) return { ok: false, error: 'unsupportedDimensions' };
-    // Native (uncompressed) pixel data must be fully present in the file.
+    // Native (uncompressed) pixel data must be fully present in the file. 1-bit frames are packed contiguously,
+    // so the total is computed in bits before rounding up.
     if (NATIVE_TS.has(transferSyntaxUid) && transferSyntaxUid !== TS.deflated && pixel.length !== 0xffffffff) {
-      const expected = frameBytes * numberOfFrames;
+      const expected = Math.ceil((rows * columns * samplesPerPixel * bitsAllocated * numberOfFrames) / 8);
       if (pixel.length < expected || pixel.dataOffset + expected > opts.fileSize) {
         return { ok: false, error: 'truncatedPixelData' };
       }
@@ -365,6 +366,7 @@ export function parseInstance(bytes: Uint8Array, opts: ParseOptions): ParseResul
     pixelSpacingCalibrationType: asciiString(ds, 'x00280a02'),
     patientOrientation: po && po.length === 2 ? (po as [string, string]) : undefined,
     rescaleType: asciiString(ds, 'x00281054'),
+    petUnits: asciiString(ds, 'x00541001'),
     voiLutFunction: asciiString(ds, 'x00281056'),
     windowExplanation: asciiValues(ds, 'x00281055'),
     presentationLutShape: asciiString(ds, 'x20500020'),

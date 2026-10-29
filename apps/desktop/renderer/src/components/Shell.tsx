@@ -155,7 +155,7 @@ export function StartScreen(): ReactNode {
                       </span>
                     </span>
                     <span className="meta num">{t('start.images', { count: r.instanceCount })}</span>
-                    <span className="meta">{new Date(r.openedAt).toLocaleDateString(locale === 'tr' ? 'tr-TR' : 'en-GB')}</span>
+                    <span className="meta">{formatDicomDate(r.openedAt.slice(0, 10).replace(/-/g, ''), locale)}</span>
                   </button>
                   <button
                     type="button"

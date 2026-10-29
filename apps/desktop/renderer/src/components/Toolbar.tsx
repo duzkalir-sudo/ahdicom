@@ -141,6 +141,7 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
           {PET_PERCENT_PRESETS.map((p) => (
             <MenuItem
               key={p.id}
+              testId={`preset-${p.id}`}
               onClick={() =>
                 run(() => {
                   const r = c?.imageRange();
@@ -167,7 +168,7 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
           <div className="menu-sep" />
           <div className="menu-label">{t('presets.user')}</div>
           {s.settings.userPresets.map((p) => (
-            <MenuItem key={p.id} onClick={() => run(() => applyPreset(p.id))}>
+            <MenuItem key={p.id} onClick={() => run(() => applyPreset(p.id))} testId="preset-user">
               {p.name} <span className="muted num">{` ${p.width} / ${p.center}`}</span>
             </MenuItem>
           ))}

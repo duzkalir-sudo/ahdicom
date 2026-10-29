@@ -74,6 +74,7 @@ function isAllowedUrl(url: string): boolean {
 /** Session-wide policies: deny permissions, block all network requests, add CSP in dev. */
 export function hardenSession(): void {
   const ses = session.defaultSession;
+  // All web permissions are denied (clipboard writes go through the validated clipboard:write IPC instead).
   ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
   ses.setPermissionCheckHandler(() => false);
   ses.setDevicePermissionHandler(() => false);

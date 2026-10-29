@@ -129,7 +129,7 @@ export interface CdvState {
   slots: (string | null)[];
   activeIndex: number;
   scans: number;
-  lastSummary?: { instances: number; notDicom: number; errors: Record<string, number>; archiveErrors: string[]; usedDicomdir: boolean };
+  lastSummary?: { instances: number; notDicom: number; errors: Record<string, number>; archiveErrors: string[]; usedDicomdir: boolean; cancelled: boolean };
 }
 
 export async function cdvState(page: Page): Promise<CdvState> {

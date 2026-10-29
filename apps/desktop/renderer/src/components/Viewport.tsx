@@ -9,8 +9,7 @@ import {
   formatNumber,
   formatPersonName,
   niceScaleLength,
-  vec3,
-  type Vec3,
+  sliceLocation,
 } from '@clinic/dicom-core';
 import { applyPreset, commandById, formatShortcut, MOD } from '../app/commands';
 import { MAX_VIEWPORTS, useStore, viewportCount } from '../state/store';
@@ -36,9 +35,7 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
   const img = props.ds.images[props.vs.index];
   const vs = props.vs;
   const hidden = t('viewport.hidden');
-  const n = props.ds.geometry.normal;
-  const ipp = img?.geometry.imagePositionPatient;
-  const location = n && ipp ? vec3.dot(ipp as Vec3, n as Vec3) : undefined;
+  const location = sliceLocation(img?.geometry.imagePositionPatient, props.ds.geometry.normal);
   const thickness = img?.geometry.sliceThickness ?? inst.geometry.sliceThickness;
   const isFrame = props.ds.kind === 'multiframe';
   const firstWarning = props.ds.warnings.find((w) => w.code !== 'charsetUncertain' && w.code !== 'nonImage');
@@ -48,7 +45,7 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
     if (probe.value === undefined) probeText = t('viewport.probeOutside');
     else {
       const val = Array.isArray(probe.value) ? probe.value.join(' ') : `${fmtValue(probe.value, locale)}${probe.unit === 'raw' ? '' : ` ${t(`units.${probe.unit}`)}`}`;
-      probeText = t('viewport.probe', { x: probe.column, y: probe.row, value: probe.padding ? `${val} (padding)` : val });
+      probeText = t('viewport.probe', { x: probe.column, y: probe.row, value: probe.padding ? `${val} (${t('viewport.padding')})` : val });
     }
   }
   const sex = inst.patientSex ? ` · ${inst.patientSex}` : '';
@@ -87,7 +84,7 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
           <div className="strong" data-testid="image-index">
             {t(isFrame ? 'viewport.frame' : 'viewport.image', { index: vs.index + 1, total: vs.total })}
           </div>
-          {location !== undefined ? <div>{t('viewport.location', { value: formatNumber(location, 2, locale) })}</div> : null}
+          {location ? <div>{t('viewport.location', { value: `${formatNumber(location.mm, 2, locale)} (${location.towards})` })}</div> : null}
           {thickness !== undefined ? <div>{t('viewport.thickness', { value: formatNumber(thickness, 2, locale) })}</div> : null}
           {props.ds.geometry.sliceSpacing !== undefined ? (
             <div>{t('viewport.spacing', { value: formatNumber(props.ds.geometry.sliceSpacing, 2, locale) })}</div>
@@ -97,8 +94,10 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
       ) : null}
       <div className="corner br" data-testid="corner-br">
         {vs.cine ? <div className="strong">{t('viewport.cine', { fps: vs.fps })}</div> : null}
-        {o.windowLevel && vs.voiLutName ? <div data-testid="wl-text">VOI LUT: {vs.voiLutName}</div> : null}
-        {o.windowLevel && !vs.voiLutName && vs.wl ? (
+        {o.windowLevel && vs.voiLutName !== undefined ? (
+          <div data-testid="wl-text">{t('viewport.voiLut', { name: vs.voiLutName })}</div>
+        ) : null}
+        {o.windowLevel && vs.voiLutName === undefined && vs.wl ? (
           <div data-testid="wl-text">{t('viewport.wl', { width: fmtValue(round(vs.wl.width), locale), center: fmtValue(round(vs.wl.center), locale) })}</div>
         ) : null}
         {o.zoom && vs.zoomPercent ? <div data-testid="zoom-text">{t('viewport.zoom', { value: `${Math.round(vs.zoomPercent)}%` })}</div> : null}

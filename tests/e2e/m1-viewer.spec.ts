@@ -480,7 +480,11 @@ test('DICOMDIR, ZIP (plain, AES, ZipCrypto) with password, bomb and traversal', 
 test('malformed files never crash the app and show readable errors', async () => {
   const s = await launch({ lang: 'en' });
   // Cornerstone logs decode failures of the deliberately corrupt streams to the console.
-  s.allowErrors(/decode|Decod|codec|JPEG|jpeg|J2K|j2k|openjpeg|charls|HTJ2K|RLE|rle|image load|loadImage|Failed to load|IMAGE_LOAD|undefined|RuntimeError|Invalid|invalid|out of bounds|abort|lossless|Error/);
+  // Expected diagnostics from the deliberately corrupt codec streams (exact messages observed from the decoders):
+  // Cornerstone logs (console.error, possibly multi-line with stacks) each failed decode; nothing else may appear.
+  s.allowErrors(
+    /^\[renderer\] (Error executing method 'decodeTask' on worker 'dicomImageLoader': .*|\d+ cdv:[\w-]+|ojph error 0x[0-9A-F]+ at .*|Invalid JPEG-LS stream: .*|Error: ERROR: frame format error .*|(Image)?(Decode)?Error: (decoded pixel data is incomplete|invalid RLE segment table|decoder error .*|Invalid JPEG-LS stream: .*|ERROR: frame format error .*).*)$/s,
+  );
   try {
     await openPaths(s, [fixture('malformed')]);
     const st = await cdvState(s.page);
@@ -500,6 +504,7 @@ test('malformed files never crash the app and show readable errors', async () =>
     await openPaths(s, [fixture('ct-phantom')]);
     await selectSeries(s, (d) => d.description === 'PHANTOM 2.5mm');
     await waitReady(s.page);
+    expectNoErrors(s);
   } finally {
     await s.close();
   }

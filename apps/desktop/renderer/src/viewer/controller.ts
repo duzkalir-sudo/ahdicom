@@ -34,7 +34,7 @@ export interface ProbeValue {
   row: number;
   /** Modality value (or RGB triple for colour) — undefined when outside the image. */
   value?: number | [number, number, number];
-  unit: 'hu' | 'bqml' | 'raw';
+  unit: ProbeUnit;
   padding?: boolean;
 }
 
@@ -235,7 +235,7 @@ export class ViewportController {
     this.initialInvert = Boolean(vp.getProperties().invert);
   }
 
-  /** Applies VOI LUT n of the current image exactly, as a piecewise-linear transfer function over its domain. */
+  /** Applies VOI LUT n of the current image as a 256-point piecewise-linear transfer function over its input domain. */
   applyVoiLut(n: number): boolean {
     const imageId = this.currentImageId();
     const lut = imageId ? lutsFor(imageId)?.voi[n] : undefined;
@@ -248,7 +248,7 @@ export class ViewportController {
     vp.setProperties({ voiRange: lutDomain(lut) });
     vp.setProperties({ colormap: { name } });
     vp.render();
-    this.emit({ voiLutName: lut.explanation ?? 'VOI LUT' });
+    this.emit({ voiLutName: lut.explanation ?? '' });
     return true;
   }
 
@@ -348,12 +348,12 @@ export class ViewportController {
     vp.render();
   }
 
-  /** One image pixel per device pixel. */
+  /** One image pixel per device (physical) pixel. Canvas coordinates are CSS pixels, so the target is dpr image px per CSS px. */
   oneToOne(): void {
     if (!this.hasImage()) return;
     const ratio = this.imagePixelsPerCssPx();
     if (!ratio) return;
-    const target = 1 / window.devicePixelRatio;
+    const target = window.devicePixelRatio || 1;
     const vp = this.viewport;
     vp.setZoom(vp.getZoom() * (ratio / target));
     vp.render();
@@ -483,7 +483,8 @@ export class ViewportController {
       voi,
       wl,
       voiFn,
-      zoomPercent: ratio ? (100 * (1 / ratio)) / (window.devicePixelRatio || 1) : undefined,
+      // Device pixels per image pixel × 100 (100 % = 1:1 on the physical display).
+      zoomPercent: ratio ? (100 * (window.devicePixelRatio || 1)) / ratio : undefined,
       rotation: pres.rotation ?? 0,
       flipH: Boolean(pres.flipHorizontal),
       flipV: Boolean(pres.flipVertical),
@@ -550,8 +551,7 @@ export class ViewportController {
     const column = Math.round(px[0]);
     const row = Math.round(px[1]);
     const inst = this.ds.firstInstance;
-    const unit: ProbeValue['unit'] =
-      inst.modality === 'CT' || inst.rescaleType === 'HU' ? 'hu' : inst.modality === 'PT' ? 'bqml' : 'raw';
+    const unit = probeUnit(inst);
     if (column < 0 || row < 0 || column >= image.columns || row >= image.rows) {
       this.emit({ probe: { column, row, unit } });
       return;
@@ -564,10 +564,11 @@ export class ViewportController {
       return;
     }
     let v = pd[i]!;
-    const scaled = Boolean((image as { preScale?: { scaled?: boolean } }).preScale?.scaled) || modalityLutApplied(id);
+    const scaled = Boolean((image as { preScale?: { scaled?: boolean } }).preScale?.scaled) || modalityLutApplied(image);
     if (!scaled) v = v * (image.slope ?? 1) + (image.intercept ?? 0);
     const pad = inst.pixelPaddingValue;
-    const padding = pad !== undefined && v === pad * (inst.geometry.rescaleSlope ?? 1) + (inst.geometry.rescaleIntercept ?? 0);
+    const g = this.ds.images[this.state.index]?.geometry ?? inst.geometry;
+    const padding = pad !== undefined && v === pad * (g.rescaleSlope ?? inst.geometry.rescaleSlope ?? 1) + (g.rescaleIntercept ?? inst.geometry.rescaleIntercept ?? 0);
     this.emit({ probe: { column, row, unit, value: v, ...(padding ? { padding } : {}) } });
   }
 
@@ -658,6 +659,20 @@ export class ViewportController {
     getEngine().disableElement(this.viewportId);
     this.listeners.clear();
   }
+}
+
+export type ProbeUnit = 'hu' | 'bqml' | 'cnts' | 'gml' | 'raw';
+
+/** Unit of modality values: HU for CT, PET Units (0054,1001) for PT; never guessed for unknown PET units. */
+export function probeUnit(inst: DisplaySet['firstInstance']): ProbeUnit {
+  if (inst.modality === 'CT' || inst.rescaleType === 'HU') return 'hu';
+  if (inst.modality === 'PT') {
+    const u = (inst.petUnits ?? '').toUpperCase();
+    if (u === 'BQML') return 'bqml';
+    if (u === 'CNTS') return 'cnts';
+    if (u === 'GML') return 'gml';
+  }
+  return 'raw';
 }
 
 /** Default cine rate: Recommended Display Frame Rate, Cine Rate, 1000 / Frame Time, else 15 fps. */

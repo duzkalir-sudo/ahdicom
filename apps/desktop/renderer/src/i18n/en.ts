@@ -104,7 +104,7 @@ export const en: Shape<Resources> = {
     wl: 'W: {{width}}  L: {{center}}',
     range: 'Range {{lower}} – {{upper}}',
     thickness: 'Thickness {{value}} mm',
-    location: 'Location {{value}} mm',
+    location: 'Location {{value}}',
     spacing: 'Spacing {{value}} mm',
     rotated: 'Rotated {{deg}}°',
     flippedH: 'H-flipped',
@@ -115,6 +115,8 @@ export const en: Shape<Resources> = {
     probeOutside: 'outside image',
     cine: 'Cine {{fps}} fps',
     reconstruction: 'Reconstruction',
+    padding: 'padding',
+    voiLut: 'VOI LUT: {{name}}',
     overlayOn: 'Overlay',
   },
   mouse: {
@@ -154,6 +156,7 @@ export const en: Shape<Resources> = {
     emptyDetail: 'Length, angle and ROI measurements will be added in the next stage (M2).',
   },
   tags: {
+    copyFailed: 'Could not copy to the clipboard.',
     search: 'Search tag, name or value',
     copyValue: 'Copy value',
     copyAll: 'Copy all',
@@ -198,6 +201,9 @@ export const en: Shape<Resources> = {
     tilt: 'Tilt',
     sort: 'Sort by',
     direction: 'Direction',
+    signed: 'signed',
+    modalityLut: 'Modality LUT',
+    voiLut: 'VOI LUT',
   },
   basis: {
     pixelSpacing: 'Pixel Spacing (patient plane)',
@@ -334,6 +340,8 @@ export const en: Shape<Resources> = {
   units: {
     hu: 'HU',
     bqml: 'Bq/ml',
+    cnts: 'counts',
+    gml: 'g/ml',
     raw: '',
     mm: 'mm',
     px: 'px',

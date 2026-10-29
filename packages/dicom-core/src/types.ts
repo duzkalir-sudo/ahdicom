@@ -102,6 +102,8 @@ export interface InstanceRecord {
   pixelSpacingCalibrationType?: string;
   patientOrientation?: [string, string];
   rescaleType?: string;
+  /** PET Units (0054,1001), e.g. BQML, CNTS, GML. */
+  petUnits?: string;
   voiLutFunction?: string;
   windowExplanation?: string[];
   presentationLutShape?: string;

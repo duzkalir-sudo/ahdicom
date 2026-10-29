@@ -100,7 +100,7 @@ export const tr = {
     wl: 'P: {{width}}  S: {{center}}',
     range: 'Aralık {{lower}} – {{upper}}',
     thickness: 'Kalınlık {{value}} mm',
-    location: 'Konum {{value}} mm',
+    location: 'Konum {{value}}',
     spacing: 'Kesit aralığı {{value}} mm',
     rotated: 'Döndürme {{deg}}°',
     flippedH: 'Y-çevrik',
@@ -111,6 +111,8 @@ export const tr = {
     probeOutside: 'görüntü dışında',
     cine: 'Sine {{fps}} kare/sn',
     reconstruction: 'Yeniden yapılandırma',
+    padding: 'dolgu',
+    voiLut: 'VOI LUT: {{name}}',
     overlayOn: 'Overlay',
   },
   mouse: {
@@ -150,6 +152,7 @@ export const tr = {
     emptyDetail: 'Uzunluk, açı ve ROI ölçümleri bir sonraki aşamada (M2) eklenecek.',
   },
   tags: {
+    copyFailed: 'Panoya kopyalanamadı.',
     search: 'Etiket, ad veya değer ara',
     copyValue: 'Değeri kopyala',
     copyAll: 'Tümünü kopyala',
@@ -194,6 +197,9 @@ export const tr = {
     tilt: 'Eğim',
     sort: 'Sıralama ölçütü',
     direction: 'Yön',
+    signed: 'işaretli',
+    modalityLut: 'Modalite LUT',
+    voiLut: 'VOI LUT',
   },
   basis: {
     pixelSpacing: 'Piksel aralığı (hasta düzlemi)',
@@ -330,6 +336,8 @@ export const tr = {
   units: {
     hu: 'HU',
     bqml: 'Bq/ml',
+    cnts: 'sayım',
+    gml: 'g/ml',
     raw: '',
     mm: 'mm',
     px: 'px',

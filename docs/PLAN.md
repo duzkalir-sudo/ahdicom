@@ -100,7 +100,11 @@ Viewer
 - [x] Full screen and distraction-free mode
 - [x] Keyboard cheat sheet (`?`/F1), tooltips with shortcuts, mouse-binding legend
 - [x] Settings: theme, language, overlay content, cache size, user W/L presets
-- **Acceptance:** all criteria pass in E2E (see `docs/VALIDATION_MATRIX.md`).
+- **Acceptance:** the criteria pass in E2E (see `docs/VALIDATION_MATRIX.md`), except these items that are implemented but
+  **not E2E-verified**: drag & drop from the OS (Playwright cannot create OS file drops; manual QA), actual OS clipboard
+  contents (clipboard unavailable in the development environment; the text handed to Electron is verified),
+  "first series shown while scanning continues" (timing-dependent), cine frame-rate accuracy (only bounce/loop behaviour is
+  checked), macOS behaviour (CI not run).
 - **STOP after M1** → report with screenshots for UX review.
 
 ### M2–M8

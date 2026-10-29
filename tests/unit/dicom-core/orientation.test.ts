@@ -11,6 +11,7 @@ import {
   spacingBasis,
   planeKind,
   niceScaleLength,
+  sliceLocation,
 } from '@clinic/dicom-core';
 
 const AXIAL = parseImageOrientation([1, 0, 0, 0, 1, 0])!;
@@ -158,5 +159,14 @@ describe('spacing basis and helpers', () => {
     expect(niceScaleLength(19.9)).toBe(10);
     expect(niceScaleLength(2.1)).toBe(2);
     expect(niceScaleLength(0.6)).toBe(0.5);
+  });
+});
+
+describe('slice location along the normal', () => {
+  it('projects IPP on the normal and names the positive direction', () => {
+    expect(sliceLocation([10, 20, 30], [0, 0, 1])).toEqual({ mm: 30, towards: 'H' });
+    // Sagittal normal = row x column = patient Right: x = +60 (Left) is -60 mm towards R
+    expect(sliceLocation([60, -127, 127], [-1, 0, 0])).toEqual({ mm: -60, towards: 'R' });
+    expect(sliceLocation(undefined, [0, 0, 1])).toBeUndefined();
   });
 });

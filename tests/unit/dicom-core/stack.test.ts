@@ -158,3 +158,32 @@ describe('pixel ↔ patient mapping with anisotropic pixels (PS3.3 C.7.6.2.1.1)'
     expect(patientToPixel(p, [10, 20, 30], o, ps)).toEqual([4, 2]);
   });
 });
+
+describe('1-bit native pixel data length', () => {
+  it('accepts packed multi-frame 1-bit data whose frame size is not a multiple of 8 bits', async () => {
+    const { parseInstance } = await import('@clinic/dicom-core');
+    const { writePart10, tag, TSUID } = await import('../../../scripts/fixtures/lib/writer.js');
+    const rows = 3;
+    const cols = 3;
+    const frames = 3; // 27 bits -> 4 bytes (not 3 x ceil(9/8) = 6)
+    const ds = [
+      { tag: tag(0x0008, 0x0016), vr: 'UI' as const, value: '1.2.840.10008.5.1.4.1.1.7' },
+      { tag: tag(0x0008, 0x0018), vr: 'UI' as const, value: '1.2.3.4' },
+      { tag: tag(0x0020, 0x000d), vr: 'UI' as const, value: '1.2.3.5' },
+      { tag: tag(0x0020, 0x000e), vr: 'UI' as const, value: '1.2.3.6' },
+      { tag: tag(0x0028, 0x0002), vr: 'US' as const, value: 1 },
+      { tag: tag(0x0028, 0x0004), vr: 'CS' as const, value: 'MONOCHROME2' },
+      { tag: tag(0x0028, 0x0008), vr: 'IS' as const, value: String(frames) },
+      { tag: tag(0x0028, 0x0010), vr: 'US' as const, value: rows },
+      { tag: tag(0x0028, 0x0011), vr: 'US' as const, value: cols },
+      { tag: tag(0x0028, 0x0100), vr: 'US' as const, value: 1 },
+      { tag: tag(0x0028, 0x0101), vr: 'US' as const, value: 1 },
+      { tag: tag(0x0028, 0x0102), vr: 'US' as const, value: 0 },
+      { tag: tag(0x0028, 0x0103), vr: 'US' as const, value: 0 },
+      { tag: tag(0x7fe0, 0x0010), vr: 'OB' as const, value: new Uint8Array(4) },
+    ];
+    const bytes = writePart10(ds, { transferSyntaxUid: TSUID.explicitLE });
+    const r = parseInstance(bytes, { fileId: 'bit1test', fileName: 'x', fileSize: bytes.length });
+    expect(r.ok).toBe(true);
+  });
+});

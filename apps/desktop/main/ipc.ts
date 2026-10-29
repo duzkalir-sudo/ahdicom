@@ -2,8 +2,8 @@
  * IPC handlers. Every handler: (1) checks the sender frame origin, (2) validates the payload with zod,
  * (3) never accepts file-system paths from the renderer except paths the preload resolved from dropped files.
  */
-import { BrowserWindow, app, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
-import { readFile, stat } from 'node:fs/promises';
+import { BrowserWindow, app, clipboard, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
+import { open, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import pkg from '../package.json';
 import {
   FileOverlaysSchema,
   FileReadSchema,
+  ClipboardWriteSchema,
   FullscreenSchema,
   OpenKindSchema,
   OpenPathsSchema,
@@ -29,6 +30,24 @@ import type { RecentStore, SettingsStore } from './store';
 import { isTrustedSender } from './security';
 
 const MAX_READ_BYTES = 2 * 1024 * 1024 * 1024;
+/**
+ * The tag browser and overlays parse on the Electron main thread, so they read only a bounded prefix
+ * (all headers and overlay data precede Pixel Data) and inflate at most MAX_INFLATED bytes.
+ */
+const MAX_HEADER_READ = 64 * 1024 * 1024;
+const MAX_INFLATED = 256 * 1024 * 1024;
+
+async function readPrefix(p: string, max: number): Promise<Uint8Array> {
+  const fh = await open(p, 'r');
+  try {
+    const size = Math.min((await fh.stat()).size, max);
+    const buf = Buffer.allocUnsafe(size);
+    const { bytesRead } = await fh.read(buf, 0, size, 0);
+    return new Uint8Array(buf.buffer, buf.byteOffset, bytesRead);
+  } finally {
+    await fh.close();
+  }
+}
 
 class IpcError extends Error {}
 
@@ -47,7 +66,7 @@ function handle<S extends z.ZodType>(
 
 const inflater = (bytes: Uint8Array, position: number): Uint8Array => {
   const head = bytes.subarray(0, position);
-  const body = inflateRawSync(bytes.subarray(position));
+  const body = inflateRawSync(bytes.subarray(position), { maxOutputLength: MAX_INFLATED });
   const out = new Uint8Array(head.length + body.length);
   out.set(head);
   out.set(body, head.length);
@@ -123,13 +142,21 @@ export function registerIpc(deps: IpcDeps): void {
   handle(IPC.fileRead, FileReadSchema, async (_e, { fileId }) => new Uint8Array(await readFile(await filePath(fileId))));
 
   handle(IPC.fileTags, FileReadSchema, async (_e, { fileId }) => {
-    const bytes = new Uint8Array(await readFile(await filePath(fileId)));
-    return buildTagTree(bytes, { lookup, inflater }).nodes;
+    const bytes = await readPrefix(await filePath(fileId), MAX_HEADER_READ);
+    try {
+      return buildTagTree(bytes, { lookup, inflater }).nodes;
+    } catch {
+      return [];
+    }
   });
 
   handle(IPC.fileOverlays, FileOverlaysSchema, async (_e, { fileId, frame }) => {
-    const bytes = new Uint8Array(await readFile(await filePath(fileId)));
-    return extractOverlays(bytes, frame, inflater);
+    const bytes = await readPrefix(await filePath(fileId), MAX_HEADER_READ);
+    try {
+      return extractOverlays(bytes, frame, inflater);
+    } catch {
+      return [];
+    }
   });
 
   handle(IPC.fileLocation, FileReadSchema, async (_e, { fileId }) => filePath(fileId));
@@ -153,4 +180,6 @@ export function registerIpc(deps: IpcDeps): void {
   });
 
   handle(IPC.sessionClear, noPayload, () => deps.clearSession());
+
+  handle(IPC.clipboardWrite, ClipboardWriteSchema, (_e, { text }) => clipboard.writeText(text));
 }

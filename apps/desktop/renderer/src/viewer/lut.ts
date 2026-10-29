@@ -7,7 +7,8 @@ import type { Types } from '@cornerstonejs/core';
 import { applyLut, parseLutSequences, type LutSequences } from '@clinic/dicom-core';
 
 const lutsByBase = new Map<string, LutSequences>();
-const modalityApplied = new Set<string>();
+/** Decoded image objects whose pixels already hold Modality LUT output (re-decoded images are new objects). */
+const modalityApplied = new WeakSet<Types.IImage>();
 
 function base(imageId: string): string {
   return imageId.replace(/[?&]frame=\d+$/, '');
@@ -22,20 +23,19 @@ export function lutsFor(imageId: string): LutSequences | undefined {
   return lutsByBase.get(base(imageId));
 }
 
-export function modalityLutApplied(imageId: string): boolean {
-  return modalityApplied.has(imageId);
+export function modalityLutApplied(image: Types.IImage): boolean {
+  return modalityApplied.has(image);
 }
 
 export function forgetLuts(baseImageId: string): void {
   lutsByBase.delete(baseImageId);
-  for (const id of modalityApplied) if (base(id) === baseImageId) modalityApplied.delete(id);
 }
 
 /** Applies a Modality LUT Sequence to decoded pixels in place when the output fits the pixel array type. */
 export function applyLutSequences(image: Types.IImage, imageId: string): Types.IImage {
   const luts = lutsByBase.get(base(imageId));
   const lut = luts?.modality;
-  if (!lut || modalityApplied.has(imageId) || image.color) return image;
+  if (!lut || modalityApplied.has(image) || image.color) return image;
   const pixels = image.getPixelData() as ArrayLike<number> & { [i: number]: number; constructor: unknown };
   const maxOut = 2 ** lut.bitsPerEntry - 1;
   const fits =
@@ -44,7 +44,8 @@ export function applyLutSequences(image: Types.IImage, imageId: string): Types.I
     pixels instanceof Int32Array ||
     pixels instanceof Uint32Array ||
     (pixels instanceof Int16Array && maxOut <= 32767);
-  if (!fits) return image;
+  // Never show stored values as if they were modality values: refuse instead (viewport shows a decode error).
+  if (!fits) throw new Error('Modality LUT output does not fit the decoded pixel buffer');
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < pixels.length; i++) {
@@ -61,6 +62,6 @@ export function applyLutSequences(image: Types.IImage, imageId: string): Types.I
     image.windowCenter = (min + max + 1) / 2;
     image.windowWidth = Math.max(1, max - min + 1);
   }
-  modalityApplied.add(imageId);
+  modalityApplied.add(image);
   return image;
 }

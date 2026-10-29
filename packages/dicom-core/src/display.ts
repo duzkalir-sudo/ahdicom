@@ -3,7 +3,7 @@
  * plane classification and scale-bar lengths. Pure functions, unit-tested against analytic cases.
  */
 import { type Vec3, parseImageOrientation, sliceNormal, vec3 } from './geometry.js';
-import { edgeLabels, patientOrientationToVector, type EdgeLabels } from './orientation.js';
+import { directionToLabel, edgeLabels, patientOrientationToVector, type EdgeLabels } from './orientation.js';
 import type { InstanceRecord } from './types.js';
 
 /**
@@ -106,4 +106,17 @@ export function niceScaleLength(maxMm: number): number {
     if (v <= maxMm) return v;
   }
   return 10 ** exp;
+}
+
+/**
+ * Signed position of a slice along the display-set normal (row x column), in mm, from IPP.
+ * The sign follows the normal; its patient letter is returned so the UI can show e.g. "12.50 mm (H)".
+ */
+export function sliceLocation(
+  ipp: readonly number[] | undefined,
+  normal: readonly number[] | undefined,
+): { mm: number; towards: string } | undefined {
+  if (!ipp || !normal || ipp.length !== 3 || normal.length !== 3) return undefined;
+  const n: Vec3 = [normal[0]!, normal[1]!, normal[2]!];
+  return { mm: vec3.dot([ipp[0]!, ipp[1]!, ipp[2]!], n), towards: directionToLabel(n) };
 }

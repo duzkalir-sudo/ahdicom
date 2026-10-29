@@ -39,6 +39,7 @@ const api: Api = {
   recentRemove: (id: string) => ipcRenderer.invoke(IPC.recentRemove, { id }),
   setFullscreen: (on: boolean) => ipcRenderer.invoke(IPC.windowFullscreen, { on }),
   clearSession: () => ipcRenderer.invoke(IPC.sessionClear),
+  copyText: (text: string) => ipcRenderer.invoke(IPC.clipboardWrite, { text }),
   on: ((event: EventName, cb: (payload: unknown) => void) => {
     if (!ALLOWED_EVENTS.has(event)) throw new Error('event not allowed');
     const listener = (_e: IpcRendererEvent, payload: unknown): void => cb(payload);
