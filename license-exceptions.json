@@ -1,0 +1,20 @@
+{
+  "$comment": "Runtime dependencies whose license is outside the CLAUDE.md allow-list. Each entry requires explicit user approval (date + where it was given).",
+  "exceptions": [
+    {
+      "name": "clipper2-ts",
+      "license": "BSL-1.0",
+      "approved": "2026-10-29 by the user in the Claude Code session (D-006); transitive dependency of @cornerstonejs/tools"
+    },
+    {
+      "name": "argparse",
+      "license": "Python-2.0",
+      "approved": "2026-10-29 by the user in the Claude Code session (D-006); transitive via @kitware/vtk.js > xmlbuilder2 > js-yaml"
+    },
+    {
+      "name": "caniuse-lite",
+      "license": "CC-BY-4.0",
+      "approved": "2026-10-29 by the user in the Claude Code session (D-006); transitive via @kitware/vtk.js > autoprefixer"
+    }
+  ]
+}

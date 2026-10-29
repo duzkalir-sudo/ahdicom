@@ -1,0 +1,45 @@
+# electron-builder 26.x configuration (v26 syntax). Unsigned builds; no update feeds.
+appId: org.clinic.dicomviewer
+productName: Clinic DICOM Viewer
+electronVersion: 45.1.0
+directories:
+  output: release
+  buildResources: build-resources
+files:
+  - out/**
+  - "!out/bundle-manifests/**"
+  - package.json
+extraMetadata:
+  main: out/main/index.js
+asar: true
+# All JavaScript is bundled; no node_modules are shipped (docs/DECISIONS.md D-005).
+npmRebuild: false
+publish: null
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  loadBrowserProcessSpecificV8Snapshot: false
+  grantFileProtocolExtraPrivileges: false
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ClinicDICOMViewer-${version}-win-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  differentialPackage: false
+  createDesktopShortcut: true
+mac:
+  target: dmg
+  category: public.app-category.medical
+  identity: null
+  hardenedRuntime: false
+  artifactName: ClinicDICOMViewer-${version}-mac-${arch}.${ext}
+dmg:
+  writeUpdateInfo: false

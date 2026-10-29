@@ -1,0 +1,34 @@
+{
+  "name": "@clinic/desktop",
+  "productName": "Clinic DICOM Viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Clinic DICOM Viewer — for image review, measurement and research. Not for primary diagnosis.",
+  "author": "Clinic DICOM Viewer project",
+  "license": "UNLICENSED",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "dist": "electron-builder --config electron-builder.yml --publish never"
+  },
+  "devDependencies": {
+    "@clinic/dicom-core": "0.1.0",
+    "@cornerstonejs/core": "5.14.0",
+    "@cornerstonejs/dicom-image-loader": "5.14.0",
+    "@cornerstonejs/metadata": "5.14.0",
+    "@cornerstonejs/tools": "5.14.0",
+    "@cornerstonejs/utils": "5.14.0",
+    "@zip.js/zip.js": "2.24.0",
+    "dcmjs": "0.52.0",
+    "dicom-parser": "1.8.21",
+    "events": "3.3.0",
+    "i18next": "26.5.11",
+    "lucide-react": "1.64.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-i18next": "17.1.9",
+    "zod": "4.6.7",
+    "zustand": "5.0.16"
+  }
+}

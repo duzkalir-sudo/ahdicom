@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+          - name: macos-arm64
+            os: macos-latest
+          - name: macos-x64
+            os: macos-15-intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.22.2
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Download Electron binary
+        run: npx install-electron --no
+      - name: Generate fixtures
+        run: npm run fixtures
+      - name: Check (typecheck, lint, unit+fuzz, E2E, fixtures, licenses, audit, build)
+        run: npm run check
+      - name: Package (unsigned, no publish)
+        run: npm run dist
+      - name: Upload screenshots and reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifacts-${{ matrix.name }}
+          path: |
+            artifacts/
+            test-results/
+          if-no-files-found: ignore
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.name }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+          if-no-files-found: error

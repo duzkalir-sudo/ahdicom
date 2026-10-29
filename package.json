@@ -1,0 +1,58 @@
+{
+  "name": "clinic-dicom-viewer-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Cross-platform desktop DICOM viewer (working name). Not for primary diagnosis.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=24.12.0 <25",
+    "npm": ">=11"
+  },
+  "workspaces": [
+    "packages/dicom-core",
+    "apps/desktop"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @clinic/desktop",
+    "typecheck": "tsc -p packages/dicom-core --noEmit && tsc -p apps/desktop/tsconfig.node.json --noEmit && tsc -p apps/desktop/tsconfig.web.json --noEmit && tsc -p tsconfig.scripts.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "fixtures": "tsx scripts/fixtures/generate.ts",
+    "license:check": "tsx scripts/license-check.ts",
+    "audit": "npm audit --audit-level=high",
+    "build": "npm run build -w @clinic/desktop",
+    "dist": "npm run build && npm run license:check && npm run dist -w @clinic/desktop",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run test:e2e && npm run fixtures && npm run license:check && npm run audit && npm run build"
+  },
+  "overrides": {
+    "adm-zip": "0.6.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/pngjs": "6.0.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "electron": "45.1.0",
+    "electron-builder": "26.18.1",
+    "electron-vite": "6.0.0",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.13.0",
+    "license-checker-rseidelsohn": "5.0.1",
+    "pngjs": "7.0.0",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

@@ -1,0 +1,24 @@
+# Risk register
+
+Likelihood / impact: L(ow) M(edium) H(igh).
+
+| Id | Risk | L | I | Mitigation | Status |
+|---|---|---|---|---|---|
+| R-001 | Cornerstone GPU path ignores Modality/VOI LUT Sequences and Pixel Padding Value → wrong display values. | H | H | Own LUT parsing + application (D-011); probe flags padding pixels. Residual: padding pixels are not forced to black / excluded from automatic ranges (only relevant without a stored window). | Partially mitigated |
+| R-002 | Anisotropic pixel spacing mishandled by Cornerstone utilities (`imageToWorldCoords` uses row spacing along rows). | M | H | DICOM-correct inverse in dicom-core for probe/overlays (D-013). Rendering aspect verified by E2E on the `aniso` fixture. Measurements (M2) must use dicom-core math only. | Mitigated |
+| R-003 | Malformed DICOM (truncated, wrong lengths, huge dimensions, bad codec streams) crashes or hangs. | M | H | Header parse limits (`PARSE_LIMITS`), native pixel-length check, scan in worker thread, decoding in web workers, malformed corpus + fuzz tests, viewport error state. Residual: a WASM decoder that loops forever would keep one decode worker busy (no per-decode timeout yet). | Partially mitigated |
+| R-004 | ZIP bombs, path traversal, password handling. | M | H | Entry count / total / ratio limits, byte-counting writer, `safeZipPath` + resolved-path check, extraction to per-session temp dir removed on exit (stale dirs > 12 h removed at start). | Mitigated (E2E-tested) |
+| R-005 | Memory growth: raw file bytes in Cornerstone's NATURALIZED metadata are not counted by its image cache. | M | M | Own accounting shown in the status bar; display sets not shown for 30 s are purged (images + raw bytes). Heap measured in E2E (VALIDATION_MATRIX). | Mitigated |
+| R-006 | WebGL unavailable on CI runners → CPU fallback or blank viewports. | M | M | E2E asserts the GPU path (`cpuRendering() === false`). Opt-in SwiftShader switch (`CDV_SWIFTSHADER=1`, test-only). | UNVERIFIED on CI |
+| R-007 | CI matrix not executed (no GitHub remote configured on this machine). Windows/macOS behaviour beyond the local Windows run is unproven. | H | M | Workflow ready in `.github/workflows/ci.yml`; needs a remote + push. | Open |
+| R-008 | dcmjs-dimse is "work in progress, not for clinical use". | M | H | M5 benchmark vs dicom-dimse-native with Orthanc; DIMSE in a utility process. | Open (M5) |
+| R-009 | Recent-studies file stores patient names and folder paths locally. | M | L | Local user profile only, never logged/transmitted; entries removable; hide-patient-data respected in the UI. | Accepted |
+| R-010 | Dropped-file paths come from the (sandboxed) renderer; a compromised renderer could ask main to scan arbitrary folders. | L | M | Only files that parse as DICOM are registered and exposed via opaque ids; sandbox + CSP + no remote content make renderer compromise unlikely. | Accepted |
+| R-011 | Unsigned installers trigger SmartScreen / Gatekeeper warnings. | H | L | Documented unsigned-install instructions (M7); signing only with user-provided certificates. | Open (M7) |
+| R-012 | No auto-update channel → outdated Chromium/Electron over time. | M | M | By design (privacy). Manual update procedure documented in M7; keep Electron current per release. | Accepted |
+| R-013 | Moderate npm advisories in transitive deps (fflate 0.7.3 via vtk.js, uuid 9 via dicom-image-loader). | L | L | Not reachable from our code paths; re-check on every Cornerstone update. `npm audit --audit-level=high` is clean. | Accepted |
+| R-014 | Turkish strings 30–40 % longer → clipped UI. | M | L | Screenshot matrix in both languages at 1280×800; toolbar uses icons with tooltips. | Mitigated |
+| R-015 | Header-only indexing reads at most 256 KiB first, the full file when the header is longer (enhanced multi-frame). Very large multi-frame files are read twice. | L | L | Acceptable for M1; streaming header reader possible later. | Accepted |
+| R-016 | Upstream Cornerstone 5.14 defects worked around locally (VOI LUT Function truncation, deflate parsing, `imageToWorldCoords` spacing, silent decode failures). An upgrade may change behaviour. | M | H | Each workaround is covered by an E2E assertion (SIGMOID, deflated values, aniso aspect, decode-error state); run the full suite on every Cornerstone upgrade; consider upstream reports. | Mitigated |
+| R-017 | Scrolling while a large series is still being prefetched is slower (~27 renders/s measured with a different method) than scrolling a cached series (55 images/s). | M | L | Prefetch runs in workers; measure again in M3 with real clinical-size data and tune prefetch concurrency. | Open |
+| R-018 | Concatenations (multi-file enhanced instances) are not merged into one display set. | L | M | Each part opens as its own multi-frame display set; merge planned (PLAN M1 [~]). | Open |
