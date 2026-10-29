@@ -87,7 +87,7 @@ export const ZipPasswordSchema = z.object({
   password: z.string().max(1024).nullable(),
 });
 export const RecentIdSchema = z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{4,64}$/) });
-export const FullscreenSchema = z.object({ on: z.boolean() });
+export const FullscreenSchema = z.object({ on: z.union([z.boolean(), z.literal('toggle')]) });
 export const ClipboardWriteSchema = z.object({ text: z.string().max(4 * 1024 * 1024) });
 
 export const RecentEntrySchema = z.object({

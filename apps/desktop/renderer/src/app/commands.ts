@@ -73,7 +73,7 @@ export function toggleCine(): void {
 }
 
 export async function toggleFullscreen(): Promise<void> {
-  await window.api.setFullscreen(!useStore.getState().fullscreen);
+  await window.api.setFullscreen('toggle');
 }
 
 export async function closeAll(): Promise<void> {

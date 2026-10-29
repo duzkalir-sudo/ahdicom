@@ -114,6 +114,9 @@ export function registerIpc(deps: IpcDeps): void {
     node: process.versions.node,
     isPackaged: app.isPackaged,
     e2e: process.env.CDV_E2E === '1' && !app.isPackaged,
+    ...(process.env.CDV_E2E === '1' && !app.isPackaged && Number(process.env.CDV_SPLASH_MS) > 0
+      ? { splashMs: Math.min(30000, Number(process.env.CDV_SPLASH_MS)) }
+      : {}),
   }));
 
   handle(IPC.settingsGet, noPayload, () => settings.get());
@@ -176,7 +179,9 @@ export function registerIpc(deps: IpcDeps): void {
   });
 
   handle(IPC.windowFullscreen, FullscreenSchema, (event, { on }) => {
-    BrowserWindow.fromWebContents(event.sender)?.setFullScreen(on);
+    const win = BrowserWindow.fromWebContents(event.sender);
+    // 'toggle' uses the window's real state: on macOS the renderer only learns about the change after the animation.
+    win?.setFullScreen(on === 'toggle' ? !win.isFullScreen() : on);
   });
 
   handle(IPC.sessionClear, noPayload, () => deps.clearSession());

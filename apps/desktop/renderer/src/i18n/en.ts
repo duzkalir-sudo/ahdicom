@@ -10,6 +10,8 @@ export const en: Shape<Resources> = {
     intendedUseFull: 'For image review, measurement and research. Not for primary diagnosis.',
     intendedUseOther: 'Görüntü inceleme, ölçüm ve araştırma amaçlıdır. Tanısal amaçlı değildir.',
     loading: 'Starting…',
+    cpuRendering: 'The graphics card (WebGL) is not available; images are drawn in the software fallback mode. Some display options (e.g. SIGMOID windows) may behave differently and the app is slower.',
+    cpuRenderingShort: 'No GPU',
   },
   groups: {
     open: 'Open',

@@ -89,6 +89,8 @@ async function createWindow(settings: SettingsStore): Promise<void> {
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
       spellcheck: false,
+      // Test-only: simulate a machine without WebGL to exercise the CPU-fallback warning.
+      webgl: !(isE2E && process.env.CDV_DISABLE_WEBGL === '1'),
       devTools: !app.isPackaged,
     },
   });

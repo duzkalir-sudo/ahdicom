@@ -224,3 +224,25 @@ test('a running scan can be cancelled', async () => {
     await s.close();
   }
 });
+
+test('without WebGL the app warns that it uses the slower software fallback', async () => {
+  const { _electron } = await import('@playwright/test');
+  const { MAIN } = await import('./harness');
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'cdv-e2e-'));
+  const app = await _electron.launch({
+    args: [MAIN],
+    env: { ...process.env, CDV_E2E: '1', CDV_USER_DATA: userData, CDV_DISABLE_WEBGL: '1' },
+    chromiumSandbox: true,
+  });
+  try {
+    const page = await app.firstWindow();
+    await expect(page.getByTestId('cpu-rendering')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('notice-warning')).toContainText('Ekran kartı');
+  } finally {
+    await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});

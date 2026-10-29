@@ -5,7 +5,7 @@ import { Archive, Disc3, FileArchive, FilePlus2, FolderOpen, Info, Network, Shie
 import { formatDicomDate, formatPersonName } from '@ahdicom/dicom-core';
 import { openKind } from '../app/commands';
 import { useStore } from '../state/store';
-import { cacheUsage } from '../viewer/cornerstone';
+import { cacheUsage, usesCpuRendering } from '../viewer/cornerstone';
 
 export function StatusBar(): ReactNode {
   const { t } = useTranslation();
@@ -58,6 +58,11 @@ export function StatusBar(): ReactNode {
             {t('status.cancel')}
           </button>
         </>
+      ) : null}
+      {ready && usesCpuRendering() ? (
+        <span className="badge-intended" data-testid="cpu-rendering" title={t('app.cpuRendering')}>
+          {t('app.cpuRenderingShort')}
+        </span>
       ) : null}
       <span className="num" data-testid="cache-usage">
         {t('status.cache', { used: mb(usage.used), max: mb(usage.max) })}

@@ -11,6 +11,8 @@ export interface AppInfo {
   node: string;
   isPackaged: boolean;
   e2e: boolean;
+  /** Test-only minimum splash duration (CDV_SPLASH_MS); undefined outside E2E. */
+  splashMs?: number;
 }
 
 export type ScanErrorCode =
@@ -78,7 +80,7 @@ export interface Api {
   recentList(): Promise<RecentEntryPublic[]>;
   recentOpen(id: string): Promise<OpenResult>;
   recentRemove(id: string): Promise<RecentEntryPublic[]>;
-  setFullscreen(on: boolean): Promise<void>;
+  setFullscreen(on: boolean | 'toggle'): Promise<void>;
   clearSession(): Promise<void>;
   /** Writes plain text to the OS clipboard (tag browser copy). */
   copyText(text: string): Promise<void>;

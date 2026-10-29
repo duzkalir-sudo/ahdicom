@@ -21,10 +21,13 @@ jobs:
             os: macos-latest
           - name: macos-x64
             os: macos-15-intel
+            # No usable GPU on this runner: use software WebGL so E2E tests the same rendering path.
+            swiftshader: '1'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
       CI: 'true'
+      CDV_SWIFTSHADER: ${{ matrix.swiftshader || '0' }}
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
     steps:

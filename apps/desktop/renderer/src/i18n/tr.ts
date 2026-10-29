@@ -6,6 +6,8 @@ export const tr = {
     intendedUseFull: 'Görüntü inceleme, ölçüm ve araştırma amaçlıdır. Tanısal amaçlı değildir.',
     intendedUseOther: 'For image review, measurement and research. Not for primary diagnosis.',
     loading: 'Başlatılıyor…',
+    cpuRendering: 'Ekran kartı (WebGL) kullanılamıyor; görüntüler yazılımsal yedek modda çiziliyor. Bu modda bazı görüntüleme seçenekleri (ör. SIGMOID pencere) farklı davranabilir ve uygulama yavaştır.',
+    cpuRenderingShort: 'GPU yok',
   },
   groups: {
     open: 'Aç',

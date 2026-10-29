@@ -192,6 +192,8 @@ test('core flow: open folder → series → scroll → W/L → zoom/pan → layo
     // Full screen and distraction-free
     await page.keyboard.press('F11');
     await expect.poll(async () => s.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFullScreen())).toBe(true);
+    // On macOS the full-screen animation runs for ~1 s; wait until the app reports it (toolbar button pressed).
+    await expect(page.getByTestId('tb-fullscreen')).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('F11');
     await expect.poll(async () => s.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFullScreen())).toBe(false);
     await page.keyboard.press('F10');
@@ -614,8 +616,11 @@ test('performance: first image, scroll rate and memory when opening/closing 20 s
     const { writeFileSync, mkdirSync } = await import('node:fs');
     mkdirSync('artifacts', { recursive: true });
     writeFileSync('artifacts/perf-m1.json', JSON.stringify(result, null, 2));
-    expect(firstImageMs).toBeLessThan(1500);
-    expect(fps).toBeGreaterThanOrEqual(30);
+    // Spec §6 targets are defined for the development machine and enforced locally. Shared CI VMs (no or weak GPU)
+    // only record the numbers and fail on catastrophic regressions (approved by the user, D-033).
+    const ci = Boolean(process.env.CI);
+    expect(firstImageMs).toBeLessThan(ci ? 10_000 : 1500);
+    expect(fps).toBeGreaterThanOrEqual(ci ? 5 : 30);
     expect(h1).toBeLessThan(h0 + 150);
     expect(cacheAfterCloseMB).toBe(0);
     expectNoErrors(s);

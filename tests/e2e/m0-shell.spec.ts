@@ -154,7 +154,7 @@ test('splash shows the intended-use statement', async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'cdv-e2e-'));
   const app = await _electron.launch({
     args: [MAIN],
-    env: { ...process.env, CDV_E2E: '1', CDV_USER_DATA: userData },
+    env: { ...process.env, CDV_E2E: '1', CDV_USER_DATA: userData, CDV_SPLASH_MS: '5000' },
     chromiumSandbox: true,
   });
   const errors: string[] = [];

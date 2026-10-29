@@ -7,7 +7,8 @@ import { Notices, Splash, StartScreen, StatusBar } from '../components/Shell';
 import { Toolbar } from '../components/Toolbar';
 import { ViewportGrid } from '../components/Viewport';
 import { useStore } from '../state/store';
-import { initCornerstone } from '../viewer/cornerstone';
+import { i18next } from '../i18n';
+import { initCornerstone, usesCpuRendering } from '../viewer/cornerstone';
 import { handleKey } from './commands';
 import type { ScanSummary } from '../../../shared/api';
 
@@ -63,7 +64,9 @@ export function App(): ReactNode {
     const started = performance.now();
     initCornerstone(useStore.getState().settings.cacheSizeMB);
     useStore.getState().setReady(true);
-    const wait = Math.max(0, SPLASH_MIN_MS - (performance.now() - started));
+    if (usesCpuRendering()) useStore.getState().notify('warning', i18next.t('app.cpuRendering'));
+    const minMs = useStore.getState().appInfo?.splashMs ?? SPLASH_MIN_MS;
+    const wait = Math.max(0, minMs - (performance.now() - started));
     const id = setTimeout(() => setSplash(false), wait);
     return () => clearTimeout(id);
   }, []);

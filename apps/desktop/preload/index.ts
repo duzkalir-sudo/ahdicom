@@ -37,7 +37,7 @@ const api: Api = {
   recentList: () => ipcRenderer.invoke(IPC.recentList),
   recentOpen: (id: string) => ipcRenderer.invoke(IPC.recentOpen, { id }),
   recentRemove: (id: string) => ipcRenderer.invoke(IPC.recentRemove, { id }),
-  setFullscreen: (on: boolean) => ipcRenderer.invoke(IPC.windowFullscreen, { on }),
+  setFullscreen: (on: boolean | 'toggle') => ipcRenderer.invoke(IPC.windowFullscreen, { on }),
   clearSession: () => ipcRenderer.invoke(IPC.sessionClear),
   copyText: (text: string) => ipcRenderer.invoke(IPC.clipboardWrite, { text }),
   on: ((event: EventName, cb: (payload: unknown) => void) => {
