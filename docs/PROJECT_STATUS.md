@@ -23,10 +23,9 @@ _Last updated: 2026-10-29_
 | `npm run check` (typecheck, lint, unit+fuzz, E2E, fixtures, licenses, audit, build) | Pass (158 unit/fuzz, 20 E2E) |
 | `npm run dist` (NSIS x64) | Pass; packaged app starts; fuses verified |
 | Verifier subagent | 1st pass FAIL (6 blocking gaps, all fixed in b402b58); 2nd pass **PASS** |
-| CI matrix (Windows, macOS arm64/x64) | **Not run** |
+| CI matrix (Windows, macOS Apple Silicon) | **Green** (run 40929893039); Intel macOS not tested (D-035) |
 
 ## Open questions for the user
-- GitHub remote for CI (R-007).
 - UX review of the M1 screenshot set.
 
 ## Failing checks

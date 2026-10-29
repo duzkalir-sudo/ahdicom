@@ -3,7 +3,8 @@
 ## Mission
 A cross-platform desktop DICOM viewer for a neurosurgery / Gamma Knife clinic. Functional scope is modeled on
 RadiAnt DICOM Viewer (full spec: `docs/PRODUCT_SPEC.md`, roadmap: `docs/PLAN.md`).
-Targets: Windows 10/11 x64 and macOS 13+ (Apple Silicon and Intel).
+Targets: Windows 10/11 x64 and macOS 13+ on Apple Silicon. An Intel (x64) macOS installer is built but not tested
+(user decision 2026-10-29: no Intel Macs in the clinic; see docs/DECISIONS.md D-035).
 Intended use: image review, measurement and research. It is NOT a certified medical device: About dialog,
 splash screen and status bar must always state "Not for primary diagnosis / Tanısal amaçlı değildir".
 

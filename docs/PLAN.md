@@ -43,9 +43,9 @@ tests/unit  tests/e2e  tests/fuzz
 - [x] Vitest harness, Playwright `_electron` harness (console/page/CSP errors fail tests, screenshot helper)
 - [x] License checker over shipped bundles + exceptions file + THIRD_PARTY_NOTICES; `npm audit --audit-level=high`
 - [x] Synthetic fixture generator (`npm run fixtures`, deterministic, ~11 s)
-- [~] CI workflow written (`windows-latest`, `macos-latest`, `macos-15-intel`) — **not executed** (no GitHub remote)
+- [x] CI on GitHub (`windows-latest`, `macos-latest` arm64): green; Intel macOS dropped as a tested platform (D-035)
 - [x] Docs
-- [x] `npm run dist` → Windows NSIS installer built and packaged app smoke-tested locally; macOS DMG UNVERIFIED
+- [x] `npm run dist` → Windows NSIS installer (local + CI) and macOS arm64 DMG (CI); x64 DMG built, untested
 
 #### Fixture list (all synthetic; `tests/fixtures/generated/`)
 | Id | Content | Purpose |
@@ -104,7 +104,7 @@ Viewer
   **not E2E-verified**: drag & drop from the OS (Playwright cannot create OS file drops; manual QA), actual OS clipboard
   contents (clipboard unavailable in the development environment; the text handed to Electron is verified),
   "first series shown while scanning continues" (timing-dependent), cine frame-rate accuracy (only bounce/loop behaviour is
-  checked), macOS behaviour (CI not run).
+  checked), Intel macOS (not tested by decision D-035).
 - **STOP after M1** → report with screenshots for UX review.
 
 ### M2–M8

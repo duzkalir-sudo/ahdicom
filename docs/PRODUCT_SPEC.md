@@ -14,7 +14,8 @@ Gamma Knife radiosurgery clinic.
 PET-CT, DSA/XA angiography, plain radiographs, occasional ultrasound. Patient names frequently contain Turkish
 characters (Ç, Ğ, İ, ı, Ö, Ş, Ü).
 
-**Platforms.** Windows 10/11 x64 and macOS 13+ (Apple Silicon and Intel). Mostly offline clinical workstations.
+**Platforms.** Windows 10/11 x64 and macOS 13+ on Apple Silicon. An Intel (x64) macOS installer is provided but not
+tested (no Intel Macs in the clinic; D-035). Mostly offline clinical workstations.
 
 **Intended use statement** (About dialog and splash screen in full; compact badge in the status bar):
 

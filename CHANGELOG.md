@@ -6,6 +6,9 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 
 ### Changed
 - Product name AHDicom (was the working name "Clinic DICOM Viewer"); appId `org.ahdicom.viewer`.
+- CI on GitHub (Windows, macOS Apple Silicon); Intel macOS is built but no longer tested (D-035).
+- macOS fixes from CI: full-screen toggle during the macOS animation; "No GPU" warning for CPU-fallback rendering.
+- Performance targets enforced locally, recorded in CI (D-033).
 
 ## [0.1.0] — 2026-10-29 — M0 foundation + M1 core 2D viewer (unreleased, not for primary diagnosis)
 

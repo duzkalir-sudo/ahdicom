@@ -36,7 +36,10 @@ nsis:
   differentialPackage: false
   createDesktopShortcut: true
 mac:
-  target: dmg
+  # arm64 is tested in CI; x64 (Intel) is built from the same arm64 runner but not tested (D-035).
+  target:
+    - target: dmg
+      arch: [arm64, x64]
   category: public.app-category.medical
   identity: null
   hardenedRuntime: false
