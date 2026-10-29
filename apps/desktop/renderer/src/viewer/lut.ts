@@ -43,7 +43,9 @@ export function applyLutSequences(image: Types.IImage, imageId: string): Types.I
     pixels instanceof Float32Array ||
     pixels instanceof Int32Array ||
     pixels instanceof Uint32Array ||
-    (pixels instanceof Int16Array && maxOut <= 32767);
+    (pixels instanceof Int16Array && maxOut <= 32767) ||
+    (pixels instanceof Uint8Array && maxOut <= 255) ||
+    (pixels instanceof Int8Array && maxOut <= 127);
   // Never show stored values as if they were modality values: refuse instead (viewport shows a decode error).
   if (!fits) throw new Error('Modality LUT output does not fit the decoded pixel buffer');
   let min = Infinity;

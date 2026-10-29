@@ -18,7 +18,7 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
   Info panel with geometry warnings and sorting; settings; keyboard shortcuts with cheat sheet; Turkish and English UI;
   dark and light themes; intended-use statement in splash, About and status bar.
 - Synthetic fixture generator (≈ 50 sets incl. compressed transfer syntaxes, charsets, DICOMDIR, encrypted ZIPs, malformed corpus).
-- Tests: 156 unit/fuzz tests, 14 Playwright `_electron` E2E tests with screenshot matrix and performance measurement.
+- Tests: 158 unit/fuzz tests, 20 Playwright `_electron` E2E tests with screenshot matrix and performance measurement.
 - electron-builder config (NSIS x64, DMG per arch, unsigned, no publish), CI workflow, license gate over shipped bundles.
 
 ### Fixed during verification
@@ -26,3 +26,7 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 - Cornerstone's naturalized reader cannot parse Deflated Explicit VR LE: datasets are inflated before ingestion.
 - Corrupt JPEG 2000 / RLE streams produced empty or blank images instead of errors: decoded-buffer and RLE-header checks.
 - Toolbar overflow at 1280 px, cropped thumbnails, stale VOI LUT state between series, overlapping edge labels.
+- Verifier findings: 1:1 and zoom % now in device pixels (HiDPI); Modality LUT re-applied after cache eviction;
+  bounded main-thread reads for tags/overlays; Pan/Zoom/Scroll left-button tools no longer leave W/L bound;
+  PET Units label; hide-patient-data masks identifying tags; clipboard via validated IPC; decode failures no longer
+  produce unhandled rejections; stricter E2E error guard; English plurals; local dates in the recent list.

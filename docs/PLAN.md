@@ -79,7 +79,7 @@ Opening/data
 - [x] Open files / folders (recursive, multi-select) / drag & drop anywhere; non-DICOM ignored with count
 - [x] DICOMDIR reading (case-insensitive file IDs); folder scan fallback
 - [x] ZIP incl. password (AES/ZipCrypto) → temp dir cleaned on exit; zip-bomb/path-traversal limits
-- [x] Scanning in a worker thread with progress + cancel (cancel button not covered by E2E); first series shown while scanning continues
+- [x] Scanning in a worker thread with progress + cancel (cancel verified through the button's IPC call, not the click); first series shown while scanning continues (UNVERIFIED in E2E)
 - [x] Recent studies list on start screen
 Data support
 - [~] Modalities, single/multi-frame, enhanced per-frame geometry — **concatenations not merged** (each part opens as its own multi-frame set)

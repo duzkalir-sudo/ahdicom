@@ -20,9 +20,9 @@ _Last updated: 2026-10-29_
 ## Last verification (2026-10-29, Windows 11)
 | Check | Result |
 |---|---|
-| `npm run check` (typecheck, lint, unit+fuzz, E2E, fixtures, licenses, audit, build) | Pass |
+| `npm run check` (typecheck, lint, unit+fuzz, E2E, fixtures, licenses, audit, build) | Pass (158 unit/fuzz, 20 E2E) |
 | `npm run dist` (NSIS x64) | Pass; packaged app starts; fuses verified |
-| Verifier subagent | see M1 report |
+| Verifier subagent | 1st pass FAIL (6 blocking gaps, all fixed in b402b58); 2nd pass **PASS** |
 | CI matrix (Windows, macOS arm64/x64) | **Not run** |
 
 ## Open questions for the user

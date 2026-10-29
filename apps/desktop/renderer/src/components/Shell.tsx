@@ -70,6 +70,12 @@ export function StatusBar(): ReactNode {
   );
 }
 
+/** Local calendar date (YYYYMMDD) of an ISO timestamp. */
+function localDa(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function StartScreen(): ReactNode {
   const { t, i18n } = useTranslation();
   const locale = (i18n.language === 'en' ? 'en' : 'tr') as 'tr' | 'en';
@@ -155,7 +161,7 @@ export function StartScreen(): ReactNode {
                       </span>
                     </span>
                     <span className="meta num">{t('start.images', { count: r.instanceCount })}</span>
-                    <span className="meta">{formatDicomDate(r.openedAt.slice(0, 10).replace(/-/g, ''), locale)}</span>
+                    <span className="meta">{formatDicomDate(localDa(r.openedAt), locale)}</span>
                   </button>
                   <button
                     type="button"

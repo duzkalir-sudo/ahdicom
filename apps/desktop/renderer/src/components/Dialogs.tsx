@@ -10,8 +10,14 @@ import type { Settings, SettingsPatch } from '../../../shared/schemas';
 import { Modal, Segmented } from './ui';
 
 async function patchSettings(p: SettingsPatch): Promise<void> {
-  const next = await window.api.setSettings(p);
-  useStore.getState().setSettings(next);
+  // Apply immediately so controlled inputs do not snap back during the IPC round-trip; main returns the validated result.
+  const cur = useStore.getState().settings;
+  useStore.getState().setSettings({ ...cur, ...p, overlay: { ...cur.overlay, ...(p.overlay ?? {}) } } as Settings);
+  try {
+    useStore.getState().setSettings(await window.api.setSettings(p));
+  } catch {
+    useStore.getState().setSettings(cur);
+  }
 }
 
 function AboutDialog(): ReactNode {

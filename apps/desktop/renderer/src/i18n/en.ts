@@ -1,8 +1,8 @@
 import type { Resources } from './tr';
 
-type Shape<T> = { [K in keyof T]: T[K] extends string ? string : Shape<T[K]> };
+type Shape<T> = { [K in keyof T]?: T[K] extends string ? string : Shape<T[K]> } & Record<string, unknown>;
 
-/** English UI strings (same keys as Turkish). */
+/** English UI strings (same keys as Turkish; plural forms use i18next _one/_other suffixes). */
 export const en: Shape<Resources> = {
   app: {
     name: 'Clinic DICOM Viewer',
@@ -77,12 +77,15 @@ export const en: Shape<Resources> = {
     recent: 'Recent studies',
     recentEmpty: 'No studies opened yet.',
     remove: 'Remove from list',
-    images: '{{count}} images',
+    images_one: '{{count}} image',
+    images_other: '{{count}} images',
   },
   series: {
     title: 'Studies',
-    images: '{{count}} images',
-    frames: '{{count}} frames',
+    images_one: '{{count}} image',
+    images_other: '{{count}} images',
+    frames_one: '{{count}} frame',
+    frames_other: '{{count}} frames',
     loading: 'Loading…',
     nonImage: 'Non-image object',
     warning: 'Has warnings',
@@ -249,8 +252,10 @@ export const en: Shape<Resources> = {
     cancel: 'Cancel',
     cache: 'Cache {{used}} / {{max}} MB',
     memory: 'Memory {{value}} MB',
-    done: '{{count}} images loaded',
-    doneSkipped: '{{count}} images loaded · {{skipped}} files skipped',
+    done_one: '{{count}} image loaded',
+    done_other: '{{count}} images loaded',
+    doneSkipped_one: '{{count}} image loaded · {{skipped}} files skipped',
+    doneSkipped_other: '{{count}} images loaded · {{skipped}} files skipped',
     cancelled: 'Scan cancelled',
     nothing: 'No DICOM images found',
     dicomdir: 'DICOMDIR used',
@@ -263,7 +268,8 @@ export const en: Shape<Resources> = {
     zipPasswordWrong: 'Wrong password; the ZIP archive could not be opened.',
     zipInvalid: 'The ZIP archive could not be read (corrupt or unsupported).',
     zipTooManyEntries: 'The ZIP archive contains too many files and was not opened.',
-    files: '{{count}} files could not be read as DICOM (corrupt, truncated or unsupported size).',
+    files_one: '{{count}} file could not be read as DICOM (corrupt, truncated or unsupported size).',
+    files_other: '{{count}} files could not be read as DICOM (corrupt, truncated or unsupported size).',
   },
   dialogs: {
     close: 'Close',
