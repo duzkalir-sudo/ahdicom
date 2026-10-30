@@ -3,6 +3,18 @@ import { useTranslation } from 'react-i18next';
 import {
   Box,
   ChevronDown,
+  Circle,
+  Diameter,
+  DraftingCompass,
+  LetterText,
+  MoveUpRight,
+  PenLine,
+  Pentagon,
+  Ratio,
+  RectangleHorizontal,
+  RulerDimensionLine,
+  TriangleRight,
+  Waypoints,
   Contrast,
   Disc3,
   EyeOff,
@@ -26,6 +38,7 @@ import {
   RotateCw,
   Ruler,
   Settings,
+  type LucideIcon,
   Share,
   SlidersHorizontal,
   Square,
@@ -51,6 +64,67 @@ import { displaySetAt, useStore, type LayoutSpec } from '../state/store';
 import { controllerAt } from '../viewer/registry';
 import { IconButton, MenuItem, Popover } from './ui';
 import { changeLanguage } from '../app/settings';
+import { MEASURE_TOOLS, type MeasureTool } from '../viewer/measurements';
+
+export const MEASURE_ICONS: Record<MeasureTool, LucideIcon> = {
+  length: Ruler,
+  angle: DraftingCompass,
+  cobb: TriangleRight,
+  deviation: RulerDimensionLine,
+  ratio: Ratio,
+  ellipse: Circle,
+  rectangle: RectangleHorizontal,
+  polygon: Pentagon,
+  polyline: Waypoints,
+  freehand: PenLine,
+  arrow: MoveUpRight,
+  text: LetterText,
+  calibrate: Diameter,
+};
+
+/** Tools with their own toolbar button; the others are in the measurement menu. */
+const DIRECT_MEASURE_TOOLS: readonly MeasureTool[] = ['length', 'ellipse', 'angle'];
+const COMMAND_OF: Partial<Record<MeasureTool, string>> = { length: 'toolLength', ellipse: 'toolEllipse', angle: 'toolAngle', arrow: 'toolText' };
+
+function MeasureMenu(props: { anchor: HTMLElement | null; onClose: () => void }): ReactNode {
+  const { t } = useTranslation();
+  const groups: MeasureTool[][] = [
+    ['length', 'deviation', 'ratio', 'polyline'],
+    ['angle', 'cobb'],
+    ['ellipse', 'rectangle', 'polygon', 'freehand'],
+    ['arrow', 'text'],
+    ['calibrate'],
+  ];
+  return (
+    <Popover anchor={props.anchor} onClose={props.onClose} testId="measure-menu">
+      {groups.map((g, i) => (
+        <div key={g[0]}>
+          {i > 0 ? <div className="menu-sep" /> : null}
+          {g.map((tool) => {
+            const Icon = MEASURE_ICONS[tool];
+            const cmd = COMMAND_OF[tool];
+            return (
+              <MenuItem
+                key={tool}
+                onClick={() => {
+                  selectTool(tool);
+                  props.onClose();
+                }}
+                kbd={cmd ? formatShortcut(commandById(cmd)?.shortcut) : undefined}
+                testId={`measure-${tool}`}
+              >
+                <span className="menu-icon-label">
+                  <Icon size={16} aria-hidden />
+                  {t(`measure.tool.${tool}`)}
+                </span>
+              </MenuItem>
+            );
+          })}
+        </div>
+      ))}
+    </Popover>
+  );
+}
 
 function LayoutMenu(props: { anchor: HTMLElement | null; onClose: () => void }): ReactNode {
   const { t } = useTranslation();
@@ -213,9 +287,9 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
 export function Toolbar(): ReactNode {
   const { t } = useTranslation();
   const s = useStore();
-  const [menu, setMenu] = useState<null | 'layout' | 'presets'>(null);
+  const [menu, setMenu] = useState<null | 'layout' | 'presets' | 'measure'>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const toggleMenu = (m: 'layout' | 'presets', el: HTMLElement): void => {
+  const toggleMenu = (m: 'layout' | 'presets' | 'measure', el: HTMLElement): void => {
     setAnchor(el);
     setMenu(menu === m ? null : m);
   };
@@ -359,9 +433,38 @@ export function Toolbar(): ReactNode {
       </div>
 
       <div className="tb-group" aria-label={t('groups.measure')}>
-        <IconButton tip={t('toolbar.measureSoon')} disabled>
-          <Ruler size={18} />
-        </IconButton>
+        {DIRECT_MEASURE_TOOLS.map((tool) => {
+          const Icon = MEASURE_ICONS[tool];
+          return (
+            <IconButton
+              key={tool}
+              tip={tooltip(`measure.tool.${tool}`, COMMAND_OF[tool])}
+              pressed={s.tool === tool}
+              onClick={() => selectTool(tool)}
+              testId={`tb-measure-${tool}`}
+            >
+              <Icon size={18} />
+            </IconButton>
+          );
+        })}
+        {(() => {
+          const other = (MEASURE_TOOLS as readonly string[]).includes(s.tool) && !DIRECT_MEASURE_TOOLS.includes(s.tool as MeasureTool);
+          const Icon = other ? MEASURE_ICONS[s.tool as MeasureTool] : Pentagon;
+          return (
+            <button
+              type="button"
+              className="icon-btn"
+              data-tip={t('measure.moreTools')}
+              aria-label={t('measure.moreTools')}
+              aria-pressed={other}
+              onClick={(e) => toggleMenu('measure', e.currentTarget)}
+              data-testid="tb-measure-more"
+            >
+              <Icon size={18} />
+              <ChevronDown size={12} className="caret" />
+            </button>
+          );
+        })()}
         <IconButton tip={t('toolbar.syncSoon')} disabled>
           <Link2 size={18} />
         </IconButton>
@@ -439,6 +542,7 @@ export function Toolbar(): ReactNode {
 
       {menu === 'layout' ? <LayoutMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
       {menu === 'presets' ? <PresetMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
+      {menu === 'measure' ? <MeasureMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
     </header>
   );
 }

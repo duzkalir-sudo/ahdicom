@@ -26,6 +26,8 @@ import {
 } from '@ahdicom/dicom-core';
 import { RENDERING_ENGINE_ID, TOOL_GROUP_ID, frameOf, fileIdOf, getEngine, getToolGroup, imageIdsFor } from './cornerstone';
 import { lutsFor, modalityLutApplied } from './lut';
+import { cancelDrawingOn } from './annotations';
+import { useStore } from '../state/store';
 
 export type ViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'nonImage';
 
@@ -406,6 +408,13 @@ export class ViewportController {
     this.emit({ cine: false });
   }
 
+  /** Cancels a measurement being drawn on this viewport. */
+  cancelDrawing(): boolean {
+    const cancelled = cancelDrawingOn(this.element);
+    if (cancelled) this.viewport.render();
+    return cancelled;
+  }
+
   setShowOverlays(on: boolean): void {
     this.showOverlays = on;
     void this.drawOverlays();
@@ -472,8 +481,12 @@ export class ViewportController {
     const img = this.ds.images[index];
     const basis = spacingBasis(this.ds.firstInstance, img?.geometry.pixelSpacing);
     const ratio = this.imagePixelsPerCssPx();
+    const manual = useStore.getState().calibrations[this.ds.seriesInstanceUid];
     const colMm =
-      basis.kind === 'pixelSpacing' || basis.kind === 'imagerMagnified' || basis.kind === 'imagerPixelSpacing' ? basis.columnMm : undefined;
+      manual?.columnMm ??
+      (basis.kind === 'pixelSpacing' || basis.kind === 'imagerMagnified' || basis.kind === 'imagerPixelSpacing'
+        ? basis.columnMm
+        : undefined);
     let labels: EdgeLabels | undefined;
     if (imageId) {
       const cam = vp.getCamera();

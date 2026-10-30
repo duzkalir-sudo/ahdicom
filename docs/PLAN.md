@@ -116,35 +116,35 @@ Cornerstone's own `cachedStats` are never shown. Measurements are stored per Stu
 (SOPInstanceUID + frame, points in image pixel coordinates), never with session file IDs.
 
 Phase A: clinical math in `dicom-core` (unit-tested against analytic phantoms before any UI uses it)
-- [ ] `measure.ts`: length in mm for each basis (Pixel Spacing, Imager Pixel Spacing ± magnification, US region,
+- [x] `measure.ts`: length in mm for each basis (Pixel Spacing, Imager Pixel Spacing ± magnification, US region,
       manual calibration); "px" with a warning when uncalibrated; anisotropic spacing
-- [ ] Angle, Cobb angle, deviation distance (point to line), length ratio
-- [ ] Polygon area/perimeter (closed), polyline length (open), ellipse/rectangle area
-- [ ] ROI pixel statistics (mean, min, max, SD, pixel count) with a documented pixel-inclusion rule (pixel centre inside)
-- [ ] Ellipsoid (π/6·a·b·c) and bullet (5π/24·a·b·c) volume from three diameters
-- [ ] US calibrated regions: region lookup, both points in the same region, physical units from (0018,6024/6026)
-- [ ] SUVbw (decay-corrected; refuses with the list of missing tags; Units, Decay Correction, Corrected Image checked);
+- [x] Angle, Cobb angle, deviation distance (point to line), length ratio
+- [x] Polygon area/perimeter (closed), polyline length (open), ellipse/rectangle area
+- [x] ROI pixel statistics (mean, min, max, SD, pixel count) with a documented pixel-inclusion rule (pixel centre inside)
+- [x] Ellipsoid (π/6·a·b·c) and bullet (5π/24·a·b·c) volume from three diameters
+- [x] US calibrated regions: region lookup, both points in the same region, physical units from (0018,6024/6026)
+- [x] SUVbw (decay-corrected; refuses with the list of missing tags; Units, Decay Correction, Corrected Image checked);
       parse the Radiopharmaceutical Information Sequence
-- [ ] Display precision from spacing (e.g. 0.5 mm spacing → 1 decimal)
+- [x] Display precision from spacing (e.g. 0.5 mm spacing → 1 decimal)
 
 Phase B: viewer integration
-- [ ] Measure tool group in the toolbar: length, angle, Cobb, deviation, ratio, ellipse, rectangle, polygon,
+- [x] Measure tool group in the toolbar: length, angle, Cobb, deviation, ratio, ellipse, rectangle, polygon,
       freehand, arrow, text, calibrate; left-button binding like the other tools
-- [ ] Text boxes show dicom-core values with unit and basis (e.g. "42.3 mm", "12.1 mm (detector)", "35 px ⚠")
-- [ ] ROI stats in HU (CT), Bq/ml and SUVbw (PET), raw otherwise; RGB images: no stats
-- [ ] Manual calibration: draw a line, enter its true length; stored per series; labelled "calibrated"
-- [ ] Esc cancels an unfinished measurement; Delete removes the selected one
+- [x] Text boxes show dicom-core values with unit and basis (e.g. "42.3 mm", "12.1 mm (detector)", "35 px ⚠")
+- [x] ROI stats in HU (CT), Bq/ml and SUVbw (PET), raw otherwise; RGB images: no stats
+- [x] Manual calibration: draw a line, enter its true length; stored per series; labelled "calibrated"
+- [x] Esc cancels an unfinished measurement; Delete removes the selected one
 
 Phase C: measurement list, undo/redo, persistence
-- [ ] Measurements tab: list per study (type, value, series/slice), select, rename, delete, jump to slice
-- [ ] Undo/redo (Ctrl+Z / Ctrl+Y) for create, edit, delete, rename
-- [ ] Saved per StudyInstanceUID as JSON in the app data folder (IPC validated with zod, size-limited); reloaded
+- [x] Measurements tab: list per study (type, value, series/slice), select, rename, delete, jump to slice
+- [x] Undo/redo (Ctrl+Z / Ctrl+Y) for create, edit, delete, rename
+- [x] Saved per StudyInstanceUID as JSON in the app data folder (IPC validated with zod, size-limited); reloaded
       when the study is opened again; original DICOM files never modified
-- [ ] Ellipsoid/bullet volume from three selected length measurements
+- [x] Ellipsoid/bullet volume from three selected length measurements
 
 Phase D: verification
-- [ ] Unit tests for all Phase A math; fuzz for the stored-measurement schema
-- [ ] E2E: draw each tool on fixtures with known answers (ct-phantom sphere diameter/area/HU, aniso circle, cr-mag,
+- [x] Unit tests for all Phase A math; fuzz for the stored-measurement schema
+- [x] E2E: draw each tool on fixtures with known answers (ct-phantom sphere diameter/area/HU, aniso circle, cr-mag,
       us-regions, pet SUVbw, pet-missing refusal), list/rename/delete/jump, undo/redo, persistence across restart
 - [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent; docs; report
 - [ ] Push to GitHub once at the end of M2 (with approval) and check the Windows + macOS CI

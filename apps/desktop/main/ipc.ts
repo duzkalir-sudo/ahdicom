@@ -14,6 +14,8 @@ import pkg from '../package.json';
 import {
   FileOverlaysSchema,
   FileReadSchema,
+  MeasurementFileSchema,
+  UidSchema,
   ClipboardWriteSchema,
   FullscreenSchema,
   OpenKindSchema,
@@ -27,6 +29,7 @@ import type { AppInfo, OpenResult } from '../shared/api';
 import type { FileRegistry } from './files';
 import type { ScanManager } from './scan';
 import type { RecentStore, SettingsStore } from './store';
+import type { MeasurementStore } from './measurements';
 import { isTrustedSender } from './security';
 
 const MAX_READ_BYTES = 2 * 1024 * 1024 * 1024;
@@ -90,6 +93,7 @@ export interface IpcDeps {
   scans: ScanManager;
   settings: SettingsStore;
   recent: RecentStore;
+  measurements: MeasurementStore;
   clearSession: () => Promise<void>;
 }
 
@@ -184,4 +188,7 @@ export function registerIpc(deps: IpcDeps): void {
   handle(IPC.sessionClear, noPayload, () => deps.clearSession());
 
   handle(IPC.clipboardWrite, ClipboardWriteSchema, (_e, { text }) => clipboard.writeText(text));
+
+  handle(IPC.measurementsLoad, z.object({ studyInstanceUid: UidSchema }), (_e, { studyInstanceUid }) => deps.measurements.load(studyInstanceUid));
+  handle(IPC.measurementsSave, MeasurementFileSchema, (_e, file) => deps.measurements.save(file));
 }

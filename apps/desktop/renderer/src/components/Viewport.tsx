@@ -14,7 +14,7 @@ import {
 import { applyPreset, commandById, formatShortcut, MOD } from '../app/commands';
 import { MAX_VIEWPORTS, useStore, viewportCount } from '../state/store';
 import { ViewportController, type ViewState } from '../viewer/controller';
-import { getEngine, imageIdsFor, purgeImages } from '../viewer/cornerstone';
+import { getEngine, imageIdsFor, isMeasureTool, purgeImages } from '../viewer/cornerstone';
 import { allControllers, controllerAt, registerController, unregisterController } from '../viewer/registry';
 import { MenuItem, PointMenu } from './ui';
 
@@ -277,7 +277,8 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
           setMenu({ x: e.clientX, y: e.clientY });
       }}
       onContextMenu={(e) => e.preventDefault()}
-      onDoubleClick={() => useStore.getState().toggleMaximize(props.index)}
+      // With a measurement tool selected, double-click finishes polygons instead of maximizing the viewport.
+      onDoubleClick={() => !isMeasureTool(useStore.getState().tool) && useStore.getState().toggleMaximize(props.index)}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes(DS_MIME)) {
           e.preventDefault();
@@ -486,7 +487,7 @@ export function ViewportGrid(): ReactNode {
       </div>
       {showLegend ? (
         <div className="mouse-legend" data-testid="mouse-legend">
-          {t('mouse.legend', { left: t(`tools.${tool}`), mod: MOD })}
+          {t('mouse.legend', { left: isMeasureTool(tool) ? t(`measure.tool.${tool}`) : t(`tools.${tool}`), mod: MOD })}
         </div>
       ) : null}
     </>

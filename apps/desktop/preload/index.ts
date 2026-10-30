@@ -40,6 +40,8 @@ const api: Api = {
   setFullscreen: (on: boolean | 'toggle') => ipcRenderer.invoke(IPC.windowFullscreen, { on }),
   clearSession: () => ipcRenderer.invoke(IPC.sessionClear),
   copyText: (text: string) => ipcRenderer.invoke(IPC.clipboardWrite, { text }),
+  loadMeasurements: (studyInstanceUid: string) => ipcRenderer.invoke(IPC.measurementsLoad, { studyInstanceUid }),
+  saveMeasurements: (file) => ipcRenderer.invoke(IPC.measurementsSave, file),
   on: ((event: EventName, cb: (payload: unknown) => void) => {
     if (!ALLOWED_EVENTS.has(event)) throw new Error('event not allowed');
     const listener = (_e: IpcRendererEvent, payload: unknown): void => cb(payload);

@@ -6,6 +6,7 @@ import { changeLanguage, patchSettings } from '../app/settings';
 import { useStore } from '../state/store';
 import { setCacheSize } from '../viewer/cornerstone';
 import { controllerAt } from '../viewer/registry';
+import { parsePositive } from '../viewer/annotations';
 import type { Settings } from '../../../shared/schemas';
 import { Modal, Segmented } from './ui';
 
@@ -412,6 +413,60 @@ function PasswordDialog(): ReactNode {
   );
 }
 
+function PromptDialog(): ReactNode {
+  const { t } = useTranslation();
+  const req = useStore((s) => s.prompt);
+  const [value, setValue] = useState('');
+  const [forReq, setForReq] = useState<typeof req>(undefined);
+  if (req !== forReq) {
+    setForReq(req);
+    setValue(req?.initial ?? '');
+  }
+  if (!req) return null;
+  const calibrate = req.kind === 'calibrate';
+  const valid = calibrate ? parsePositive(value) !== undefined : true;
+  const answer = (v: string | null): void => {
+    useStore.getState().setPrompt(undefined);
+    req.resolve(v);
+  };
+  return (
+    <Modal title={t(calibrate ? 'measure.calibrateTitle' : 'measure.textTitle')} onClose={() => answer(null)} testId="prompt-dialog"
+      footer={
+        <>
+          <button type="button" className="btn" onClick={() => answer(null)}>
+            {t('dialogs.cancel')}
+          </button>
+          <button type="button" className="btn primary" onClick={() => answer(value)} disabled={!valid} data-testid="prompt-ok">
+            {t('dialogs.ok')}
+          </button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (valid) answer(value);
+        }}
+      >
+        {req.detail ? <p style={{ marginTop: 0 }}>{req.detail}</p> : null}
+        <div className="field">
+          <label htmlFor="prompt-input">{t(calibrate ? 'measure.calibrateLabel' : 'measure.textLabel')}</label>
+          <input
+            id="prompt-input"
+            className="input"
+            value={value}
+            inputMode={calibrate ? 'decimal' : 'text'}
+            maxLength={calibrate ? 16 : 200}
+            onChange={(e) => setValue(e.target.value)}
+            autoComplete="off"
+            data-testid="prompt-input"
+          />
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export function Dialogs(): ReactNode {
   const dialog = useStore((s) => s.dialog);
   return (
@@ -421,6 +476,7 @@ export function Dialogs(): ReactNode {
       {dialog === 'settings' ? <SettingsDialog /> : null}
       {dialog === 'windowLevel' ? <WindowLevelDialog /> : null}
       <PasswordDialog />
+      <PromptDialog />
     </>
   );
 }

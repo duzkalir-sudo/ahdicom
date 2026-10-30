@@ -18,6 +18,8 @@ export const IPC = {
   windowFullscreen: 'window:fullscreen',
   sessionClear: 'session:clear',
   clipboardWrite: 'clipboard:write',
+  measurementsLoad: 'measurements:load',
+  measurementsSave: 'measurements:save',
 } as const;
 
 export const EVENTS = {

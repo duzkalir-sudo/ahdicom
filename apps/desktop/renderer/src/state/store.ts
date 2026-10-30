@@ -15,6 +15,15 @@ export function viewportCount(l: LayoutSpec): number {
   return l.kind === 'grid' ? l.rows * l.cols : 3;
 }
 
+/** A modal text/number question from a measurement tool (annotation text, calibration length). */
+export interface PromptRequest {
+  kind: 'text' | 'calibrate';
+  initial: string;
+  /** Extra context shown above the input (e.g. the measured length before calibration). */
+  detail?: string;
+  resolve(value: string | null): void;
+}
+
 export interface Notice {
   id: number;
   kind: 'info' | 'warning' | 'error';
@@ -50,6 +59,11 @@ interface State {
   pinnedTags: string[];
   /** Display sets currently playing cine, per viewport index. */
   cine: Record<number, boolean>;
+  /** Manual calibrations per SeriesInstanceUID (mm per pixel). */
+  calibrations: Record<string, { rowMm: number; columnMm: number }>;
+  prompt?: PromptRequest;
+  /** Incremented whenever measurements change (the measurement list re-reads them). */
+  measureRev: number;
 }
 
 interface Actions {
@@ -79,6 +93,10 @@ interface Actions {
   setRecent(r: RecentEntryPublic[]): void;
   togglePin(tag: string): void;
   setCine(index: number, on: boolean): void;
+  setCalibration(seriesInstanceUid: string, c: { rowMm: number; columnMm: number } | undefined): void;
+  setPrompt(p: PromptRequest | undefined): void;
+  replaceCalibrations(c: Record<string, { rowMm: number; columnMm: number }>): void;
+  bumpMeasureRev(): void;
 }
 
 let noticeId = 0;
@@ -125,6 +143,8 @@ export const useStore = create<State & Actions>()((set, get) => {
     recent: [],
     pinnedTags: [],
     cine: {},
+    calibrations: {},
+    measureRev: 0,
 
     setReady: (ready) => set({ ready }),
     setAppInfo: (appInfo) => set({ appInfo }),
@@ -143,6 +163,7 @@ export const useStore = create<State & Actions>()((set, get) => {
         maximizedIndex: null,
         lastSummary: undefined,
         cine: {},
+        calibrations: {},
       }),
     setSort: (sortKey, sortDirection) => {
       set({ sortKey, sortDirection });
@@ -195,6 +216,15 @@ export const useStore = create<State & Actions>()((set, get) => {
       set({ pinnedTags: p.includes(tag) ? p.filter((t) => t !== tag) : [...p, tag] });
     },
     setCine: (index, on) => set({ cine: { ...get().cine, [index]: on } }),
+    setPrompt: (prompt) => set({ prompt }),
+    replaceCalibrations: (calibrations) => set({ calibrations }),
+    bumpMeasureRev: () => set({ measureRev: get().measureRev + 1 }),
+    setCalibration: (uid, c) => {
+      const next = { ...get().calibrations };
+      if (c) next[uid] = c;
+      else delete next[uid];
+      set({ calibrations: next });
+    },
   };
 });
 

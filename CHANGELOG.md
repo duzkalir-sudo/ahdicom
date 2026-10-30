@@ -4,6 +4,17 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 
 ## [Unreleased]
 
+### Added (M2 — measurements)
+- Measurement tools: length, angle, Cobb angle, deviation (point to line), length ratio, ellipse / rectangle / polygon ROI,
+  open polyline, freehand, arrow with text, text, manual calibration.
+- Values computed by `dicom-core` with the spacing basis shown next to them (patient plane, magnification corrected,
+  detector, US region, calibrated); uncalibrated images show px with a warning.
+- ROI statistics in HU (CT), SUVbw or Bq/ml (PET, with the missing tags named when SUV is refused), raw otherwise.
+- Measurements tab: list with value, series and image; rename, delete, jump to the image; ellipsoid / bullet volume from three
+  ticked diameters; manual calibrations with remove.
+- Undo / redo (Ctrl+Z / Ctrl+Y); Esc cancels a measurement being drawn; Delete removes the selected one.
+- Measurements and calibrations are saved per study in the app data folder and restored when the study is opened again.
+
 ### Changed (UX review round 1, 2026-10-30)
 - No splash screen; the "i" button opens About with the intended-use statement and legal information.
 - English is the default language; TR/EN button in the toolbar.

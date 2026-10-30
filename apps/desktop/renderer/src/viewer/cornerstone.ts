@@ -19,6 +19,7 @@ import {
   WindowLevelTool,
   ZoomTool,
   addTool,
+  annotation as csAnnotation,
   init as toolsInit,
   Enums as ToolEnums,
   type Types as ToolTypes,
@@ -28,6 +29,8 @@ import { Enums as MetadataEnums, metaData as metadataStore, utilities as metadat
 import { normalizeVoiLutFunction, rleHeaderValid, splitDeflatedPart10, type DisplayImage, type DisplaySet } from '@ahdicom/dicom-core';
 import dcmjs from 'dcmjs';
 import { applyLutSequences, forgetLuts, registerLuts } from './lut';
+import { MEASURE_TOOLS, measureToolConfigs, toolNameOf, type MeasureTool } from './measurements';
+import { initAnnotationEvents } from './annotations';
 
 export const RENDERING_ENGINE_ID = 'cdv-engine';
 export const TOOL_GROUP_ID = 'cdv-stack-tools';
@@ -37,14 +40,43 @@ const NATURALIZED = MetadataEnums.MetadataModules.NATURALIZED;
 let engine: RenderingEngine | undefined;
 let toolGroup: ToolTypes.IToolGroup | undefined;
 
-export type LeftTool = 'windowLevel' | 'pan' | 'zoom' | 'scroll';
+/** Cornerstone's double-click detection window (DOUBLE_CLICK_TOLERANCE_MS) plus a margin. */
+const DOUBLE_CLICK_WINDOW_MS = 450;
+/** End of the window in which Cornerstone may still replay a viewport click (a press released in place). */
+let heldClickUntil = -Infinity;
+let press: { time: number; x: number; y: number } | undefined;
+let pendingToolSwitch: ReturnType<typeof setTimeout> | undefined;
+window.addEventListener(
+  'mousedown',
+  (e) => {
+    press =
+      e.target instanceof Element && e.target.closest('.vp-element') ? { time: performance.now(), x: e.clientX, y: e.clientY } : undefined;
+  },
+  true,
+);
+window.addEventListener(
+  'mouseup',
+  (e) => {
+    // Only a click (release within Cornerstone's 3 px drag tolerance) is held; a drag is handled immediately.
+    if (press && Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) <= 3) heldClickUntil = press.time + DOUBLE_CLICK_WINDOW_MS;
+    press = undefined;
+  },
+  true,
+);
 
-const TOOL_NAMES: Record<LeftTool, string> = {
+export type NavigationTool = 'windowLevel' | 'pan' | 'zoom' | 'scroll';
+export type LeftTool = NavigationTool | MeasureTool;
+
+const NAV_TOOL_NAMES: Record<NavigationTool, string> = {
   windowLevel: WindowLevelTool.toolName,
   pan: PanTool.toolName,
   zoom: ZoomTool.toolName,
   scroll: StackScrollTool.toolName,
 };
+
+export function isMeasureTool(t: LeftTool): t is MeasureTool {
+  return (MEASURE_TOOLS as readonly string[]).includes(t);
+}
 
 export function imageIdFor(img: DisplayImage): string {
   return img.frame ? `${SCHEME}:${img.fileId}?frame=${img.frame}` : `${SCHEME}:${img.fileId}`;
@@ -211,6 +243,11 @@ async function loadCdvImage(imageId: string, options?: Record<string, unknown>):
   }
 }
 
+/** Loads an image's metadata (not its pixels) so its geometry is known, e.g. to restore saved measurements. */
+export async function loadImageMetadata(imageId: string): Promise<void> {
+  await ensureNaturalized(baseImageId(imageId));
+}
+
 /** Releases decoded images and raw bytes of a display set that is no longer shown. */
 export function purgeImages(imageIds: readonly string[]): void {
   const bases = new Set<string>();
@@ -250,6 +287,7 @@ export function naturalizedCacheBytes(): number {
 export function initCornerstone(cacheSizeMB: number): void {
   if (engine) return;
   installDecodeErrorHandler();
+  routeSvgTextStyleThroughCssom();
   // dcmjs reports "Invalid vr type ox/xs" for every valid Implicit VR file whose dictionary VR is ambiguous
   // (OB/OW, US/SS) at error level. These are parser diagnostics, not failures; keep them out of the console.
   dcmjs.log.getLogger('validation.dcmjs').setLevel('silent');
@@ -274,16 +312,64 @@ export function initCornerstone(cacheSizeMB: number): void {
   toolGroup.addTool(PanTool.toolName);
   toolGroup.addTool(ZoomTool.toolName);
   toolGroup.addTool(StackScrollTool.toolName, { loop: false });
-  setLeftTool('windowLevel');
+  for (const m of measureToolConfigs()) {
+    addTool(m.cls as Parameters<typeof addTool>[0]);
+    toolGroup.addTool(m.name, m.config);
+    // Cornerstone binds plain "z"/"y" keys to its own undo/redo; the app has its own history (Ctrl+Z / Ctrl+Y).
+    const actions = (toolGroup.getToolInstance(m.name) as { configuration?: { actions?: Record<string, unknown> } }).configuration?.actions;
+    if (actions) {
+      delete actions.undo;
+      delete actions.redo;
+    }
+  }
+  applyLeftTool('windowLevel');
+  initAnnotationEvents();
+  // Measurement text on a dark translucent box stays readable over bright structures (bone, contrast).
+  csAnnotation.config.style.setDefaultToolStyles({
+    global: { ...csAnnotation.config.style.getDefaultToolStyles()?.global, textBoxBackground: 'rgba(0, 0, 0, 0.75)' },
+  });
   engine = new RenderingEngine(RENDERING_ENGINE_ID);
+}
+
+/**
+ * Cornerstone's text boxes set an inline `style` attribute on SVG <text>, which the strict CSP (style-src 'self')
+ * blocks and reports as an error. Setting the same declarations through CSSOM is allowed by CSP, so the `style`
+ * attribute of SVG text elements is routed to `style.cssText` (D-044).
+ */
+function routeSvgTextStyleThroughCssom(): void {
+  const proto = SVGTextElement.prototype;
+  const original = proto.setAttribute;
+  proto.setAttribute = function setAttribute(this: SVGTextElement, name: string, value: string): void {
+    if (name.toLowerCase() === 'style') {
+      this.style.cssText = value;
+      return;
+    }
+    original.call(this, name, value);
+  };
 }
 
 export function setCacheSize(cacheSizeMB: number): void {
   cache.setMaxCacheSize(cacheSizeMB * 1024 * 1024);
 }
 
-/** Default mouse bindings: left = selected tool, right = zoom, middle = pan, wheel = scroll. */
+/**
+ * Default mouse bindings: left = selected tool, right = zoom, middle = pan, wheel = scroll.
+ * Measurement tools that are not selected stay passive, so their annotations remain visible and editable.
+ */
 export function setLeftTool(tool: LeftTool): void {
+  // Cornerstone holds a viewport click for up to 400 ms to detect a double-click and then replays it to the tool that
+  // is active at that moment. A tool switched within that window (click, then a shortcut key) would receive the old
+  // click and start a phantom measurement, so the switch takes effect once the held click has been handled.
+  clearTimeout(pendingToolSwitch);
+  const wait = heldClickUntil - performance.now();
+  if (wait > 0) {
+    pendingToolSwitch = setTimeout(() => applyLeftTool(tool), wait);
+    return;
+  }
+  applyLeftTool(tool);
+}
+
+function applyLeftTool(tool: LeftTool): void {
   if (!toolGroup) return;
   const { MouseBindings } = ToolEnums;
   const bindings: Record<string, ToolTypes.IToolBinding[]> = {
@@ -292,7 +378,8 @@ export function setLeftTool(tool: LeftTool): void {
     [ZoomTool.toolName]: [{ mouseButton: MouseBindings.Secondary }],
     [StackScrollTool.toolName]: [{ mouseButton: MouseBindings.Wheel }],
   };
-  bindings[TOOL_NAMES[tool]]!.push({ mouseButton: MouseBindings.Primary });
+  for (const m of MEASURE_TOOLS) bindings[toolNameOf(m)] = [];
+  bindings[isMeasureTool(tool) ? toolNameOf(tool) : NAV_TOOL_NAMES[tool]]!.push({ mouseButton: MouseBindings.Primary });
   // setToolActive with an empty list does not remove an existing binding: clear all bindings first.
   for (const name of Object.keys(bindings)) toolGroup.setToolPassive(name, { removeAllBindings: true });
   for (const [name, b] of Object.entries(bindings)) if (b.length > 0) toolGroup.setToolActive(name, { bindings: b });

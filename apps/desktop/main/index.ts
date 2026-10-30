@@ -12,6 +12,7 @@ import { registerIpc } from './ipc';
 import { ScanManager } from './scan';
 import { DEV_SERVER_URL, hardenSession, hardenWebContents, registerAppProtocol, registerSchemes } from './security';
 import { RecentStore, SettingsStore } from './store';
+import { MeasurementStore } from './measurements';
 
 const isE2E = process.env.CDV_E2E === '1' && !app.isPackaged;
 
@@ -135,6 +136,7 @@ void app.whenReady().then(async () => {
     nativeTheme.themeSource = next.theme;
   });
   const recent = new RecentStore(path.join(userData, 'recent.json'));
+  const measurements = new MeasurementStore(path.join(userData, 'measurements'));
   await settings.load();
   await recent.load();
   scans = new ScanManager(registry, recent, tempRoot);
@@ -144,6 +146,7 @@ void app.whenReady().then(async () => {
     scans,
     settings,
     recent,
+    measurements,
     clearSession: async () => {
       scans.cancelAll();
       registry.clear();

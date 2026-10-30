@@ -6,6 +6,7 @@ import { getShouldUseCPURendering } from '@cornerstonejs/core';
 import { useStore } from './state/store';
 import { cacheUsage } from './viewer/cornerstone';
 import { controllerAt } from './viewer/registry';
+import { listMeasurements } from './viewer/annotations';
 
 export function installTestHooks(): void {
   (window as unknown as { __cdv: unknown }).__cdv = {
@@ -48,6 +49,9 @@ export function installTestHooks(): void {
       return { x: r.left + p[0], y: r.top + p[1] };
     },
     cpuRendering: () => getShouldUseCPURendering(),
+    /** Measurements with their displayed value lines. */
+    measurements: () => listMeasurements(),
+    calibrations: () => useStore.getState().calibrations,
     /** Image cache + raw-bytes usage in bytes. */
     cacheBytes: () => cacheUsage().used,
     /**

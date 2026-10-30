@@ -9,7 +9,6 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Pin,
-  Ruler,
   Search,
 } from 'lucide-react';
 import {
@@ -25,6 +24,7 @@ import { useStore } from '../state/store';
 import { controllerAt } from '../viewer/registry';
 import { fileIdOf } from '../viewer/cornerstone';
 import { IconButton } from './ui';
+import { MeasurementsPanel } from './MeasurementsPanel';
 
 const TS_NAMES: Record<string, string> = {
   '1.2.840.10008.1.2': 'Implicit VR Little Endian',
@@ -67,6 +67,7 @@ function InfoPanel(): ReactNode {
   const locale = (i18n.language === 'en' ? 'en' : 'tr') as 'tr' | 'en';
   const ds = useActiveDisplaySet();
   const hide = useStore((s) => s.settings.hidePatientData);
+  const calibration = useStore((s) => (ds ? s.calibrations[ds.seriesInstanceUid] : undefined));
   if (!ds) return <div className="panel-pad muted">{t('info.noSelection')}</div>;
   const i = ds.firstInstance;
   const basis = spacingBasis(i);
@@ -96,6 +97,14 @@ function InfoPanel(): ReactNode {
             mag: basis.kind === 'imagerMagnified' ? basis.magnification : '',
           })}
         </dd>
+        {calibration ? (
+          <>
+            <dt>{t('info.calibration')}</dt>
+            <dd className="num" data-testid="info-calibration">
+              {`${formatNumber(calibration.rowMm, 4, locale)} × ${formatNumber(calibration.columnMm, 4, locale)} mm (${t('measure.basis.manual')})`}
+            </dd>
+          </>
+        ) : null}
         <dt>{t('info.sliceSpacing')}</dt>
         <dd className="num">{mm(ds.geometry.sliceSpacing)}</dd>
         <dt>{t('info.sliceThickness')}</dt>
@@ -441,15 +450,7 @@ export function RightPanel(): ReactNode {
       <div className="side-body">
         {tab === 'info' ? <InfoPanel /> : null}
         {tab === 'tags' ? <TagBrowser /> : null}
-        {tab === 'measurements' ? (
-          <div className="panel-pad" style={{ textAlign: 'center', paddingTop: 32 }}>
-            <Ruler size={28} className="muted" />
-            <div style={{ fontWeight: 600, marginTop: 8 }}>{t('measurements.empty')}</div>
-            <div className="muted" style={{ marginTop: 4 }}>
-              {t('measurements.emptyDetail')}
-            </div>
-          </div>
-        ) : null}
+        {tab === 'measurements' ? <MeasurementsPanel /> : null}
       </div>
     </aside>
   );

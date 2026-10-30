@@ -1,6 +1,6 @@
 /** Type of `window.api` exposed by the preload script. Types only — no runtime code. */
 import type { InstanceRecord, OverlayLayer, TagNode } from '@ahdicom/dicom-core';
-import type { OpenKind, RecentEntryPublic, Settings, SettingsPatch } from './schemas';
+import type { MeasurementFile, OpenKind, RecentEntryPublic, Settings, SettingsPatch } from './schemas';
 
 export interface AppInfo {
   name: string;
@@ -82,6 +82,10 @@ export interface Api {
   clearSession(): Promise<void>;
   /** Writes plain text to the OS clipboard (tag browser copy). */
   copyText(text: string): Promise<void>;
+  /** Saved measurements of a study, or null when there are none (or the file is unreadable). */
+  loadMeasurements(studyInstanceUid: string): Promise<MeasurementFile | null>;
+  /** Saves (or, when empty, deletes) the measurements of a study. */
+  saveMeasurements(file: MeasurementFile): Promise<void>;
   on(event: 'scan:progress', cb: (p: ScanProgress) => void): () => void;
   on(event: 'scan:batch', cb: (b: ScanBatch) => void): () => void;
   on(event: 'scan:done', cb: (s: ScanSummary) => void): () => void;

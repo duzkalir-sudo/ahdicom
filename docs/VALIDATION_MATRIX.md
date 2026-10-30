@@ -79,6 +79,25 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Intended-use statement in About ("i" button) and status bar | E2E m0 | Pass |
 | Screenshots 1280×800 & 1920×1080 × dark/light × tr/en inspected | `artifacts/screenshots/M0`, `M1` | Inspected; issues fixed (toolbar overflow, thumbnails, labels, tag table) |
 
+## Measurements (M2)
+
+| Requirement | Test | Evidence |
+|---|---|---|
+| Length uses column spacing along rows and row spacing along columns; anisotropic 25 mm circle = 50 mm both ways | unit `measure.test.ts`, E2E `m2-measure` (aniso) | Pass |
+| Imager Pixel Spacing ÷ magnification (CR, labelled); manual calibration keeps the pixel aspect; saved and reloaded | unit, E2E (cr-mag, calibration persistence) | Pass |
+| US: mm only when all points lie in one spatial region; outside/across/non-spatial → px with a warning | unit (synthetic + `us-regions` fixture), E2E | Pass |
+| Angle and Cobb in physical space; deviation perpendicular to the infinite line; length ratio of physical lengths | unit (analytic), E2E (angle 90°) | Pass |
+| Shoelace area, ellipse area (conjugate semi-axes), point-in-shape; ROI stats with pixel-centre rule and Welford SD | unit (ramp/circle phantoms, large offsets) | Pass |
+| ROI in HU on the CT phantom (1000 HU sphere: mean 1000, SD 0); area equals π·a·b of the handles placed | E2E | Pass |
+| SUVbw: hand-computed reference (5.1885), ADMIN, GML, series-time rewrite, midnight; refuses with missing tags named | unit `suv.test.ts`, E2E (pet 5.19 SUVbw; pet-missing names PatientWeight, RadionuclideTotalDose) | Pass |
+| Ellipsoid π/6·abc and bullet 5π/24·abc from three ticked lengths | unit, E2E (list volume box) | Pass |
+| Arrow with text (Turkish characters), Esc cancels unfinished polygon/ellipse, Delete removes selected, zero-length line discarded | E2E | Pass |
+| List: rename, delete, jump to the image, undo/redo (Ctrl+Z / Ctrl+Y) | E2E | Pass |
+| Saved per study, restored after restart with identical pixel coordinates; loaded items are not undoable | E2E (two launches with the same app data) | Pass |
+| Measurement on a series that left the viewport stays listed and is saved | E2E (orient-axial → sagittal, restart) | Pass |
+| No CSP violation from measurement text (D-044) | every E2E (console errors fail the run) | Pass |
+| Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M2` | See report |
+
 ## Performance (Windows 11 laptop, local GPU; `artifacts/perf-m1.json`)
 
 | Metric | Target | Measured |

@@ -21,6 +21,8 @@ export interface LaunchOptions {
   width?: number;
   height?: number;
   settings?: Record<string, unknown>;
+  /** Reuse an app data folder (e.g. to test persistence across restarts); it is then kept on close. */
+  userData?: string;
 }
 
 export interface Session {
@@ -34,7 +36,7 @@ export interface Session {
 }
 
 export async function launch(opts: LaunchOptions = {}): Promise<Session> {
-  const userData = mkdtempSync(path.join(os.tmpdir(), 'cdv-e2e-'));
+  const userData = opts.userData ?? mkdtempSync(path.join(os.tmpdir(), 'cdv-e2e-'));
   const settings = {
     version: 1,
     theme: opts.theme ?? 'dark',
@@ -84,7 +86,7 @@ export async function launch(opts: LaunchOptions = {}): Promise<Session> {
     allowErrors: (re) => allowed.push(re),
     close: async () => {
       await app.close();
-      rmSync(userData, { recursive: true, force: true });
+      if (!opts.userData) rmSync(userData, { recursive: true, force: true });
     },
   };
 }

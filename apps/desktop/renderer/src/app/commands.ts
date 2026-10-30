@@ -7,6 +7,8 @@ import { i18next } from '../i18n';
 import { displaySetAt, useStore } from '../state/store';
 import { purgeAll, setLeftTool, type LeftTool } from '../viewer/cornerstone';
 import { allControllers, controllerAt } from '../viewer/registry';
+import { deleteSelected, isDrawing } from '../viewer/annotations';
+import { redo, resetMeasurements, undo } from '../viewer/measureDoc';
 import type { OpenKind } from '../../../shared/schemas';
 
 export const isMac = navigator.userAgent.includes('Mac');
@@ -78,6 +80,8 @@ export async function toggleFullscreen(): Promise<void> {
 
 export async function closeAll(): Promise<void> {
   for (const c of allControllers()) c.stopCine();
+  // Measurements are saved per study, then removed from the viewer with the studies.
+  await resetMeasurements();
   await window.api.clearSession();
   useStore.getState().clearAll();
   // Viewports unmount with the start screen; release cached pixels afterwards.
@@ -143,6 +147,20 @@ export const COMMANDS: Command[] = [
   { id: 'toolPan', labelKey: 'toolbar.pan', group: 'tools', shortcut: { key: 'p' }, run: () => selectTool('pan') },
   { id: 'toolZoom', labelKey: 'toolbar.zoom', group: 'tools', shortcut: { key: 'z' }, run: () => selectTool('zoom') },
   { id: 'toolScroll', labelKey: 'toolbar.scroll', group: 'tools', shortcut: { key: 's' }, run: () => selectTool('scroll') },
+  { id: 'toolLength', labelKey: 'measure.tool.length', group: 'tools', shortcut: { key: 'm' }, run: () => selectTool('length') },
+  { id: 'toolEllipse', labelKey: 'measure.tool.ellipse', group: 'tools', shortcut: { key: 'e' }, run: () => selectTool('ellipse') },
+  { id: 'toolAngle', labelKey: 'measure.tool.angle', group: 'tools', shortcut: { key: 'n' }, run: () => selectTool('angle') },
+  { id: 'toolText', labelKey: 'measure.tool.arrow', group: 'tools', shortcut: { key: 't' }, run: () => selectTool('arrow') },
+  { id: 'undo', labelKey: 'measurements.undo', group: 'tools', shortcut: { key: 'z', mod: true }, run: undo },
+  {
+    id: 'redo',
+    labelKey: 'measurements.redo',
+    group: 'tools',
+    shortcut: { key: 'y', mod: true },
+    alt: [{ key: 'z', mod: true, shift: true }],
+    run: redo,
+  },
+  { id: 'deleteMeasurement', labelKey: 'measure.deleteSelected', group: 'tools', shortcut: { key: 'Delete' }, run: () => void deleteSelected() },
   { id: 'rotateCw', labelKey: 'toolbar.rotateCw', group: 'view', shortcut: { key: 'r' }, run: () => active()?.rotate(90) },
   { id: 'rotateCcw', labelKey: 'toolbar.rotateCcw', group: 'view', shortcut: { key: 'r', shift: true }, run: () => active()?.rotate(-90) },
   { id: 'flipH', labelKey: 'toolbar.flipH', group: 'view', shortcut: { key: 'h' }, run: () => active()?.flip('h') },
@@ -255,13 +273,17 @@ function matches(s: Shortcut, e: KeyboardEvent): boolean {
 export function handleKey(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return false;
+  if (useStore.getState().prompt) return false;
   if (e.key === 'Escape') {
     const s = useStore.getState();
     if (s.dialog) s.setDialog(null);
+    else if (allControllers().some((c) => c.cancelDrawing())) return true;
     else if (s.fullscreen) void window.api.setFullscreen(false);
     return true;
   }
   if (useStore.getState().dialog) return false;
+  // While a measurement is being drawn, keys such as Backspace belong to the tool (remove the last point).
+  if (isDrawing()) return false;
   for (const c of COMMANDS) {
     if ((c.shortcut && matches(c.shortcut, e)) || c.alt?.some((a) => matches(a, e))) {
       c.run();
