@@ -203,6 +203,7 @@ export const tr = {
     calibrated: '{{series}} serisi elle kalibre edildi.',
   },
   measurements: {
+    loadFailed: 'Bir çalışmanın kayıtlı ölçümleri okunamadı; bu kayıt değiştirilmeyecek.',
     saveFailed: 'Ölçümler kaydedilemedi.',
     empty: 'Henüz ölçüm yok',
     emptyDetail: 'Araç çubuğundan bir araç seçin (cetvel, elips, açı veya yanındaki menü) ve görüntü üzerinde çizin.',

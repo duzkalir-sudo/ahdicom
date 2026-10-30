@@ -19,8 +19,13 @@ export class MeasurementStore {
     return path.join(this.dir, `${name}.json`);
   }
 
+  /**
+   * Null when the study has no file, or when its content is invalid (that file is set aside). Throws when an existing
+   * file cannot be read (locked, permissions): the renderer then leaves it untouched instead of overwriting it.
+   */
   async load(studyInstanceUid: string): Promise<MeasurementFile | null> {
     const file = this.fileFor(studyInstanceUid);
+    let text: string;
     try {
       const st = await stat(file);
       if (!st.isFile()) return null;
@@ -28,21 +33,23 @@ export class MeasurementStore {
         await this.setAside(file);
         return null;
       }
-      let raw: unknown;
-      try {
-        raw = JSON.parse(await readFile(file, 'utf8'));
-      } catch {
-        raw = undefined;
-      }
-      const parsed = MeasurementFileSchema.safeParse(raw);
-      if (!parsed.success || parsed.data.studyInstanceUid !== studyInstanceUid) {
-        await this.setAside(file);
-        return null;
-      }
-      return parsed.data;
+      text = await readFile(file, 'utf8');
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw new Error('measurement file unreadable', { cause: e });
+    }
+    let raw: unknown;
+    try {
+      raw = JSON.parse(text);
     } catch {
+      raw = undefined;
+    }
+    const parsed = MeasurementFileSchema.safeParse(raw);
+    if (!parsed.success || parsed.data.studyInstanceUid !== studyInstanceUid) {
+      await this.setAside(file);
       return null;
     }
+    return parsed.data;
   }
 
   /**

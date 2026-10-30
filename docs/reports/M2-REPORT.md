@@ -38,7 +38,7 @@ Not done: explicit user choice of the spacing basis (R-027), DICOM SR/GSPS expor
 | Screenshot inspection | Done | All 22 M2 screenshots opened; no clipping/overflow; text-box background raised to 75 % opacity |
 | Performance / memory | Pass | `PERF {"firstImageMs":465,"fps":60.3,"heapAfterMB":63,"cacheAfterCloseMB":0}` |
 | CI matrix (Windows, macOS) | Not run | Waiting for push approval |
-| Verifier subagent | 1st pass **FAIL** → fixed | 2 blocking gaps (per-image calibration; calibration dropped on partial-study save) and the pinned API list (updated with the user's approval) — all fixed; see below |
+| Verifier subagent | 1st pass **FAIL**, 2nd pass **FAIL** → fixed | Pass 1: per-image calibration; calibration dropped on partial-study save; pinned API list (updated with the user's approval). Pass 2 confirmed those fixed and found a save-during-restore race and an over-broad set-aside on read errors — both fixed (D-050). The race fix has no dedicated test (timing-dependent); verified by code review and the persistence E2E tests. |
 
 Existing test changed (user-approved 2026-10-30): `tests/e2e/m0-shell.spec.ts` pinned preload API list +`loadMeasurements`,
 +`saveMeasurements`; nothing else in the test changed.

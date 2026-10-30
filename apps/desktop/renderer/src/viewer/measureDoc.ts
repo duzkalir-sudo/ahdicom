@@ -251,6 +251,8 @@ export function redo(): void {
 const calibrationStudy = new Map<string, string>();
 /** Loads in progress: a save waits for them, so a study file is never written before its saved content was read. */
 const loading = new Set<Promise<unknown>>();
+/** Studies whose saved file exists but could not be read; they are not written in this session. */
+const unsavable = new Set<string>();
 /** Saves run one after another; two overlapping writes could otherwise finish out of order. */
 let saveChain: Promise<void> = Promise.resolve();
 
@@ -261,7 +263,8 @@ function save(): Promise<void> {
 
 async function writeChangedStudies(): Promise<void> {
   while (loading.size > 0) await Promise.all([...loading]);
-  const snap = JSON.parse(history[historyIndex] ?? JSON.stringify(snapshot())) as Snapshot;
+  // The current document, not the history entry: a load may have restored items after that entry was taken.
+  const snap = snapshot();
   const seriesStudy = new Map<string, string>(calibrationStudy);
   for (const ds of Object.values(useStore.getState().displaySets)) seriesStudy.set(ds.seriesInstanceUid, ds.studyInstanceUid);
   const studies = new Set<string>([...lastSaved.keys(), ...snap.items.map((i) => i.study)]);
@@ -270,6 +273,7 @@ async function writeChangedStudies(): Promise<void> {
     if (st) studies.add(st);
   }
   for (const study of studies) {
+    if (unsavable.has(study)) continue;
     const calibrations: Calibrations = {};
     for (const [series, c] of Object.entries(snap.calibrations)) if (seriesStudy.get(series) === study) calibrations[series] = c;
     const file: MeasurementFile = {
@@ -301,6 +305,34 @@ async function preparePlanes(items: readonly MeasurementItem[]): Promise<void> {
   await Promise.all([...ids].map((id) => loadImageMetadata(id).catch(() => undefined)));
 }
 
+/** Reads a study's saved measurements and restores them. Returns true when something was restored. */
+async function restoreStudy(study: string): Promise<boolean> {
+  let file: MeasurementFile | null;
+  try {
+    file = await window.api.loadMeasurements(study);
+  } catch {
+    // The file exists but could not be read (e.g. locked by another program): never overwrite it in this session.
+    unsavable.add(study);
+    useStore.getState().notify('warning', i18next.t('measurements.loadFailed'));
+    return false;
+  }
+  if (!file) return false;
+  for (const series of Object.keys(file.calibrations)) calibrationStudy.set(series, study);
+  await preparePlanes(file.items);
+  restoring = true;
+  try {
+    for (const it of file.items) {
+      if (!restoreItem(it)) pending.set(study, [...(pending.get(study) ?? []), it]);
+    }
+    const cal = useStore.getState().calibrations;
+    useStore.getState().replaceCalibrations({ ...cal, ...file.calibrations });
+  } finally {
+    restoring = false;
+  }
+  lastSaved.set(study, JSON.stringify(file));
+  return true;
+}
+
 /** Loads saved measurements of studies seen for the first time and restores items whose images are now indexed. */
 export async function syncStudies(): Promise<void> {
   await preparePlanes([...pending.values()].flat());
@@ -321,24 +353,10 @@ export async function syncStudies(): Promise<void> {
   for (const study of studies) {
     if (loadedStudies.has(study) || !/^[0-9.]{1,64}$/.test(study)) continue;
     loadedStudies.add(study);
-    const load = window.api.loadMeasurements(study).catch(() => null);
-    loading.add(load);
-    const file = await load.finally(() => loading.delete(load));
-    if (!file) continue;
-    for (const series of Object.keys(file.calibrations)) calibrationStudy.set(series, study);
-    lastSaved.set(study, JSON.stringify(file));
-    await preparePlanes(file.items);
-    restoring = true;
-    try {
-      for (const it of file.items) {
-        if (!restoreItem(it)) pending.set(study, [...(pending.get(study) ?? []), it]);
-      }
-      const cal = useStore.getState().calibrations;
-      useStore.getState().replaceCalibrations({ ...cal, ...file.calibrations });
-    } finally {
-      restoring = false;
-    }
-    changed = true;
+    // The study counts as loading until its items are restored, so no save can write it without them.
+    const job = restoreStudy(study);
+    loading.add(job);
+    if (await job.finally(() => loading.delete(job))) changed = true;
   }
   if (changed || historyIndex < 0) {
     // Loaded measurements are the new baseline: they cannot be undone.
@@ -362,6 +380,7 @@ export async function resetMeasurements(): Promise<void> {
   loadedStudies.clear();
   lastSaved.clear();
   calibrationStudy.clear();
+  unsavable.clear();
   history = [];
   historyIndex = -1;
   lastLines.clear();
