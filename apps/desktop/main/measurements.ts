@@ -58,7 +58,8 @@ export class MeasurementStore {
    */
   private async setAside(file: string): Promise<void> {
     console.warn('An unreadable measurement file was set aside');
-    await rename(file, `${file}.unreadable-${Date.now()}`).catch(() => undefined);
+    // If the rename fails, the error reaches the renderer, which then leaves this study's file alone.
+    await rename(file, `${file}.unreadable-${Date.now()}`);
   }
 
   async save(data: MeasurementFile): Promise<void> {

@@ -210,7 +210,7 @@ export const en: Shape<Resources> = {
     calibrated: 'Series {{series}} calibrated manually.',
   },
   measurements: {
-    loadFailed: 'Saved measurements of a study could not be read; they will not be overwritten.',
+    loadFailed: 'Saved measurements of a study could not be read. They are kept unchanged; new measurements of that study are not saved in this session.',
     saveFailed: 'Measurements could not be saved.',
     empty: 'No measurements yet',
     emptyDetail: 'Choose a tool in the toolbar (ruler, ellipse, angle or the menu next to them) and draw on the image.',
