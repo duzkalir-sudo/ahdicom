@@ -44,7 +44,9 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
   if (probe) {
     if (probe.value === undefined) probeText = t('viewport.probeOutside');
     else {
-      const val = Array.isArray(probe.value) ? probe.value.join(' ') : `${fmtValue(probe.value, locale)}${probe.unit === 'raw' ? '' : ` ${t(`units.${probe.unit}`)}`}`;
+      const val = Array.isArray(probe.value)
+        ? probe.value.join(' ')
+        : `${fmtValue(probe.value, locale)}${probe.unit === 'raw' ? '' : ` ${t(`units.${probe.unit}`)}`}`;
       probeText = t('viewport.probe', { x: probe.column, y: probe.row, value: probe.padding ? `${val} (${t('viewport.padding')})` : val });
     }
   }
@@ -55,7 +57,7 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
       {o.patient ? (
         <div className="corner tl" data-testid="corner-tl">
           <div className="strong">{hide ? hidden : formatPersonName(inst.patientName, locale) || '—'}</div>
-          <div>{hide ? hidden : inst.patientId ?? ''}</div>
+          <div>{hide ? hidden : (inst.patientId ?? '')}</div>
           <div>{hide ? '' : `${formatDicomDate(inst.patientBirthDate, locale)}${sex}${age}`}</div>
           {inst.charsetUncertain ? <div className="warn">⚠ {t('warnings.charsetUncertain')}</div> : null}
         </div>
@@ -66,7 +68,11 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
           <div>{`${formatDicomDate(inst.studyDate, locale)} ${formatDicomTime(inst.studyTime)}`}</div>
           {o.series ? (
             <div>
-              {[inst.modality, inst.seriesNumber !== undefined ? t('viewport.series', { number: inst.seriesNumber }) : undefined, inst.seriesDescription]
+              {[
+                inst.modality,
+                inst.seriesNumber !== undefined ? t('viewport.series', { number: inst.seriesNumber }) : undefined,
+                inst.seriesDescription,
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </div>
@@ -84,7 +90,9 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
           <div className="strong" data-testid="image-index">
             {t(isFrame ? 'viewport.frame' : 'viewport.image', { index: vs.index + 1, total: vs.total })}
           </div>
-          {location ? <div>{t('viewport.location', { value: `${formatNumber(location.mm, 2, locale)} (${location.towards})` })}</div> : null}
+          {location ? (
+            <div>{t('viewport.location', { value: `${formatNumber(location.mm, 2, locale)} (${location.towards})` })}</div>
+          ) : null}
           {thickness !== undefined ? <div>{t('viewport.thickness', { value: formatNumber(thickness, 2, locale) })}</div> : null}
           {props.ds.geometry.sliceSpacing !== undefined ? (
             <div>{t('viewport.spacing', { value: formatNumber(props.ds.geometry.sliceSpacing, 2, locale) })}</div>
@@ -98,9 +106,13 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
           <div data-testid="wl-text">{t('viewport.voiLut', { name: vs.voiLutName })}</div>
         ) : null}
         {o.windowLevel && vs.voiLutName === undefined && vs.wl ? (
-          <div data-testid="wl-text">{t('viewport.wl', { width: fmtValue(round(vs.wl.width), locale), center: fmtValue(round(vs.wl.center), locale) })}</div>
+          <div data-testid="wl-text">
+            {t('viewport.wl', { width: fmtValue(round(vs.wl.width), locale), center: fmtValue(round(vs.wl.center), locale) })}
+          </div>
         ) : null}
-        {o.zoom && vs.zoomPercent ? <div data-testid="zoom-text">{t('viewport.zoom', { value: `${Math.round(vs.zoomPercent)}%` })}</div> : null}
+        {o.zoom && vs.zoomPercent ? (
+          <div data-testid="zoom-text">{t('viewport.zoom', { value: `${Math.round(vs.zoomPercent)}%` })}</div>
+        ) : null}
         {vs.rotation ? <div>{t('viewport.rotated', { deg: vs.rotation })}</div> : null}
         {vs.flipH || vs.flipV || vs.inverted ? (
           <div>
@@ -129,7 +141,13 @@ function ScaleBar(props: { vs: ViewState; height: number }): ReactNode {
   const label = len >= 10 ? `${len / 10} cm` : `${len} mm`;
   const basis = props.vs.basis.kind;
   return (
-    <div className="scalebar" data-testid="scale-bar" title={t(`basis.${basis === 'imagerMagnified' ? 'imagerMagnified' : basis}`, { mag: basis === 'imagerMagnified' ? props.vs.basis.magnification : '' })}>
+    <div
+      className="scalebar"
+      data-testid="scale-bar"
+      title={t(`basis.${basis === 'imagerMagnified' ? 'imagerMagnified' : basis}`, {
+        mag: basis === 'imagerMagnified' ? props.vs.basis.magnification : '',
+      })}
+    >
       <span className="label">{label}</span>
       <div className="bar" style={{ height: px }} />
     </div>
@@ -255,7 +273,8 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
       onPointerUpCapture={(e) => {
         const d = rightDown.current;
         rightDown.current = null;
-        if (e.button === 2 && d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 4 && status === 'ready') setMenu({ x: e.clientX, y: e.clientY });
+        if (e.button === 2 && d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 4 && status === 'ready')
+          setMenu({ x: e.clientX, y: e.clientY });
       }}
       onContextMenu={(e) => e.preventDefault()}
       onDoubleClick={() => useStore.getState().toggleMaximize(props.index)}
@@ -283,10 +302,18 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
           {showInfo ? <Corners ds={ds} vs={vs} /> : null}
           {showInfo && orientationOn && vs.labels ? (
             <>
-              <span className="orient top" data-testid="orient-top">{vs.labels.top}</span>
-              <span className="orient bottom" data-testid="orient-bottom">{vs.labels.bottom}</span>
-              <span className="orient left" data-testid="orient-left">{vs.labels.left}</span>
-              <span className="orient right" data-testid="orient-right">{vs.labels.right}</span>
+              <span className="orient top" data-testid="orient-top">
+                {vs.labels.top}
+              </span>
+              <span className="orient bottom" data-testid="orient-bottom">
+                {vs.labels.bottom}
+              </span>
+              <span className="orient left" data-testid="orient-left">
+                {vs.labels.left}
+              </span>
+              <span className="orient right" data-testid="orient-right">
+                {vs.labels.right}
+              </span>
             </>
           ) : null}
           {showInfo && scaleOn ? <ScaleBar vs={vs} height={height} /> : null}
@@ -446,7 +473,8 @@ export function ViewportGrid(): ReactNode {
     return undefined;
   };
   if (maximized !== null) style = { gridTemplateColumns: '1fr', gridTemplateRows: '1fr' };
-  else if (layout.kind === 'grid') style = { gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))` };
+  else if (layout.kind === 'grid')
+    style = { gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))` };
   else style = { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: 'repeat(2, minmax(0, 1fr))' };
 
   return (

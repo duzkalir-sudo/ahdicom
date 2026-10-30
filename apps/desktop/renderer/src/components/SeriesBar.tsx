@@ -81,7 +81,11 @@ function SeriesItem(props: { ds: DisplaySet; splitCount: number }): ReactNode {
   const shown = useStore((s) => s.slots.slice(0, viewportCount(s.layout)).includes(ds.id));
   const warn = ds.warnings.find((w) => w.code !== 'nonImage');
   const count =
-    ds.kind === 'nonImage' ? t('series.nonImage') : ds.kind === 'multiframe' ? t('series.frames', { count: ds.images.length }) : t('series.images', { count: ds.images.length });
+    ds.kind === 'nonImage'
+      ? t('series.nonImage')
+      : ds.kind === 'multiframe'
+        ? t('series.frames', { count: ds.images.length })
+        : t('series.images', { count: ds.images.length });
   const desc = ds.seriesDescription || t('series.noDescription');
   return (
     <button

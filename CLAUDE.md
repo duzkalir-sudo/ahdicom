@@ -5,8 +5,9 @@ A cross-platform desktop DICOM viewer for a neurosurgery / Gamma Knife clinic. F
 RadiAnt DICOM Viewer (full spec: `docs/PRODUCT_SPEC.md`, roadmap: `docs/PLAN.md`).
 Targets: Windows 10/11 x64 and macOS 13+ on Apple Silicon. An Intel (x64) macOS installer is built but not tested
 (user decision 2026-10-29: no Intel Macs in the clinic; see docs/DECISIONS.md D-035).
-Intended use: image review, measurement and research. It is NOT a certified medical device: About dialog,
-splash screen and status bar must always state "Not for primary diagnosis / Tanısal amaçlı değildir".
+Intended use: image review, measurement and research. It is NOT a certified medical device: the About dialog
+(the "i" button, which also holds the legal information) and the status bar must always state
+"Not for primary diagnosis / Tanısal amaçlı değildir". There is no splash screen (user decision 2026-10-30, D-036).
 
 ## Stack (changing any item requires a `docs/DECISIONS.md` entry and user approval)
 - Electron (current stable) + electron-builder (NSIS for Windows, DMG for macOS arm64 + x64)
@@ -16,7 +17,7 @@ splash screen and status bar must always state "Not for primary diagnosis / Tan�
   Its README says it is work-in-progress and not for clinical use: in M5, benchmark it against `dicom-dimse-native`
   (DCMTK-based, prebuilt binaries) with the Orthanc test suite and record the choice in `docs/DECISIONS.md`.
 - Local archive: SQLite (`better-sqlite3`) in the main process
-- State: Zustand; icons: `lucide-react`; i18n: `i18next` (Turkish default, English second)
+- State: Zustand; icons: `lucide-react`; i18n: `i18next` (English default, Turkish second, TR/EN button in the toolbar; D-037)
 - Tests: Vitest (unit/integration), Playwright `_electron` API (E2E + screenshots)
 
 ## Repo layout

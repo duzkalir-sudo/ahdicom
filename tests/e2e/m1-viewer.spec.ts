@@ -31,7 +31,10 @@ const manifest = (JSON.parse(readFileSync(path.join(FIXTURES, 'manifest.json'), 
 
 async function pixelToClient(page: Page, i: number, column: number, row: number): Promise<{ x: number; y: number }> {
   const p = await page.evaluate(
-    ([idx, c, r]) => (window as unknown as { __cdv: { pixelToClient(i: number, c: number, r: number): { x: number; y: number } | undefined } }).__cdv.pixelToClient(idx!, c!, r!),
+    ([idx, c, r]) =>
+      (
+        window as unknown as { __cdv: { pixelToClient(i: number, c: number, r: number): { x: number; y: number } | undefined } }
+      ).__cdv.pixelToClient(idx!, c!, r!),
     [i, column, row],
   );
   if (!p) throw new Error('pixelToClient failed');
@@ -127,15 +130,19 @@ test('core flow: open folder → series → scroll → W/L → zoom/pan → layo
     await expect.poll(async () => (await vpState(page)).rotation).toBe(90);
     await page.keyboard.press('h');
     await page.keyboard.press('i');
-    await expect.poll(async () => {
-      const v = await vpState(page);
-      return [v.flipH, v.inverted];
-    }).toEqual([true, true]);
+    await expect
+      .poll(async () => {
+        const v = await vpState(page);
+        return [v.flipH, v.inverted];
+      })
+      .toEqual([true, true]);
     await page.keyboard.press('Backspace');
-    await expect.poll(async () => {
-      const v = await vpState(page);
-      return [v.rotation, v.flipH, v.flipV, v.inverted, v.wl?.width, v.wl?.center];
-    }).toEqual([0, false, false, false, 80, 40]);
+    await expect
+      .poll(async () => {
+        const v = await vpState(page);
+        return [v.rotation, v.flipH, v.flipV, v.inverted, v.wl?.width, v.wl?.center];
+      })
+      .toEqual([0, false, false, false, 80, 40]);
 
     // Context menu on right click without drag
     await page.mouse.click(box.x + box.width / 3, box.y + box.height / 3, { button: 'right' });
@@ -153,7 +160,14 @@ test('core flow: open folder → series → scroll → W/L → zoom/pan → layo
     await expect.poll(async () => (await vpState(page)).wl).toEqual({ width: 350, center: 45 });
 
     // Layouts 1×1 … 5×5 and presets — every cell visible and inside the grid
-    for (const [id, n] of [['2x2', 4], ['1+2', 3], ['2+1', 3], ['3x3', 9], ['5x5', 25], ['1x1', 1]] as const) {
+    for (const [id, n] of [
+      ['2x2', 4],
+      ['1+2', 3],
+      ['2+1', 3],
+      ['3x3', 9],
+      ['5x5', 25],
+      ['1x1', 1],
+    ] as const) {
       await page.getByTestId('tb-layout').click();
       await page.getByTestId(`layout-${id}`).click();
       const grid = (await page.getByTestId('viewport-grid').boundingBox())!;
@@ -211,7 +225,12 @@ test('HU probe is exact at the phantom sphere centres; scale bar and spacing bas
   try {
     await openPaths(s, [fixture('ct-phantom')]);
     await waitReady(s.page);
-    const probes = manifest.find((m) => m.id === 'ct-phantom')!.expect!.probes as { slice: number; column: number; row: number; hu: number }[];
+    const probes = manifest.find((m) => m.id === 'ct-phantom')!.expect!.probes as {
+      slice: number;
+      column: number;
+      row: number;
+      hu: number;
+    }[];
     expect(probes.length).toBeGreaterThanOrEqual(3);
     for (const p of probes) {
       await scrollTo(s, p.slice);
@@ -242,8 +261,12 @@ test('orientation markers follow rotate/flip and match the rendered asymmetric p
     await openPaths(s, [fixture('orient-axial'), fixture('orient-sagittal'), fixture('orient-coronal'), fixture('oblique')]);
     const cases = [
       { desc: 'AXIAL', slice: 32, base: { left: 'R', right: 'L', top: 'A', bottom: 'P' }, blob: ['L', 'A'] },
-      { desc: 'SAGITTAL', slice: 7, // normal = row × column = patient Right, so ascending order starts at x = +88
-      base: { left: 'A', right: 'P', top: 'H', bottom: 'F' }, blob: ['A', 'H'] },
+      {
+        desc: 'SAGITTAL',
+        slice: 7, // normal = row × column = patient Right, so ascending order starts at x = +88
+        base: { left: 'A', right: 'P', top: 'H', bottom: 'F' },
+        blob: ['A', 'H'],
+      },
       { desc: 'CORONAL', slice: 7, base: { left: 'R', right: 'L', top: 'H', bottom: 'F' }, blob: ['L', 'H'] },
     ];
     for (const c of cases) {
@@ -266,8 +289,14 @@ test('orientation markers follow rotate/flip and match the rendered asymmetric p
         const horizontal = dx > 0 ? labels.right : labels.left;
         const vertical = dy > 0 ? labels.bottom : labels.top;
         // The bright marker lies towards c.blob directions; the label on its side must name one of them.
-        expect(c.blob.some((l) => horizontal.includes(l)), `${c.desc} after ${step}: horizontal ${JSON.stringify(labels)} dx=${dx}`).toBe(true);
-        expect(c.blob.some((l) => vertical.includes(l)), `${c.desc} after ${step}: vertical ${JSON.stringify(labels)} dy=${dy}`).toBe(true);
+        expect(
+          c.blob.some((l) => horizontal.includes(l)),
+          `${c.desc} after ${step}: horizontal ${JSON.stringify(labels)} dx=${dx}`,
+        ).toBe(true);
+        expect(
+          c.blob.some((l) => vertical.includes(l)),
+          `${c.desc} after ${step}: vertical ${JSON.stringify(labels)} dy=${dy}`,
+        ).toBe(true);
       }
       await s.page.keyboard.press('Backspace');
     }
@@ -319,7 +348,17 @@ test('every fixture opens or shows a clear error; transfer syntaxes decode to id
       else expect(v.status, `${d.description} should render`).toBe('ready');
     }
     // Lossless transfer syntaxes: same stored value at the asymmetric corner marker (row 5, column 250).
-    for (const desc of ['Implicit VR LE', 'Explicit VR LE', 'Explicit VR BE', 'Deflated explicit LE', 'RLE Lossless', 'JPEG Lossless SV1', 'JPEG-LS lossless', 'JPEG 2000 lossless', 'HTJ2K lossless']) {
+    for (const desc of [
+      'Implicit VR LE',
+      'Explicit VR LE',
+      'Explicit VR BE',
+      'Deflated explicit LE',
+      'RLE Lossless',
+      'JPEG Lossless SV1',
+      'JPEG-LS lossless',
+      'JPEG 2000 lossless',
+      'HTJ2K lossless',
+    ]) {
       await selectSeries(s, (d) => d.description === desc);
       await waitReady(s.page);
       const c = await pixelToClient(s.page, 0, 250, 5);
@@ -394,7 +433,14 @@ test('every fixture opens or shows a clear error; transfer syntaxes decode to id
 test('geometry warnings, sorting fallback, enhanced MR and series split are shown', async () => {
   const s = await launch();
   try {
-    await openPaths(s, [fixture('gantry-tilt'), fixture('nonuniform'), fixture('no-geometry'), fixture('mixed-orient'), fixture('enhanced-mr'), fixture('shuffled')]);
+    await openPaths(s, [
+      fixture('gantry-tilt'),
+      fixture('nonuniform'),
+      fixture('no-geometry'),
+      fixture('mixed-orient'),
+      fixture('enhanced-mr'),
+      fixture('shuffled'),
+    ]);
     const st = await cdvState(s.page);
     const byDesc = (d: string) => st.studies.flatMap((x) => x.series).find((x) => x.description === d)!;
     expect(byDesc('TILT 15').displaySets[0]!.warnings).toContain('gantryTilt');
@@ -414,12 +460,9 @@ test('geometry warnings, sorting fallback, enhanced MR and series split are show
     await waitReady(s.page);
     await expect(s.page.getByTestId('info-sorted')).toContainText('Instance Number');
 
-    // Sorting keys and direction re-order the stack
+    // Shuffled instance numbers / file names still load as one stack in spatial order (sort UI removed, D-038).
     await selectSeries(s, (d) => d.description === 'SHUFFLED');
     await waitReady(s.page);
-    await s.page.getByTestId('sort-direction').selectOption('desc');
-    await s.page.getByTestId('sort-key').selectOption('fileName');
-    await s.page.getByTestId('sort-key').selectOption('spatial');
     await expect.poll(async () => (await vpState(s.page)).total).toBe(30);
 
     await selectSeries(s, (d) => d.description === 'ENHANCED T1 20 FRAMES');
@@ -592,7 +635,18 @@ test('performance: first image, scroll rate and memory when opening/closing 20 s
     const heap = async (): Promise<number> =>
       s.page.evaluate(() => (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize / 1048576);
     await s.page.getByTestId('tb-close-all').click();
-    await openPaths(s, [fixture('ts-explicit-le'), fixture('orient-axial'), fixture('orient-sagittal'), fixture('orient-coronal'), fixture('oblique'), fixture('pet'), fixture('shuffled'), fixture('gantry-tilt'), fixture('nonuniform'), fixture('mixed-orient')]);
+    await openPaths(s, [
+      fixture('ts-explicit-le'),
+      fixture('orient-axial'),
+      fixture('orient-sagittal'),
+      fixture('orient-coronal'),
+      fixture('oblique'),
+      fixture('pet'),
+      fixture('shuffled'),
+      fixture('gantry-tilt'),
+      fixture('nonuniform'),
+      fixture('mixed-orient'),
+    ]);
     const ids = (await cdvState(s.page)).studies.flatMap((x) => x.series.flatMap((se) => se.displaySets.map((d) => d.id)));
     const h0 = await heap();
     for (let k = 0; k < 20; k++) {
@@ -639,8 +693,18 @@ test('viewer screenshot matrix (sizes × themes × languages)', async () => {
     for (const theme of ['dark', 'light'] as const) {
       const s = await launch({ lang, theme });
       try {
-        await openPaths(s, [fixture('ct-phantom'), fixture('turkish-148'), fixture('orient-axial'), fixture('orient-sagittal'), fixture('orient-coronal'), fixture('gantry-tilt')]);
-        for (const [w, h] of [[1280, 800], [1920, 1080]] as const) {
+        await openPaths(s, [
+          fixture('ct-phantom'),
+          fixture('turkish-148'),
+          fixture('orient-axial'),
+          fixture('orient-sagittal'),
+          fixture('orient-coronal'),
+          fixture('gantry-tilt'),
+        ]);
+        for (const [w, h] of [
+          [1280, 800],
+          [1920, 1080],
+        ] as const) {
           await setSize(s.app, w, h);
           const tag = `${w}x${h}-${theme}-${lang}`;
           await s.page.getByTestId('tb-layout').click();

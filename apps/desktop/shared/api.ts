@@ -11,8 +11,6 @@ export interface AppInfo {
   node: string;
   isPackaged: boolean;
   e2e: boolean;
-  /** Test-only minimum splash duration (CDV_SPLASH_MS); undefined outside E2E. */
-  splashMs?: number;
 }
 
 export type ScanErrorCode =

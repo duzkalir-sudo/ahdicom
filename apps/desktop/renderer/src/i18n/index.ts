@@ -8,7 +8,7 @@ export type Language = 'tr' | 'en';
 export async function initI18n(lng: Language): Promise<void> {
   await i18next.use(initReactI18next).init({
     lng,
-    fallbackLng: 'tr',
+    fallbackLng: 'en',
     resources: { tr: { translation: tr }, en: { translation: en } },
     interpolation: { escapeValue: false },
     returnNull: false,

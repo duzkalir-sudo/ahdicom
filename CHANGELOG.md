@@ -4,6 +4,15 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 
 ## [Unreleased]
 
+### Changed (UX review round 1, 2026-10-30)
+- No splash screen; the "i" button opens About with the intended-use statement and legal information.
+- English is the default language; TR/EN button in the toolbar.
+- Tooltips appear immediately on hover for every icon, including disabled ones.
+- Sort selector removed from the Info panel (images are always in spatial order).
+
+### Fixed
+- Flip horizontal/vertical worked only once (Cornerstone `setViewPresentation` cannot un-flip).
+
 ### Changed
 - Product name AHDicom (was the working name "Clinic DICOM Viewer"); appId `org.ahdicom.viewer`.
 - CI on GitHub (Windows, macOS Apple Silicon); Intel macOS is built but no longer tested (D-035).

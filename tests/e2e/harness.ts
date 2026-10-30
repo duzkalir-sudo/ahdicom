@@ -125,11 +125,21 @@ export async function screenshot(page: Page, milestone: string, name: string): P
 
 export interface CdvState {
   ready: boolean;
-  studies: { patientName?: string; series: { description?: string; displaySets: { id: string; images: number; kind: string; warnings: string[] }[] }[] }[];
+  studies: {
+    patientName?: string;
+    series: { description?: string; displaySets: { id: string; images: number; kind: string; warnings: string[] }[] }[];
+  }[];
   slots: (string | null)[];
   activeIndex: number;
   scans: number;
-  lastSummary?: { instances: number; notDicom: number; errors: Record<string, number>; archiveErrors: string[]; usedDicomdir: boolean; cancelled: boolean };
+  lastSummary?: {
+    instances: number;
+    notDicom: number;
+    errors: Record<string, number>;
+    archiveErrors: string[];
+    usedDicomdir: boolean;
+    cancelled: boolean;
+  };
 }
 
 export async function cdvState(page: Page): Promise<CdvState> {

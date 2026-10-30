@@ -7,7 +7,12 @@ import { cdvState, expectNoErrors, fixture, launch, openPaths, stubOpenDialog, v
 
 async function pixelToClient(page: Page, column: number, row: number): Promise<{ x: number; y: number }> {
   const p = await page.evaluate(
-    ([c, r]) => (window as unknown as { __cdv: { pixelToClient(i: number, c: number, r: number): { x: number; y: number } } }).__cdv.pixelToClient(0, c!, r!),
+    ([c, r]) =>
+      (window as unknown as { __cdv: { pixelToClient(i: number, c: number, r: number): { x: number; y: number } } }).__cdv.pixelToClient(
+        0,
+        c!,
+        r!,
+      ),
     [column, row],
   );
   return p;
@@ -114,7 +119,7 @@ test('hide patient data masks overlay, series bar and identifying tags; tag pin 
   }
 });
 
-test('slice slider, PageUp, scroll-drag tool and sort order', async () => {
+test('slice slider, PageUp, scroll-drag tool and default spatial order', async () => {
   const s = await launch();
   try {
     await openPaths(s, [fixture('shuffled')]);
@@ -152,15 +157,14 @@ test('slice slider, PageUp, scroll-drag tool and sort order', async () => {
     expect((await vpState(s.page)).wl).toEqual(wlAfterScroll);
     await s.page.keyboard.press('w');
 
-    // Spatial ascending: first image is z = 0; descending: first image is z = 87 (positions 0 … 87 step 3).
+    // Default order is spatial ascending (positions 0 … 87 mm step 3): first image z = 0, last z = 87,
+    // regardless of the shuffled instance numbers and file names.
     await s.page.keyboard.press('Home');
     await expect(s.page.getByTestId('corner-bl')).toContainText('0,00 (H)');
-    await s.page.getByTestId('tab-info').click();
-    await s.page.getByTestId('sort-direction').selectOption('desc');
-    await s.page.keyboard.press('Home');
+    await s.page.keyboard.press('End');
     await expect(s.page.getByTestId('corner-bl')).toContainText('87,00 (H)');
-    await s.page.getByTestId('sort-key').selectOption('instanceNumber');
-    await expect(s.page.getByTestId('info-sorted')).toContainText('Instance Number');
+    await s.page.getByTestId('tab-info').click();
+    await expect(s.page.getByTestId('info-sorted')).toContainText('Uzaysal konum');
     expectNoErrors(s);
   } finally {
     await s.close();
@@ -213,7 +217,11 @@ test('a running scan can be cancelled', async () => {
     // after it starts (a click cannot reliably beat a sub-second scan on a fast machine).
     await stubOpenDialog(s.app, [fixture('ct-large'), fixture('ct-phantom'), fixture('pet'), fixture('orient-axial')]);
     await s.page.evaluate(async () => {
-      const api = (window as unknown as { api: { open(k: string): Promise<{ started: boolean; scanId?: string }>; cancelScan(id: string): Promise<void> } }).api;
+      const api = (
+        window as unknown as {
+          api: { open(k: string): Promise<{ started: boolean; scanId?: string }>; cancelScan(id: string): Promise<void> };
+        }
+      ).api;
       const r = await api.open('folder');
       if (r.started && r.scanId) await api.cancelScan(r.scanId);
     });
@@ -240,9 +248,79 @@ test('without WebGL the app warns that it uses the slower software fallback', as
   try {
     const page = await app.firstWindow();
     await expect(page.getByTestId('cpu-rendering')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId('notice-warning')).toContainText('Ekran kartı');
+    await expect(page.getByTestId('notice-warning')).toContainText('graphics card');
   } finally {
     await app.close();
     fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('flip horizontal/vertical toggle back and forth (twice = original image)', async () => {
+  const { grab, brightRegion } = await import('./pixels');
+  const s = await launch();
+  try {
+    await openPaths(s, [fixture('orient-axial')]);
+    await waitReady(s.page);
+    await s.page.getByTestId('viewport-0').click({ position: { x: 5, y: 5 } });
+    await s.page.keyboard.press('Home');
+    for (let k = 0; k < 32; k++) await s.page.keyboard.press('ArrowDown'); // slice through the big marker (L-A)
+    await s.page.keyboard.press('o'); // hide text overlay for pixel analysis
+    const centroid = async (): Promise<{ cx: number; cy: number; w: number }> => {
+      await s.page.waitForTimeout(250);
+      const g = await grab(s.page.getByTestId('viewport-element-0'));
+      const b = brightRegion(g, 235);
+      return { cx: b.cx, cy: b.cy, w: g.width };
+    };
+    const start = await centroid();
+    for (const [key, field] of [
+      ['h', 'flipH'],
+      ['v', 'flipV'],
+    ] as const) {
+      await s.page.keyboard.press(key);
+      await expect.poll(async () => (await vpState(s.page))[field]).toBe(true);
+      const once = await centroid();
+      await s.page.keyboard.press(key);
+      await expect.poll(async () => (await vpState(s.page))[field]).toBe(false);
+      const twice = await centroid();
+      if (key === 'h') expect(Math.sign(once.cx - start.w / 2)).toBe(-Math.sign(start.cx - start.w / 2));
+      else expect(Math.abs(once.cy - start.cy)).toBeGreaterThan(20);
+      expect(Math.abs(twice.cx - start.cx)).toBeLessThan(3);
+      expect(Math.abs(twice.cy - start.cy)).toBeLessThan(3);
+    }
+    // Toolbar buttons toggle the same way.
+    await s.page.getByTestId('tb-flip-h').click();
+    await s.page.getByTestId('tb-flip-h').click();
+    await expect.poll(async () => (await vpState(s.page)).flipH).toBe(false);
+    await s.page.keyboard.press('o');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('tooltips appear immediately on hover, also for disabled buttons; language button switches TR/EN', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await s.page.getByTestId('tb-open-files').hover();
+    await expect(s.page.getByTestId('tooltip')).toContainText('Open files', { timeout: 300 });
+    await s.page.getByTestId('tb-about').hover();
+    await expect(s.page.getByTestId('tooltip')).toContainText('About and legal information', { timeout: 300 });
+    await s.page.getByTestId('tb-close-all').hover(); // disabled (nothing open)
+    await expect(s.page.getByTestId('tooltip')).toContainText('Close all', { timeout: 300 });
+    await s.page.getByTestId('status-text').hover();
+    await expect(s.page.getByTestId('tooltip')).toHaveCount(0);
+
+    await expect(s.page.getByTestId('tb-language')).toHaveText('EN');
+    await expect(s.page.getByTestId('status-text')).toHaveText('Ready');
+    await s.page.getByTestId('tb-language').click();
+    await expect(s.page.getByTestId('tb-language')).toHaveText('TR');
+    await expect(s.page.getByTestId('status-text')).toHaveText('Hazır');
+    const saved = await s.page.evaluate(() =>
+      (window as unknown as { api: { getSettings(): Promise<{ language: string }> } }).api.getSettings(),
+    );
+    expect(saved.language).toBe('tr');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
   }
 });

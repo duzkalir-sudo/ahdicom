@@ -10,7 +10,8 @@ export const en: Shape<Resources> = {
     intendedUseFull: 'For image review, measurement and research. Not for primary diagnosis.',
     intendedUseOther: 'Görüntü inceleme, ölçüm ve araştırma amaçlıdır. Tanısal amaçlı değildir.',
     loading: 'Starting…',
-    cpuRendering: 'The graphics card (WebGL) is not available; images are drawn in the software fallback mode. Some display options (e.g. SIGMOID windows) may behave differently and the app is slower.',
+    cpuRendering:
+      'The graphics card (WebGL) is not available; images are drawn in the software fallback mode. Some display options (e.g. SIGMOID windows) may behave differently and the app is slower.',
     cpuRenderingShort: 'No GPU',
   },
   groups: {
@@ -52,7 +53,8 @@ export const en: Shape<Resources> = {
     distractionFree: 'Distraction-free mode',
     settings: 'Settings',
     help: 'Keyboard shortcuts',
-    about: 'About',
+    about: 'About and legal information',
+    language: 'Language: English — click to switch to Turkish',
     comingSoon: 'In a later version',
     measureSoon: 'Measurement tools (M2)',
     syncSoon: 'Series synchronization (M3)',

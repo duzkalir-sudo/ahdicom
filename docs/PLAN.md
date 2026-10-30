@@ -96,16 +96,18 @@ Viewer
 - [x] Cine with fps, loop/bounce
 - [x] Four-corner overlay, orientation markers (correct after rotate/flip), scale bar, hide-patient-data, configurable content
 - [x] Tag browser (sequence tree, search, copy value/all, pin, file location)
-- [x] Series sorting (spatial, instance number, acquisition time, file name; asc/desc), fallback shown in Info panel
+- [x] Spatial order with InstanceNumber fallback shown in the Info panel (sort selector removed at the user's request, D-038)
 - [x] Full screen and distraction-free mode
-- [x] Keyboard cheat sheet (`?`/F1), tooltips with shortcuts, mouse-binding legend
+- [x] Keyboard cheat sheet (`?`/F1), instant tooltips with shortcuts (D-040), mouse-binding legend
+- [x] English default + TR/EN toolbar button (D-037); no splash, legal info behind the "i" button (D-036)
 - [x] Settings: theme, language, overlay content, cache size, user W/L presets
 - **Acceptance:** the criteria pass in E2E (see `docs/VALIDATION_MATRIX.md`), except these items that are implemented but
   **not E2E-verified**: drag & drop from the OS (Playwright cannot create OS file drops; manual QA), actual OS clipboard
   contents (clipboard unavailable in the development environment; the text handed to Electron is verified),
   "first series shown while scanning continues" (timing-dependent), cine frame-rate accuracy (only bounce/loop behaviour is
   checked), Intel macOS (not tested by decision D-035).
-- **STOP after M1** → report with screenshots for UX review.
+- **STOP after M1** → UX review. Round 1 (2026-10-30) feedback implemented: splash removed, flip toggle fixed,
+  instant tooltips, sort section removed, English default + language button. Open: what the Tags tab is for.
 
 ### M2–M8
 See `docs/PRODUCT_SPEC.md` §3 and milestone acceptance criteria in the brief; detailed task lists are added when each

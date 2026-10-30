@@ -17,7 +17,8 @@ characters (Ç, Ğ, İ, ı, Ö, Ş, Ü).
 **Platforms.** Windows 10/11 x64 and macOS 13+ on Apple Silicon. An Intel (x64) macOS installer is provided but not
 tested (no Intel Macs in the clinic; D-035). Mostly offline clinical workstations.
 
-**Intended use statement** (About dialog and splash screen in full; compact badge in the status bar):
+**Intended use statement** (About dialog behind the "i" button, together with the legal information, in full;
+compact badge in the status bar). No splash screen (user decision, D-036):
 
 > For image review, measurement and research. Not for primary diagnosis.
 > Görüntü inceleme, ölçüm ve araştırma amaçlıdır. Tanısal amaçlı değildir.
@@ -95,7 +96,7 @@ Priority: **P0** required for first clinical-research use · **P1** required for
 | Image filters: sharpen, smooth, edge (display-only, clearly indicated) | P2 | 6 |
 | Four-corner overlay (patient, study, series, image info, W/L, zoom), orientation markers, scale bar, "hide patient data" toggle, configurable overlay content | P0 | 1 |
 | DICOM tag browser: tree incl. sequences, search, copy value/all, pin/highlight tags, show file location | P0 | 1 |
-| Series sorting: instance number, spatial position, acquisition time, file name, asc/desc | P1 | 1 |
+| Series sorting: spatial position by default (InstanceNumber fallback shown). The sort-key/direction selector was removed from the Info panel at the user's request (D-038); sorting logic remains in `dicom-core` | P1 | 1 |
 | Split multi-volume series (multi-phase CT, DWI b-values, multi-echo) into display sets; merge series into one panel | P1 | 3 |
 | Copy active viewport or all visible viewports to clipboard as one image | P1 | 6 |
 | Full screen and distraction-free mode | P1 | 1 |
@@ -159,7 +160,7 @@ Priority: **P0** required for first clinical-research use · **P1** required for
 ### 3.9 Interface and system
 | Feature | Pri | M |
 |---|---|---|
-| Turkish (default) and English UI; every string through i18n | P0 | 0 |
+| English (default) and Turkish UI with a TR/EN button in the toolbar; every string through i18n | P0 | 0 |
 | Customizable keyboard shortcuts and mouse bindings per tool | P1 | 7 |
 | Settings: theme, language, overlay content, presets, cache size, archive locations, PACS nodes, export defaults | P0 | 1–7 |
 | Touch/trackpad gestures | P2 | 7 |
@@ -184,6 +185,7 @@ Priority: **P0** required for first clinical-research use · **P1** required for
   consistent icon size/stroke, system font stack, tabular numerals. UI chrome contrast ≥ WCAG AA.
   Viewport background pure black; active viewport clearly outlined.
 - **States:** designed empty, loading, partial-load, error and "unsupported data" states with helpful text.
+- **Tooltips:** every icon shows its name (and shortcut) immediately on hover, also when disabled.
 - **Localization:** Turkish strings are 30–40 % longer; no clipping. Dates follow locale (DD.MM.YYYY in Turkish).
   Patient names render Ç, Ğ, İ, ı, Ö, Ş, Ü correctly.
 - **HiDPI:** crisp at Retina and 150–200 % Windows scaling. Minimum window 1280×800.

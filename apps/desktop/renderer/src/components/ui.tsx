@@ -20,8 +20,9 @@ export function IconButton(props: {
       data-tip-pos={props.tipPos}
       aria-label={props.label ?? props.tip}
       aria-pressed={props.pressed === undefined ? undefined : props.pressed}
-      disabled={props.disabled}
-      onClick={props.onClick}
+      // aria-disabled instead of disabled: disabled buttons receive no mouse events, so their tooltip would never show.
+      aria-disabled={props.disabled ? true : undefined}
+      onClick={props.disabled ? undefined : props.onClick}
       data-testid={props.testId}
     >
       {props.children}
@@ -97,9 +98,22 @@ export function PointMenu(props: { x: number; y: number; onClose: () => void; ch
   );
 }
 
-export function MenuItem(props: { onClick: () => void; children: ReactNode; kbd?: string; disabled?: boolean; testId?: string }): ReactNode {
+export function MenuItem(props: {
+  onClick: () => void;
+  children: ReactNode;
+  kbd?: string;
+  disabled?: boolean;
+  testId?: string;
+}): ReactNode {
   return (
-    <button type="button" className="menu-item" role="menuitem" onClick={props.onClick} disabled={props.disabled} data-testid={props.testId}>
+    <button
+      type="button"
+      className="menu-item"
+      role="menuitem"
+      onClick={props.onClick}
+      disabled={props.disabled}
+      data-testid={props.testId}
+    >
       <span>{props.children}</span>
       {props.kbd ? <span className="kbd">{props.kbd}</span> : null}
     </button>
@@ -122,7 +136,14 @@ export function Modal(props: {
   }, []);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div ref={ref} className={`modal${props.wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={props.title} data-testid={props.testId}>
+      <div
+        ref={ref}
+        className={`modal${props.wide ? ' wide' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={props.title}
+        data-testid={props.testId}
+      >
         <div className="modal-head">
           <span className="title">{props.title}</span>
           <IconButton tip={t('dialogs.close')} tipPos="left" onClick={props.onClose}>
@@ -136,7 +157,11 @@ export function Modal(props: {
   );
 }
 
-export function Segmented<T extends string>(props: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }): ReactNode {
+export function Segmented<T extends string>(props: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}): ReactNode {
   return (
     <div className="segmented" role="group">
       {props.options.map((o) => (

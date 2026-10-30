@@ -15,7 +15,15 @@ export function installTestHooks(): void {
         ready: s.ready,
         studies: s.studies.map((st) => ({
           patientName: st.patientName,
-          series: st.series.map((se) => ({ description: se.seriesDescription, displaySets: se.displaySets.map((d) => ({ id: d.id, images: d.images.length, kind: d.kind, warnings: d.warnings.map((w) => w.code) })) })),
+          series: st.series.map((se) => ({
+            description: se.seriesDescription,
+            displaySets: se.displaySets.map((d) => ({
+              id: d.id,
+              images: d.images.length,
+              kind: d.kind,
+              warnings: d.warnings.map((w) => w.code),
+            })),
+          })),
         })),
         slots: s.slots.slice(0, 25),
         activeIndex: s.activeIndex,

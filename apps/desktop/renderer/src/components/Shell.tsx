@@ -39,7 +39,11 @@ export function StatusBar(): ReactNode {
     const errorCount = Object.values(summary.errors).reduce((a, b) => a + (b ?? 0), 0);
     if (summary.cancelled) text = t('status.cancelled');
     else if (summary.instances === 0) text = t('status.nothing');
-    else text = errorCount + summary.notDicom > 0 ? t('status.doneSkipped', { count: summary.instances, skipped: errorCount + summary.notDicom }) : t('status.done', { count: summary.instances });
+    else
+      text =
+        errorCount + summary.notDicom > 0
+          ? t('status.doneSkipped', { count: summary.instances, skipped: errorCount + summary.notDicom })
+          : t('status.done', { count: summary.instances });
     if (summary.usedDicomdir) text += ` · ${t('status.dicomdir')}`;
   }
   const mb = (b: number): number => Math.round(b / (1024 * 1024));
@@ -68,7 +72,13 @@ export function StatusBar(): ReactNode {
         {t('status.cache', { used: mb(usage.used), max: mb(usage.max) })}
       </span>
       {usage.heap ? <span className="num">{t('status.memory', { value: mb(usage.heap) })}</span> : null}
-      <button type="button" className="badge-intended" onClick={() => useStore.getState().setDialog('about')} data-testid="intended-badge">
+      <button
+        type="button"
+        className="badge-intended"
+        onClick={() => useStore.getState().setDialog('about')}
+        data-testid="intended-badge"
+        data-tip={t('toolbar.about')}
+      >
         <ShieldAlert size={13} /> {t('app.intendedUseShort')}
       </button>
     </footer>
@@ -153,7 +163,10 @@ export function StartScreen(): ReactNode {
                     className="recent-item"
                     onClick={() => {
                       void window.api.recentOpen(r.id).then((res) => {
-                        if (res.started) useStore.getState().setScan({ scanId: res.scanId, phase: 'listing', filesFound: 0, filesDone: 0, instances: 0, skipped: 0 });
+                        if (res.started)
+                          useStore
+                            .getState()
+                            .setScan({ scanId: res.scanId, phase: 'listing', filesFound: 0, filesDone: 0, instances: 0, skipped: 0 });
                       });
                     }}
                   >
@@ -183,25 +196,6 @@ export function StartScreen(): ReactNode {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-export function Splash(): ReactNode {
-  const { t } = useTranslation();
-  return (
-    <div className="splash" data-testid="splash">
-      <div className="splash-card">
-        <div className="brand-mark">A</div>
-        <h1>{t('app.name')}</h1>
-        <div className="intended-box" style={{ textAlign: 'left' }}>
-          <p>
-            <strong>{t('app.intendedUseFull')}</strong>
-          </p>
-          <p>{t('app.intendedUseOther')}</p>
-        </div>
-        <div className="muted">{t('app.loading')}</div>
       </div>
     </div>
   );

@@ -44,7 +44,7 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
   theme: 'dark',
-  language: 'tr',
+  language: 'en',
   cacheSizeMB: 2048,
   hidePatientData: false,
   overlay: {

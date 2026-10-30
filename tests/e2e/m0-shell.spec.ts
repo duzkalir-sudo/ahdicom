@@ -153,16 +153,17 @@ test('start screen and dialogs screenshot matrix', async () => {
   }
 });
 
-test('splash shows the intended-use statement', async () => {
+test('first launch: English by default, no splash screen, legal information behind the i button', async () => {
   const { _electron } = await import('@playwright/test');
   const { MAIN } = await import('./harness');
   const os = await import('node:os');
   const fs = await import('node:fs');
   const path = await import('node:path');
+  // No settings file: first start with defaults.
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'cdv-e2e-'));
   const app = await _electron.launch({
     args: [MAIN],
-    env: { ...process.env, CDV_E2E: '1', CDV_USER_DATA: userData, CDV_SPLASH_MS: '5000' },
+    env: { ...process.env, CDV_E2E: '1', CDV_USER_DATA: userData },
     chromiumSandbox: true,
   });
   const errors: string[] = [];
@@ -175,11 +176,15 @@ test('splash shows the intended-use statement', async () => {
       if (m.type() === 'error') errors.push(`[renderer] ${m.text()}`);
     });
     page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
-    await expect(page.getByTestId('splash')).toContainText('Tanısal amaçlı değildir');
-    await screenshot(page, 'M0', 'splash-1440x900-dark-tr');
-    await expect(page.getByTestId('splash')).toHaveCount(0, {
-      timeout: 30_000,
-    });
+    await expect(page.getByTestId('start-screen')).toBeVisible();
+    await expect(page.getByTestId('splash')).toHaveCount(0);
+    await expect(page.getByTestId('status-text')).toHaveText('Ready');
+    await expect(page.getByTestId('intended-badge')).toContainText('Not for primary diagnosis');
+    await page.getByTestId('tb-about').click();
+    const about = page.getByTestId('about-dialog');
+    await expect(about).toContainText('For image review, measurement and research. Not for primary diagnosis.');
+    await expect(about).toContainText('Tanısal amaçlı değildir');
+    await screenshot(page, 'M0', 'about-first-launch-1440x900-dark-en');
     expect(errors).toEqual([]);
   } finally {
     await app.close();

@@ -37,10 +37,21 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { CT_PRESETS, PET_PERCENT_PRESETS, percentRange } from '@ahdicom/dicom-core';
-import { applyPreset, closeAll, commandById, formatShortcut, openKind, selectTool, toggleCine, toggleFullscreen, tooltip } from '../app/commands';
+import {
+  applyPreset,
+  closeAll,
+  commandById,
+  formatShortcut,
+  openKind,
+  selectTool,
+  toggleCine,
+  toggleFullscreen,
+  tooltip,
+} from '../app/commands';
 import { displaySetAt, useStore, type LayoutSpec } from '../state/store';
 import { controllerAt } from '../viewer/registry';
 import { IconButton, MenuItem, Popover } from './ui';
+import { changeLanguage } from '../app/settings';
 
 function LayoutMenu(props: { anchor: HTMLElement | null; onClose: () => void }): ReactNode {
   const { t } = useTranslation();
@@ -114,12 +125,20 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
   }));
   return (
     <Popover anchor={props.anchor} onClose={props.onClose} testId="preset-menu">
-      <MenuItem onClick={() => run(() => c?.defaultWindow())} kbd={formatShortcut(commandById('defaultWindow')?.shortcut)} testId="preset-default">
+      <MenuItem
+        onClick={() => run(() => c?.defaultWindow())}
+        kbd={formatShortcut(commandById('defaultWindow')?.shortcut)}
+        testId="preset-default"
+      >
         {t('presets.default')}
       </MenuItem>
       {fileWindows.length > 1
         ? fileWindows.map((w, i) => (
-            <MenuItem key={`fw${i}`} onClick={() => run(() => c?.setWindow({ center: w.center, width: w.width }))} testId={`preset-file-${i}`}>
+            <MenuItem
+              key={`fw${i}`}
+              onClick={() => run(() => c?.setWindow({ center: w.center, width: w.width }))}
+              testId={`preset-file-${i}`}
+            >
               {t('presets.fromFile', { name: w.name })}
             </MenuItem>
           ))
@@ -158,7 +177,13 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
         </>
       ) : (
         CT_PRESETS.map((p) => (
-          <MenuItem key={p.id} onClick={() => run(() => applyPreset(p.id))} kbd={p.key} disabled={modality !== 'CT'} testId={`preset-${p.id}`}>
+          <MenuItem
+            key={p.id}
+            onClick={() => run(() => applyPreset(p.id))}
+            kbd={p.key}
+            disabled={modality !== 'CT'}
+            testId={`preset-${p.id}`}
+          >
             {t(p.labelKey)} <span className="muted num">{` ${p.width} / ${p.center}`}</span>
           </MenuItem>
         ))
@@ -175,7 +200,11 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
         </>
       ) : null}
       <div className="menu-sep" />
-      <MenuItem onClick={() => run(() => useStore.getState().setDialog('windowLevel'))} kbd={formatShortcut(commandById('windowDialog')?.shortcut)} testId="preset-dialog">
+      <MenuItem
+        onClick={() => run(() => useStore.getState().setDialog('windowLevel'))}
+        kbd={formatShortcut(commandById('windowDialog')?.shortcut)}
+        testId="preset-dialog"
+      >
         {t('toolbar.windowDialog')}
       </MenuItem>
     </Popover>
@@ -236,16 +265,36 @@ export function Toolbar(): ReactNode {
       </div>
 
       <div className="tb-group" aria-label={t('groups.navigate')}>
-        <IconButton tip={tooltip('toolbar.windowLevel', 'toolWL')} pressed={s.tool === 'windowLevel'} onClick={() => selectTool('windowLevel')} testId="tb-tool-wl">
+        <IconButton
+          tip={tooltip('toolbar.windowLevel', 'toolWL')}
+          pressed={s.tool === 'windowLevel'}
+          onClick={() => selectTool('windowLevel')}
+          testId="tb-tool-wl"
+        >
           <SunMedium size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.pan', 'toolPan')} pressed={s.tool === 'pan'} onClick={() => selectTool('pan')} testId="tb-tool-pan">
+        <IconButton
+          tip={tooltip('toolbar.pan', 'toolPan')}
+          pressed={s.tool === 'pan'}
+          onClick={() => selectTool('pan')}
+          testId="tb-tool-pan"
+        >
           <Hand size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.zoom', 'toolZoom')} pressed={s.tool === 'zoom'} onClick={() => selectTool('zoom')} testId="tb-tool-zoom">
+        <IconButton
+          tip={tooltip('toolbar.zoom', 'toolZoom')}
+          pressed={s.tool === 'zoom'}
+          onClick={() => selectTool('zoom')}
+          testId="tb-tool-zoom"
+        >
           <ZoomIn size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.scroll', 'toolScroll')} pressed={s.tool === 'scroll'} onClick={() => selectTool('scroll')} testId="tb-tool-scroll">
+        <IconButton
+          tip={tooltip('toolbar.scroll', 'toolScroll')}
+          pressed={s.tool === 'scroll'}
+          onClick={() => selectTool('scroll')}
+          testId="tb-tool-scroll"
+        >
           <MoveVertical size={18} />
         </IconButton>
         <button
@@ -260,10 +309,20 @@ export function Toolbar(): ReactNode {
           <SlidersHorizontal size={18} />
           <ChevronDown size={12} className="caret" />
         </button>
-        <IconButton tip={tooltip('toolbar.rotateCcw', 'rotateCcw')} onClick={() => active()?.rotate(-90)} disabled={!hasImages} testId="tb-rotate-ccw">
+        <IconButton
+          tip={tooltip('toolbar.rotateCcw', 'rotateCcw')}
+          onClick={() => active()?.rotate(-90)}
+          disabled={!hasImages}
+          testId="tb-rotate-ccw"
+        >
           <RotateCcw size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.rotateCw', 'rotateCw')} onClick={() => active()?.rotate(90)} disabled={!hasImages} testId="tb-rotate-cw">
+        <IconButton
+          tip={tooltip('toolbar.rotateCw', 'rotateCw')}
+          onClick={() => active()?.rotate(90)}
+          disabled={!hasImages}
+          testId="tb-rotate-cw"
+        >
           <RotateCw size={18} />
         </IconButton>
         <IconButton tip={tooltip('toolbar.flipH', 'flipH')} onClick={() => active()?.flip('h')} disabled={!hasImages} testId="tb-flip-h">
@@ -278,13 +337,24 @@ export function Toolbar(): ReactNode {
         <IconButton tip={tooltip('toolbar.fit', 'fit')} onClick={() => active()?.fit()} disabled={!hasImages} testId="tb-fit">
           <Focus size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.oneToOne', 'oneToOne')} onClick={() => active()?.oneToOne()} disabled={!hasImages} testId="tb-1to1">
+        <IconButton
+          tip={tooltip('toolbar.oneToOne', 'oneToOne')}
+          onClick={() => active()?.oneToOne()}
+          disabled={!hasImages}
+          testId="tb-1to1"
+        >
           <Square size={18} />
         </IconButton>
         <IconButton tip={tooltip('toolbar.reset', 'reset')} onClick={() => active()?.reset()} disabled={!hasImages} testId="tb-reset">
           <Undo2 size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.cine', 'cine')} pressed={Boolean(s.cine[s.activeIndex])} onClick={toggleCine} disabled={!hasImages} testId="tb-cine">
+        <IconButton
+          tip={tooltip('toolbar.cine', 'cine')}
+          pressed={Boolean(s.cine[s.activeIndex])}
+          onClick={toggleCine}
+          disabled={!hasImages}
+          testId="tb-cine"
+        >
           <Play size={18} />
         </IconButton>
       </div>
@@ -305,13 +375,28 @@ export function Toolbar(): ReactNode {
       </div>
 
       <div className="tb-group" aria-label={t('groups.settings')}>
-        <IconButton tip={tooltip('toolbar.overlays', 'overlay')} pressed={s.showInfoOverlay} onClick={() => s.toggleInfoOverlay()} testId="tb-overlay">
+        <IconButton
+          tip={tooltip('toolbar.overlays', 'overlay')}
+          pressed={s.showInfoOverlay}
+          onClick={() => s.toggleInfoOverlay()}
+          testId="tb-overlay"
+        >
           <Type size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.dicomOverlays', 'dicomOverlay')} pressed={s.showDicomOverlays} onClick={() => s.toggleDicomOverlays()} testId="tb-dicom-overlay">
+        <IconButton
+          tip={tooltip('toolbar.dicomOverlays', 'dicomOverlay')}
+          pressed={s.showDicomOverlays}
+          onClick={() => s.toggleDicomOverlays()}
+          testId="tb-dicom-overlay"
+        >
           <Layers size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.hidePatient', 'hidePatient')} pressed={s.settings.hidePatientData} onClick={() => commandById('hidePatient')?.run()} testId="tb-hide-patient">
+        <IconButton
+          tip={tooltip('toolbar.hidePatient', 'hidePatient')}
+          pressed={s.settings.hidePatientData}
+          onClick={() => commandById('hidePatient')?.run()}
+          testId="tb-hide-patient"
+        >
           <EyeOff size={18} />
         </IconButton>
       </div>
@@ -322,13 +407,33 @@ export function Toolbar(): ReactNode {
         <IconButton tip={tooltip('toolbar.distractionFree', 'distractionFree')} onClick={() => s.setDistractionFree(true)} testId="tb-df">
           <Monitor size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.fullscreen', 'fullscreen')} pressed={s.fullscreen} onClick={() => void toggleFullscreen()} testId="tb-fullscreen">
+        <IconButton
+          tip={tooltip('toolbar.fullscreen', 'fullscreen')}
+          pressed={s.fullscreen}
+          onClick={() => void toggleFullscreen()}
+          testId="tb-fullscreen"
+        >
           {s.fullscreen ? <Minimize2 size={18} /> : <Maximize size={18} />}
         </IconButton>
         <IconButton tip={tooltip('toolbar.help', 'help')} tipPos="left" onClick={() => s.setDialog('shortcuts')} testId="tb-help">
           <HelpCircle size={18} />
         </IconButton>
-        <IconButton tip={tooltip('toolbar.settings', 'settings')} tipPos="left" onClick={() => s.setDialog('settings')} testId="tb-settings">
+        <button
+          type="button"
+          className="icon-btn lang-btn"
+          data-tip={t('toolbar.language')}
+          aria-label={t('toolbar.language')}
+          onClick={() => void changeLanguage(s.settings.language === 'tr' ? 'en' : 'tr')}
+          data-testid="tb-language"
+        >
+          {s.settings.language === 'tr' ? 'TR' : 'EN'}
+        </button>
+        <IconButton
+          tip={tooltip('toolbar.settings', 'settings')}
+          tipPos="left"
+          onClick={() => s.setDialog('settings')}
+          testId="tb-settings"
+        >
           <Settings size={18} />
         </IconButton>
         <IconButton tip={t('toolbar.about')} tipPos="left" onClick={() => s.setDialog('about')} testId="tb-about">

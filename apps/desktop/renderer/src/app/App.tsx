@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Dialogs } from '../components/Dialogs';
 import { RightPanel } from '../components/RightPanel';
 import { SeriesBar } from '../components/SeriesBar';
-import { Notices, Splash, StartScreen, StatusBar } from '../components/Shell';
+import { Notices, StartScreen, StatusBar } from '../components/Shell';
+import { TooltipLayer } from '../components/TooltipLayer';
 import { Toolbar } from '../components/Toolbar';
 import { ViewportGrid } from '../components/Viewport';
 import { useStore } from '../state/store';
@@ -11,8 +12,6 @@ import { i18next } from '../i18n';
 import { initCornerstone, usesCpuRendering } from '../viewer/cornerstone';
 import { handleKey } from './commands';
 import type { ScanSummary } from '../../../shared/api';
-
-const SPLASH_MIN_MS = 900;
 
 function useResolvedTheme(): void {
   const theme = useStore((s) => s.settings.theme);
@@ -55,20 +54,14 @@ export function App(): ReactNode {
   const hasStudies = useStore((s) => s.studies.length > 0);
   const scanning = useStore((s) => Object.keys(s.scans).length > 0);
   const df = useStore((s) => s.distractionFree);
-  const [splash, setSplash] = useState(true);
   const [dragOver, setDragOver] = useState(false);
   useResolvedTheme();
   useApiEvents();
 
   useEffect(() => {
-    const started = performance.now();
     initCornerstone(useStore.getState().settings.cacheSizeMB);
     useStore.getState().setReady(true);
     if (usesCpuRendering()) useStore.getState().notify('warning', i18next.t('app.cpuRendering'));
-    const minMs = useStore.getState().appInfo?.splashMs ?? SPLASH_MIN_MS;
-    const wait = Math.max(0, minMs - (performance.now() - started));
-    const id = setTimeout(() => setSplash(false), wait);
-    return () => clearTimeout(id);
   }, []);
 
   useEffect(() => {
@@ -104,7 +97,8 @@ export function App(): ReactNode {
       const files = [...(e.dataTransfer?.files ?? [])];
       if (files.length === 0) return;
       void window.api.openDropped(files).then((r) => {
-        if (r.started) useStore.getState().setScan({ scanId: r.scanId, phase: 'listing', filesFound: 0, filesDone: 0, instances: 0, skipped: 0 });
+        if (r.started)
+          useStore.getState().setScan({ scanId: r.scanId, phase: 'listing', filesFound: 0, filesDone: 0, instances: 0, skipped: 0 });
       });
     };
     window.addEventListener('dragenter', onEnter);
@@ -132,7 +126,7 @@ export function App(): ReactNode {
       <Dialogs />
       <Notices />
       {dragOver ? <div className="drop-veil">{t('start.dropHere')}</div> : null}
-      {splash ? <Splash /> : null}
+      <TooltipLayer />
     </div>
   );
 }

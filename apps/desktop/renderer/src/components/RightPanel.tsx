@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 import {
   type DisplaySet,
-  type SortDirection,
-  type SortKey,
   type TagNode,
   formatDicomDate,
   formatNumber,
@@ -69,8 +67,6 @@ function InfoPanel(): ReactNode {
   const locale = (i18n.language === 'en' ? 'en' : 'tr') as 'tr' | 'en';
   const ds = useActiveDisplaySet();
   const hide = useStore((s) => s.settings.hidePatientData);
-  const sortKey = useStore((s) => s.sortKey);
-  const sortDirection = useStore((s) => s.sortDirection);
   if (!ds) return <div className="panel-pad muted">{t('info.noSelection')}</div>;
   const i = ds.firstInstance;
   const basis = spacingBasis(i);
@@ -144,33 +140,6 @@ function InfoPanel(): ReactNode {
           </>
         ) : null}
       </dl>
-
-      <div className="section-title">{t('info.sort')}</div>
-      <div className="row2">
-        <select
-          className="select"
-          value={sortKey}
-          aria-label={t('info.sort')}
-          data-testid="sort-key"
-          onChange={(e) => useStore.getState().setSort(e.target.value as SortKey, sortDirection)}
-        >
-          {(['spatial', 'instanceNumber', 'acquisitionTime', 'fileName'] as const).map((k) => (
-            <option key={k} value={k}>
-              {t(`sort.${k}`)}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          value={sortDirection}
-          aria-label={t('info.direction')}
-          data-testid="sort-direction"
-          onChange={(e) => useStore.getState().setSort(sortKey, e.target.value as SortDirection)}
-        >
-          <option value="asc">{t('sort.asc')}</option>
-          <option value="desc">{t('sort.desc')}</option>
-        </select>
-      </div>
 
       <div className="section-title">{t('info.warnings')}</div>
       {ds.warnings.length === 0 ? (
@@ -407,7 +376,7 @@ function TagList(props: { fileId: string }): ReactNode {
                   type="button"
                   className={`mini${isPinned ? ' on' : ''}`}
                   aria-label={isPinned ? t('tags.unpin') : t('tags.pin')}
-                  title={isPinned ? t('tags.unpin') : t('tags.pin')}
+                  data-tip={isPinned ? t('tags.unpin') : t('tags.pin')}
                   onClick={() => useStore.getState().togglePin(r.node.tag)}
                 >
                   <Pin size={12} />

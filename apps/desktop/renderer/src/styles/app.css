@@ -66,7 +66,14 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
   font-size: 13px;
   line-height: 1.4;
   overflow: hidden;
@@ -174,7 +181,7 @@ select {
   white-space: nowrap;
 }
 
-.icon-btn:hover:not(:disabled) {
+.icon-btn:hover:not(:disabled):not([aria-disabled='true']) {
   background: var(--surface-3);
   color: var(--text);
 }
@@ -185,7 +192,8 @@ select {
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-.icon-btn:disabled {
+.icon-btn:disabled,
+.icon-btn[aria-disabled='true'] {
   opacity: 0.38;
   cursor: default;
 }
@@ -194,38 +202,20 @@ select {
   margin-left: -2px;
 }
 
-/* Tooltips: data-tip shown below the control */
-[data-tip] {
-  position: relative;
-}
-
-[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
+/* Tooltips: rendered instantly by TooltipLayer for any element with data-tip */
+.tooltip {
+  position: fixed;
+  z-index: 200;
+  max-width: 360px;
   padding: 4px 8px;
   border-radius: 6px;
   background: var(--text);
   color: var(--bg);
   font-size: 12px;
   font-weight: 500;
-  white-space: nowrap;
+  line-height: 1.35;
   pointer-events: none;
   box-shadow: var(--shadow);
-}
-
-[data-tip-pos='top']:hover::after {
-  top: auto;
-  bottom: calc(100% + 6px);
-}
-
-[data-tip-pos='left']:hover::after {
-  left: auto;
-  right: 0;
-  transform: none;
 }
 
 /* ---------------------------------------------------------------- popover menus */
@@ -1326,39 +1316,6 @@ kbd {
   color: var(--text-muted);
 }
 
-/* ---------------------------------------------------------------- splash */
-.splash {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  background: var(--bg);
-}
-
-.splash-card {
-  width: min(520px, calc(100vw - 48px));
-  text-align: center;
-}
-
-.splash-card .brand-mark {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.splash-card h1 {
-  margin: 0;
-  font-size: 22px;
-}
-
 /* ---------------------------------------------------------------- notices */
 .notices {
   position: fixed;
@@ -1415,4 +1372,11 @@ kbd {
   to {
     transform: rotate(360deg);
   }
+}
+
+.lang-btn {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  min-width: 40px;
 }

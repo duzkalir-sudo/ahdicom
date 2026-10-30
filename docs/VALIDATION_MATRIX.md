@@ -62,7 +62,10 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Scroll (wheel, keys, PgUp/PgDn, Home/End), W/L drag, zoom, pan, Ctrl+wheel, fit, rotate, flip, invert, reset, context menu, numeric W/L | E2E core flow | Pass |
 | 1:1 = one image pixel per device pixel; zoom % in device pixels | `m1-coverage` (pixel-centre spacing on screen = 100 / dpr CSS px for 100 columns; mm per CSS px = 0.5 × dpr) | Pass |
 | Left-button tools (scroll drag, pan, zoom) do not change W/L | `m1-coverage` | Pass |
-| Slice slider, PageUp, sort key/direction (first image z = 0 asc, 87 desc) | `m1-coverage` | Pass |
+| Slice slider, PageUp, default spatial order (first z = 0, last z = 87 despite shuffled instance numbers) | `m1-coverage` | Pass |
+| Flip H/V twice restores the original image (pixel centroid) | `m1-coverage` | Pass |
+| Instant tooltips (incl. disabled buttons); TR/EN language button persists | `m1-coverage` | Pass |
+| First launch: English, no splash, About holds legal/intended-use text | `m0-shell` | Pass |
 | PET Units label (BQML), PET % presets, user W/L preset save + apply | `m1-coverage` | Pass |
 | Hide patient data: overlay, series bar, tag browser masked | `m1-coverage` | Pass |
 | Tag pin and copy-all (text handed to Electron clipboard) | `m1-coverage` | Pass (OS clipboard itself UNVERIFIED: not accessible in this environment) |
@@ -73,7 +76,7 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | DICOM overlays incl. per-frame, toggle | E2E (overlay colour at frame line, hidden after toggle) | Pass |
 | Tag browser search, location | E2E core flow | Pass |
 | Full screen / distraction-free | E2E core flow | Pass |
-| Intended-use statement in About, splash, status bar | E2E m0 | Pass |
+| Intended-use statement in About ("i" button) and status bar | E2E m0 | Pass |
 | Screenshots 1280×800 & 1920×1080 × dark/light × tr/en inspected | `artifacts/screenshots/M0`, `M1` | Inspected; issues fixed (toolbar overflow, thumbnails, labels, tag table) |
 
 ## Performance (Windows 11 laptop, local GPU; `artifacts/perf-m1.json`)

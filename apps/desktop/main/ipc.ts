@@ -114,9 +114,6 @@ export function registerIpc(deps: IpcDeps): void {
     node: process.versions.node,
     isPackaged: app.isPackaged,
     e2e: process.env.CDV_E2E === '1' && !app.isPackaged,
-    ...(process.env.CDV_E2E === '1' && !app.isPackaged && Number(process.env.CDV_SPLASH_MS) > 0
-      ? { splashMs: Math.min(30000, Number(process.env.CDV_SPLASH_MS)) }
-      : {}),
   }));
 
   handle(IPC.settingsGet, noPayload, () => settings.get());

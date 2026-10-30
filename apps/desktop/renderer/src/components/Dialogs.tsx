@@ -2,30 +2,28 @@ import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { rangeToWindow, windowToRange } from '@ahdicom/dicom-core';
 import { COMMANDS, formatShortcut } from '../app/commands';
-import { setLanguage } from '../i18n';
+import { changeLanguage, patchSettings } from '../app/settings';
 import { useStore } from '../state/store';
 import { setCacheSize } from '../viewer/cornerstone';
 import { controllerAt } from '../viewer/registry';
-import type { Settings, SettingsPatch } from '../../../shared/schemas';
+import type { Settings } from '../../../shared/schemas';
 import { Modal, Segmented } from './ui';
-
-async function patchSettings(p: SettingsPatch): Promise<void> {
-  // Apply immediately so controlled inputs do not snap back during the IPC round-trip; main returns the validated result.
-  const cur = useStore.getState().settings;
-  useStore.getState().setSettings({ ...cur, ...p, overlay: { ...cur.overlay, ...(p.overlay ?? {}) } } as Settings);
-  try {
-    useStore.getState().setSettings(await window.api.setSettings(p));
-  } catch {
-    useStore.getState().setSettings(cur);
-  }
-}
 
 function AboutDialog(): ReactNode {
   const { t } = useTranslation();
   const info = useStore((s) => s.appInfo);
   const close = (): void => useStore.getState().setDialog(null);
   return (
-    <Modal title={t('dialogs.aboutTitle')} onClose={close} testId="about-dialog" footer={<button type="button" className="btn primary" onClick={close}>{t('dialogs.close')}</button>}>
+    <Modal
+      title={t('dialogs.aboutTitle')}
+      onClose={close}
+      testId="about-dialog"
+      footer={
+        <button type="button" className="btn primary" onClick={close}>
+          {t('dialogs.close')}
+        </button>
+      }
+    >
       <div style={{ fontSize: 16, fontWeight: 600 }}>{t('app.name')}</div>
       <div className="muted">{info ? t('dialogs.version', { version: info.version }) : ''}</div>
       <div className="intended-box">
@@ -36,7 +34,9 @@ function AboutDialog(): ReactNode {
       </div>
       <p className="muted">{t('dialogs.privacy')}</p>
       <p className="muted">{t('dialogs.licenses')}</p>
-      {info ? <p className="muted num">{t('dialogs.components', { electron: info.electron, chrome: info.chrome, node: info.node })}</p> : null}
+      {info ? (
+        <p className="muted num">{t('dialogs.components', { electron: info.electron, chrome: info.chrome, node: info.node })}</p>
+      ) : null}
     </Modal>
   );
 }
@@ -85,10 +85,30 @@ function SettingsDialog(): ReactNode {
   const { t } = useTranslation();
   const s = useStore((st) => st.settings);
   const close = (): void => useStore.getState().setDialog(null);
-  const overlayKeys: (keyof Settings['overlay'])[] = ['patient', 'study', 'series', 'image', 'windowLevel', 'zoom', 'orientation', 'scaleBar', 'probe'];
+  const overlayKeys: (keyof Settings['overlay'])[] = [
+    'patient',
+    'study',
+    'series',
+    'image',
+    'windowLevel',
+    'zoom',
+    'orientation',
+    'scaleBar',
+    'probe',
+  ];
   const cap = (k: string): string => k.charAt(0).toUpperCase() + k.slice(1);
   return (
-    <Modal title={t('dialogs.settingsTitle')} onClose={close} wide testId="settings-dialog" footer={<button type="button" className="btn primary" onClick={close}>{t('dialogs.close')}</button>}>
+    <Modal
+      title={t('dialogs.settingsTitle')}
+      onClose={close}
+      wide
+      testId="settings-dialog"
+      footer={
+        <button type="button" className="btn primary" onClick={close}>
+          {t('dialogs.close')}
+        </button>
+      }
+    >
       <div className="row2">
         <div>
           <div className="section-title" style={{ marginTop: 0 }}>
@@ -114,18 +134,23 @@ function SettingsDialog(): ReactNode {
                 { value: 'tr', label: t('languageNames.tr') },
                 { value: 'en', label: t('languageNames.en') },
               ]}
-              onChange={(language) => {
-                void patchSettings({ language });
-                void setLanguage(language);
-              }}
+              onChange={(language) => void changeLanguage(language)}
             />
           </div>
           <label className="check">
-            <input type="checkbox" checked={s.hidePatientData} onChange={(e) => void patchSettings({ hidePatientData: e.target.checked })} />
+            <input
+              type="checkbox"
+              checked={s.hidePatientData}
+              onChange={(e) => void patchSettings({ hidePatientData: e.target.checked })}
+            />
             {t('settings.hidePatient')}
           </label>
           <label className="check">
-            <input type="checkbox" checked={s.showMouseLegend} onChange={(e) => void patchSettings({ showMouseLegend: e.target.checked })} />
+            <input
+              type="checkbox"
+              checked={s.showMouseLegend}
+              onChange={(e) => void patchSettings({ showMouseLegend: e.target.checked })}
+            />
             {t('settings.mouseLegend')}
           </label>
           <div className="section-title">{t('settings.performance')}</div>
@@ -195,7 +220,11 @@ function SettingsDialog(): ReactNode {
               <span>
                 {p.name} <span className="muted num">{`${p.width} / ${p.center}`}</span>
               </span>
-              <button type="button" className="link-btn" onClick={() => void patchSettings({ userPresets: s.userPresets.filter((x) => x.id !== p.id) })}>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => void patchSettings({ userPresets: s.userPresets.filter((x) => x.id !== p.id) })}
+              >
                 {t('settings.delete')}
               </button>
             </div>
@@ -244,7 +273,10 @@ function WindowLevelDialog(): ReactNode {
     if (!valid || !name.trim()) return;
     const wl = mode === 'window' ? { width: na, center: nb } : rangeToWindow({ lower: na, upper: nb }, fn);
     void patchSettings({
-      userPresets: [...settings.userPresets, { id: `u${Date.now()}`, name: name.trim().slice(0, 64), width: wl.width, center: wl.center }].slice(-50),
+      userPresets: [
+        ...settings.userPresets,
+        { id: `u${Date.now()}`, name: name.trim().slice(0, 64), width: wl.width, center: wl.center },
+      ].slice(-50),
     });
     apply();
   };
@@ -283,11 +315,25 @@ function WindowLevelDialog(): ReactNode {
         <div className="row2">
           <div className="field">
             <label htmlFor="wl-a">{mode === 'window' ? t('dialogs.width') : t('dialogs.lower')}</label>
-            <input id="wl-a" className="input num" value={a} onChange={(e) => setA(e.target.value)} inputMode="decimal" data-testid="wl-a" />
+            <input
+              id="wl-a"
+              className="input num"
+              value={a}
+              onChange={(e) => setA(e.target.value)}
+              inputMode="decimal"
+              data-testid="wl-a"
+            />
           </div>
           <div className="field">
             <label htmlFor="wl-b">{mode === 'window' ? t('dialogs.center') : t('dialogs.upper')}</label>
-            <input id="wl-b" className="input num" value={b} onChange={(e) => setB(e.target.value)} inputMode="decimal" data-testid="wl-b" />
+            <input
+              id="wl-b"
+              className="input num"
+              value={b}
+              onChange={(e) => setB(e.target.value)}
+              inputMode="decimal"
+              data-testid="wl-b"
+            />
           </div>
         </div>
         {valid && mode === 'window' ? (
@@ -351,7 +397,15 @@ function PasswordDialog(): ReactNode {
         {req.retry ? <p style={{ color: 'var(--danger)' }}>{t('dialogs.passwordRetry')}</p> : null}
         <div className="field">
           <label htmlFor="zip-pw">{t('dialogs.password')}</label>
-          <input id="zip-pw" className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="off" data-testid="password-input" />
+          <input
+            id="zip-pw"
+            className="input"
+            type="password"
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            autoComplete="off"
+            data-testid="password-input"
+          />
         </div>
       </form>
     </Modal>

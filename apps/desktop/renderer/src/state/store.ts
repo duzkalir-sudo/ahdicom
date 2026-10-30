@@ -1,13 +1,6 @@
 /** Application state (zustand). Clinical logic lives in @ahdicom/dicom-core; this only orchestrates UI state. */
 import { create } from 'zustand';
-import {
-  buildStudies,
-  type DisplaySet,
-  type InstanceRecord,
-  type SortDirection,
-  type SortKey,
-  type StudyNode,
-} from '@ahdicom/dicom-core';
+import { buildStudies, type DisplaySet, type InstanceRecord, type SortDirection, type SortKey, type StudyNode } from '@ahdicom/dicom-core';
 import type { AppInfo, ScanProgress, ScanSummary, ZipPasswordRequest } from '../../../shared/api';
 import type { RecentEntryPublic, Settings } from '../../../shared/schemas';
 import type { LeftTool } from '../viewer/cornerstone';

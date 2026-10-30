@@ -192,7 +192,14 @@ export class ViewportController {
       this.clearOverlayCanvas();
       return;
     }
-    this.emit({ ...EMPTY, status: 'loading', displaySetId: ds.id, total: ids.length, basis: spacingBasis(ds.firstInstance), fps: defaultFps(ds) });
+    this.emit({
+      ...EMPTY,
+      status: 'loading',
+      displaySetId: ds.id,
+      total: ids.length,
+      basis: spacingBasis(ds.firstInstance),
+      fps: defaultFps(ds),
+    });
     try {
       // Load the first image explicitly: setStack resolves even when decoding fails.
       await imageLoader.loadAndCacheImage(ids[0]!);
@@ -243,7 +250,9 @@ export class ViewportController {
     const name = `${VOI_LUT_COLORMAP_PREFIX}${fileIdOf(imageId!)}-${n}`;
     const RGBPoints: number[] = [];
     for (const [x, y] of lutToNormalizedCurve(lut, 256)) RGBPoints.push(x, y, y, y);
-    csUtils.colormap.registerColormap({ ColorSpace: 'RGB', Name: name, RGBPoints } as unknown as Parameters<typeof csUtils.colormap.registerColormap>[0]);
+    csUtils.colormap.registerColormap({ ColorSpace: 'RGB', Name: name, RGBPoints } as unknown as Parameters<
+      typeof csUtils.colormap.registerColormap
+    >[0]);
     const vp = this.viewport;
     vp.setProperties({ voiRange: lutDomain(lut) });
     vp.setProperties({ colormap: { name } });
@@ -328,8 +337,10 @@ export class ViewportController {
   flip(axis: 'h' | 'v'): void {
     if (!this.hasImage()) return;
     const vp = this.viewport;
-    const p = vp.getViewPresentation();
-    vp.setViewPresentation(axis === 'h' ? { flipHorizontal: !p.flipHorizontal } : { flipVertical: !p.flipVertical });
+    // Cornerstone 5.14 setViewPresentation() only flips when asked for `true`, so it can never un-flip.
+    // setCamera() compares with the current state and toggles correctly.
+    const cam = vp.getCamera();
+    vp.setCamera(axis === 'h' ? { flipHorizontal: !cam.flipHorizontal } : { flipVertical: !cam.flipVertical });
     vp.render();
   }
 
@@ -372,7 +383,8 @@ export class ViewportController {
     this.clearVoiLut();
     vp.resetCamera();
     vp.resetProperties();
-    vp.setViewPresentation({ rotation: 0, flipHorizontal: false, flipVertical: false });
+    vp.setViewPresentation({ rotation: 0 });
+    vp.setCamera({ flipHorizontal: false, flipVertical: false });
     this.applyInitialDisplay();
     vp.render();
   }
@@ -460,7 +472,8 @@ export class ViewportController {
     const img = this.ds.images[index];
     const basis = spacingBasis(this.ds.firstInstance, img?.geometry.pixelSpacing);
     const ratio = this.imagePixelsPerCssPx();
-    const colMm = basis.kind === 'pixelSpacing' || basis.kind === 'imagerMagnified' || basis.kind === 'imagerPixelSpacing' ? basis.columnMm : undefined;
+    const colMm =
+      basis.kind === 'pixelSpacing' || basis.kind === 'imagerMagnified' || basis.kind === 'imagerPixelSpacing' ? basis.columnMm : undefined;
     let labels: EdgeLabels | undefined;
     if (imageId) {
       const cam = vp.getCamera();
@@ -517,13 +530,22 @@ export class ViewportController {
     const id = this.currentImageId();
     if (!id) return undefined;
     const plane = metaData.get('imagePlaneModule', id) as
-      | { imagePositionPatient?: number[]; rowCosines?: number[]; columnCosines?: number[]; rowPixelSpacing?: number; columnPixelSpacing?: number }
+      | {
+          imagePositionPatient?: number[];
+          rowCosines?: number[];
+          columnCosines?: number[];
+          rowPixelSpacing?: number;
+          columnPixelSpacing?: number;
+        }
       | undefined;
     if (!plane?.imagePositionPatient || !plane.rowCosines || !plane.columnCosines) return undefined;
     const o = parseImageOrientation([...plane.rowCosines, ...plane.columnCosines]);
     if (!o) return undefined;
     const world = this.viewport.canvasToWorld([x, y]) as unknown as Vec3;
-    return patientToPixel(world, plane.imagePositionPatient as unknown as Vec3, o, [plane.rowPixelSpacing || 1, plane.columnPixelSpacing || 1]);
+    return patientToPixel(world, plane.imagePositionPatient as unknown as Vec3, o, [
+      plane.rowPixelSpacing || 1,
+      plane.columnPixelSpacing || 1,
+    ]);
   }
 
   /** Canvas point of an image pixel centre (inverse of canvasToPixel). */
@@ -531,7 +553,13 @@ export class ViewportController {
     const id = this.currentImageId();
     if (!id) return undefined;
     const plane = metaData.get('imagePlaneModule', id) as
-      | { imagePositionPatient?: number[]; rowCosines?: number[]; columnCosines?: number[]; rowPixelSpacing?: number; columnPixelSpacing?: number }
+      | {
+          imagePositionPatient?: number[];
+          rowCosines?: number[];
+          columnCosines?: number[];
+          rowPixelSpacing?: number;
+          columnPixelSpacing?: number;
+        }
       | undefined;
     if (!plane?.imagePositionPatient || !plane.rowCosines || !plane.columnCosines) return undefined;
     const rs = plane.rowPixelSpacing || 1;
@@ -568,7 +596,9 @@ export class ViewportController {
     if (!scaled) v = v * (image.slope ?? 1) + (image.intercept ?? 0);
     const pad = inst.pixelPaddingValue;
     const g = this.ds.images[this.state.index]?.geometry ?? inst.geometry;
-    const padding = pad !== undefined && v === pad * (g.rescaleSlope ?? inst.geometry.rescaleSlope ?? 1) + (g.rescaleIntercept ?? inst.geometry.rescaleIntercept ?? 0);
+    const padding =
+      pad !== undefined &&
+      v === pad * (g.rescaleSlope ?? inst.geometry.rescaleSlope ?? 1) + (g.rescaleIntercept ?? inst.geometry.rescaleIntercept ?? 0);
     this.emit({ probe: { column, row, unit, value: v, ...(padding ? { padding } : {}) } });
   }
 
