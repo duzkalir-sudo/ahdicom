@@ -109,7 +109,47 @@ Viewer
 - **STOP after M1** → UX review. Round 1 (2026-10-30) feedback implemented: splash removed, flip toggle fixed,
   instant tooltips, sort section removed, English default + language button, Tags tab renamed with an explanation (D-041), distraction-free mode removed (D-042).
 
-### M2–M8
+### M2 — Measurements and annotations — **in progress** (started 2026-10-30 with the user's approval)
+Design (D-043): Cornerstone annotation tools draw and edit the handles; **every displayed number comes from
+`dicom-core`**, computed from image-pixel coordinates (own `patientToPixel`, R-002) and the spacing basis.
+Cornerstone's own `cachedStats` are never shown. Measurements are stored per StudyInstanceUID with stable keys
+(SOPInstanceUID + frame, points in image pixel coordinates), never with session file IDs.
+
+Phase A: clinical math in `dicom-core` (unit-tested against analytic phantoms before any UI uses it)
+- [ ] `measure.ts`: length in mm for each basis (Pixel Spacing, Imager Pixel Spacing ± magnification, US region,
+      manual calibration); "px" with a warning when uncalibrated; anisotropic spacing
+- [ ] Angle, Cobb angle, deviation distance (point to line), length ratio
+- [ ] Polygon area/perimeter (closed), polyline length (open), ellipse/rectangle area
+- [ ] ROI pixel statistics (mean, min, max, SD, pixel count) with a documented pixel-inclusion rule (pixel centre inside)
+- [ ] Ellipsoid (π/6·a·b·c) and bullet (5π/24·a·b·c) volume from three diameters
+- [ ] US calibrated regions: region lookup, both points in the same region, physical units from (0018,6024/6026)
+- [ ] SUVbw (decay-corrected; refuses with the list of missing tags; Units, Decay Correction, Corrected Image checked);
+      parse the Radiopharmaceutical Information Sequence
+- [ ] Display precision from spacing (e.g. 0.5 mm spacing → 1 decimal)
+
+Phase B: viewer integration
+- [ ] Measure tool group in the toolbar: length, angle, Cobb, deviation, ratio, ellipse, rectangle, polygon,
+      freehand, arrow, text, calibrate; left-button binding like the other tools
+- [ ] Text boxes show dicom-core values with unit and basis (e.g. "42.3 mm", "12.1 mm (detector)", "35 px ⚠")
+- [ ] ROI stats in HU (CT), Bq/ml and SUVbw (PET), raw otherwise; RGB images: no stats
+- [ ] Manual calibration: draw a line, enter its true length; stored per series; labelled "calibrated"
+- [ ] Esc cancels an unfinished measurement; Delete removes the selected one
+
+Phase C: measurement list, undo/redo, persistence
+- [ ] Measurements tab: list per study (type, value, series/slice), select, rename, delete, jump to slice
+- [ ] Undo/redo (Ctrl+Z / Ctrl+Y) for create, edit, delete, rename
+- [ ] Saved per StudyInstanceUID as JSON in the app data folder (IPC validated with zod, size-limited); reloaded
+      when the study is opened again; original DICOM files never modified
+- [ ] Ellipsoid/bullet volume from three selected length measurements
+
+Phase D: verification
+- [ ] Unit tests for all Phase A math; fuzz for the stored-measurement schema
+- [ ] E2E: draw each tool on fixtures with known answers (ct-phantom sphere diameter/area/HU, aniso circle, cr-mag,
+      us-regions, pet SUVbw, pet-missing refusal), list/rename/delete/jump, undo/redo, persistence across restart
+- [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent; docs; report
+- [ ] Push to GitHub once at the end of M2 (with approval) and check the Windows + macOS CI
+
+### M3–M8
 See `docs/PRODUCT_SPEC.md` §3 and milestone acceptance criteria in the brief; detailed task lists are added when each
 milestone starts. M8 (RT module) only after explicit user approval.
 

@@ -1,16 +1,17 @@
 # Project status
 
-_Last updated: 2026-10-29_
+_Last updated: 2026-10-30_
 
 ## Current milestone
-**M1 — Core 2D viewer: implemented and verified locally (Windows 11 x64). STOP for user UX review before M2.**
+**M2 — Measurements and annotations: in progress.** M1 is done, CI green on Windows + macOS arm64, and UX review round 1 is implemented. The UX commits are pushed together with M2 (one push per milestone, user decision 2026-10-30).
 
 ## Where things are
 | Area | State |
 |---|---|
-| M0 foundation | Done. CI workflow written but never executed (no GitHub remote). |
+| M0 foundation | Done. CI green on Windows and macOS arm64. |
 | M1 viewer | Done except: concatenation merge, Presentation LUT INVERSE not E2E-asserted, pixel padding not excluded from auto ranges (see PLAN [~]). |
-| M2–M8 | Not started. M8 needs explicit approval. |
+| M2 | In progress (started 2026-10-30): Phase A, measurement math in dicom-core. |
+| M3–M8 | Not started. M8 needs explicit approval. |
 
 ## How to resume
 1. Node 24.22.2 is installed portably at `%LOCALAPPDATA%\Programs\node-v24.22.2-win-x64` (not on PATH). Prepend it to PATH.
