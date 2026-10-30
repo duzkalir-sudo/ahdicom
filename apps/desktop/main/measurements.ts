@@ -23,16 +23,35 @@ export class MeasurementStore {
     const file = this.fileFor(studyInstanceUid);
     try {
       const st = await stat(file);
-      if (!st.isFile() || st.size > MAX_FILE_BYTES) return null;
-      const parsed = MeasurementFileSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
+      if (!st.isFile()) return null;
+      if (st.size > MAX_FILE_BYTES) {
+        await this.setAside(file);
+        return null;
+      }
+      let raw: unknown;
+      try {
+        raw = JSON.parse(await readFile(file, 'utf8'));
+      } catch {
+        raw = undefined;
+      }
+      const parsed = MeasurementFileSchema.safeParse(raw);
       if (!parsed.success || parsed.data.studyInstanceUid !== studyInstanceUid) {
-        console.warn('Ignoring an invalid measurement file');
+        await this.setAside(file);
         return null;
       }
       return parsed.data;
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Keeps an unreadable file (corrupt, or written by a newer version) under another name so the next save does not
+   * overwrite it.
+   */
+  private async setAside(file: string): Promise<void> {
+    console.warn('An unreadable measurement file was set aside');
+    await rename(file, `${file}.unreadable-${Date.now()}`).catch(() => undefined);
   }
 
   async save(data: MeasurementFile): Promise<void> {

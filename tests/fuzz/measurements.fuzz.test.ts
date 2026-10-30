@@ -149,6 +149,8 @@ describe('measurement store', () => {
       writeFileSync(file, content);
       expect(await store.load(VALID.studyInstanceUid)).toBeNull();
     }
+    // Unreadable files are set aside (renamed), not left to be overwritten by the next save.
+    expect(readdirSync(dir).some((f) => f.includes('.unreadable-'))).toBe(true);
     writeFileSync(file, ' '.repeat(17 * 1024 * 1024));
     expect(await store.load(VALID.studyInstanceUid)).toBeNull();
     for (let seed = 1; seed <= 40; seed++) {

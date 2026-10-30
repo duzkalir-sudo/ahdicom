@@ -109,7 +109,7 @@ Viewer
 - **STOP after M1** → UX review. Round 1 (2026-10-30) feedback implemented: splash removed, flip toggle fixed,
   instant tooltips, sort section removed, English default + language button, Tags tab renamed with an explanation (D-041), distraction-free mode removed (D-042).
 
-### M2 — Measurements and annotations — **in progress** (started 2026-10-30 with the user's approval)
+### M2 — Measurements and annotations — **done locally** (2026-10-30, Windows 11); CI pending the milestone push
 Design (D-043): Cornerstone annotation tools draw and edit the handles; **every displayed number comes from
 `dicom-core`**, computed from image-pixel coordinates (own `patientToPixel`, R-002) and the spacing basis.
 Cornerstone's own `cachedStats` are never shown. Measurements are stored per StudyInstanceUID with stable keys
@@ -146,7 +146,7 @@ Phase D: verification
 - [x] Unit tests for all Phase A math; fuzz for the stored-measurement schema
 - [x] E2E: draw each tool on fixtures with known answers (ct-phantom sphere diameter/area/HU, aniso circle, cr-mag,
       us-regions, pet SUVbw, pet-missing refusal), list/rename/delete/jump, undo/redo, persistence across restart
-- [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent; docs; report
+- [x] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent (1st pass FAIL, gaps fixed: D-049, D-050); docs; report (`docs/reports/M2-REPORT.md`)
 - [ ] Push to GitHub once at the end of M2 (with approval) and check the Windows + macOS CI
 
 ### M3–M8

@@ -480,6 +480,75 @@ test('a measurement on a series that left the viewport stays listed and saved', 
   }
 });
 
+test('each image of a series is measured with its own calibration (US at two depths)', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openSeries(s, 'us-multi');
+    expect((await vpState(s.page)).total).toBe(2); // one display set with both images
+    await pickTool(s.page, 'm');
+    await drag(s.page, [150, 100], [250, 100]); // image 1: 100 px × 0.2 mm
+    await s.page.keyboard.press('ArrowDown');
+    await expect.poll(async () => (await vpState(s.page)).index).toBe(1);
+    await drag(s.page, [150, 200], [250, 200]); // image 2: 100 px × 0.4 mm
+    await expect.poll(async () => (await measurements(s.page)).filter((m) => m.tool === 'length' && m.lines.length > 0).length).toBe(2);
+    const all = (await measurements(s.page)).filter((m) => m.tool === 'length');
+    const values = all.map((m) => num(m.lines[0])).sort((a, b) => a - b);
+    near(values[0]!, 20, 0.6);
+    near(values[1]!, 40, 1.2);
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('a calibration survives a save made while only part of its study is open', async () => {
+  const userData = mkdtempSync(path.join(os.tmpdir(), 'cdv-e2e-persist-'));
+  try {
+    // 1: calibrate the sagittal series of the orientation study.
+    let s = await launch({ lang: 'en', userData });
+    try {
+      await openPaths(s, [fixture('orient-axial'), fixture('orient-sagittal')]);
+      await showSeries(s, 'SAGITTAL');
+      await pickFromMenu(s.page, 'calibrate');
+      await drag(s.page, [20, 20], [120, 20]);
+      await s.page.getByTestId('prompt-input').fill('25');
+      await s.page.getByTestId('prompt-ok').click();
+      await s.page.getByTestId('tab-info').click();
+      await expect(s.page.getByTestId('info-calibration')).toBeVisible();
+      await s.page.waitForTimeout(500);
+      expectNoErrors(s);
+    } finally {
+      await s.close();
+    }
+    // 2: open only the axial series of the same study and change something, which rewrites the study file.
+    s = await launch({ lang: 'en', userData });
+    try {
+      await openPaths(s, [fixture('orient-axial')]);
+      await waitReady(s.page);
+      await pickTool(s.page, 'm');
+      await drag(s.page, [40, 64], [100, 64]);
+      await expect.poll(async () => (await measurements(s.page)).length).toBe(1);
+      await s.page.waitForTimeout(500);
+      expectNoErrors(s);
+    } finally {
+      await s.close();
+    }
+    // 3: the sagittal calibration is still there.
+    s = await launch({ lang: 'en', userData });
+    try {
+      await openPaths(s, [fixture('orient-axial'), fixture('orient-sagittal')]);
+      await showSeries(s, 'SAGITTAL');
+      await s.page.getByTestId('tab-info').click();
+      await expect(s.page.getByTestId('info-calibration')).toContainText('(calibrated)');
+      expectNoErrors(s);
+    } finally {
+      await s.close();
+    }
+  } finally {
+    rmSync(userData, { recursive: true, force: true });
+  }
+});
+
 test('M2 screenshot matrix (sizes × themes × languages)', async () => {
   test.setTimeout(600_000);
   for (const lang of ['tr', 'en'] as const) {

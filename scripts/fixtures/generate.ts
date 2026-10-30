@@ -558,6 +558,42 @@ async function projection(): Promise<void> {
     await save('us-regions/US.dcm', writePart10(ds, { transferSyntaxUid: TSUID.explicitLE }));
     add({ id: 'us-regions', dir: 'us-regions', kind: 'valid', files: 1, description: 'US RGB with one calibrated region (0.2 mm/px)', expect: { deltaCm: 0.02 } });
   }
+  // US series of two images at different depths: same size, different calibration (0.2 and 0.4 mm/px).
+  // Both land in one display set, so each image must be measured with its own region.
+  {
+    const rows = 480, cols = 640;
+    const s = series('proj', 3, 'US', 'US MULTI DEPTH');
+    const deltas = [0.02, 0.04];
+    for (let k = 0; k < deltas.length; k++) {
+      const rgb = new Uint8Array(rows * cols * 3);
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          const g = r > 50 && r < 430 && c > 100 && c < 540 ? 40 + ((r * 7 + c * 13 + k * 50) % 90) : 0;
+          rgb.fill(g, (r * cols + c) * 3, (r * cols + c) * 3 + 3);
+        }
+      const region = [
+        el(0x0018, 0x6012, 'US', 1),
+        el(0x0018, 0x6014, 'US', 1),
+        el(0x0018, 0x6016, 'UL', 0),
+        el(0x0018, 0x6018, 'UL', 100),
+        el(0x0018, 0x601a, 'UL', 50),
+        el(0x0018, 0x601c, 'UL', 540),
+        el(0x0018, 0x601e, 'UL', 430),
+        el(0x0018, 0x6024, 'US', 3),
+        el(0x0018, 0x6026, 'US', 3),
+        el(0x0018, 0x602c, 'FD', deltas[k]!),
+        el(0x0018, 0x602e, 'FD', deltas[k]!),
+      ];
+      const ds: Element[] = [
+        ...patientStudySeries(ps, s),
+        ...sopCommon(SOP.us, uid(`sop:usmulti:${k}`), k + 1),
+        seq(0x0018, 0x6011, [region]),
+        ...pixelModule({ rows, columns: cols, bitsAllocated: 8, bitsStored: 8, pixelRepresentation: 0, samplesPerPixel: 3, photometric: 'RGB', planarConfiguration: 0 }, rgb),
+      ];
+      await save(`us-multi/US${k + 1}.dcm`, writePart10(ds, { transferSyntaxUid: TSUID.explicitLE }));
+    }
+    add({ id: 'us-multi', dir: 'us-multi', kind: 'valid', files: 2, description: 'US series of two images with different calibration (0.2 / 0.4 mm/px)', expect: { mmPerPx: [0.2, 0.4] } });
+  }
 }
 
 function colorWheel(rows: number, cols: number): Uint8Array {

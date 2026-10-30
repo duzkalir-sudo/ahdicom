@@ -4,6 +4,7 @@
  */
 import { cache, getRenderingEngines, type Types } from '@cornerstonejs/core';
 import { annotation as csAnnotation, splines, type Types as ToolTypes } from '@cornerstonejs/tools';
+import { i18next } from '../i18n';
 import { useStore } from '../state/store';
 import { MEASUREMENTS_VERSION, type MeasurementFile, type MeasurementItem } from '../../../shared/schemas';
 import {
@@ -243,9 +244,25 @@ export function redo(): void {
 }
 
 /** Writes every study whose saved content differs from the last write (an empty study deletes its file). */
-async function save(): Promise<void> {
+/**
+ * Study of each calibrated series. Display sets give it for open series; files read from disk give it for series of a
+ * study that is only partly open, so their calibrations are written back instead of being dropped.
+ */
+const calibrationStudy = new Map<string, string>();
+/** Loads in progress: a save waits for them, so a study file is never written before its saved content was read. */
+const loading = new Set<Promise<unknown>>();
+/** Saves run one after another; two overlapping writes could otherwise finish out of order. */
+let saveChain: Promise<void> = Promise.resolve();
+
+function save(): Promise<void> {
+  saveChain = saveChain.then(writeChangedStudies, writeChangedStudies);
+  return saveChain;
+}
+
+async function writeChangedStudies(): Promise<void> {
+  while (loading.size > 0) await Promise.all([...loading]);
   const snap = JSON.parse(history[historyIndex] ?? JSON.stringify(snapshot())) as Snapshot;
-  const seriesStudy = new Map<string, string>();
+  const seriesStudy = new Map<string, string>(calibrationStudy);
   for (const ds of Object.values(useStore.getState().displaySets)) seriesStudy.set(ds.seriesInstanceUid, ds.studyInstanceUid);
   const studies = new Set<string>([...lastSaved.keys(), ...snap.items.map((i) => i.study)]);
   for (const uid of Object.keys(snap.calibrations)) {
@@ -269,6 +286,7 @@ async function save(): Promise<void> {
     } catch {
       lastSaved.delete(study);
       console.warn('Measurements could not be saved');
+      useStore.getState().notify('error', i18next.t('measurements.saveFailed'));
     }
   }
 }
@@ -303,8 +321,11 @@ export async function syncStudies(): Promise<void> {
   for (const study of studies) {
     if (loadedStudies.has(study) || !/^[0-9.]{1,64}$/.test(study)) continue;
     loadedStudies.add(study);
-    const file = await window.api.loadMeasurements(study).catch(() => null);
+    const load = window.api.loadMeasurements(study).catch(() => null);
+    loading.add(load);
+    const file = await load.finally(() => loading.delete(load));
     if (!file) continue;
+    for (const series of Object.keys(file.calibrations)) calibrationStudy.set(series, study);
     lastSaved.set(study, JSON.stringify(file));
     await preparePlanes(file.items);
     restoring = true;
@@ -340,6 +361,7 @@ export async function resetMeasurements(): Promise<void> {
   pending.clear();
   loadedStudies.clear();
   lastSaved.clear();
+  calibrationStudy.clear();
   history = [];
   historyIndex = -1;
   lastLines.clear();

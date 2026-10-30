@@ -210,6 +210,7 @@ export const en: Shape<Resources> = {
     calibrated: 'Series {{series}} calibrated manually.',
   },
   measurements: {
+    saveFailed: 'Measurements could not be saved.',
     empty: 'No measurements yet',
     emptyDetail: 'Choose a tool in the toolbar (ruler, ellipse, angle or the menu next to them) and draw on the image.',
     undo: 'Undo',

@@ -20,12 +20,14 @@ import {
 import {
   type DisplayImage,
   type DisplaySet,
+  type InstanceRecord,
   type MeasureScale,
   type Point2,
   type RoiStats,
   type Vec3,
   angleDeg,
   cobbAngleDeg,
+  dicomDateTimeSeconds,
   ellipseArea,
   ellipseBBox,
   ellipseFromHandles,
@@ -249,21 +251,37 @@ export function measureToolConfigs(): { cls: unknown; name: string; config: Reco
 interface ImageRef {
   ds: DisplaySet;
   image: DisplayImage;
+  /**
+   * The instance this image belongs to. Calibration (US regions, Imager Pixel Spacing, magnification), padding and
+   * PET attributes can differ between the instances of one display set, so they are never taken from the first one.
+   */
+  inst: InstanceRecord;
+  /** Earliest acquisition date/time of the display set (seconds), the QIBA reference for SUV decay correction. */
+  earliestAcquisition?: number;
 }
 
 let refsFor: Record<string, DisplaySet> | undefined;
 let refs = new Map<string, ImageRef>();
 
-/** Display set and image of a `cdv:` image id (rebuilt when the display sets change). */
+/** Display set, image and instance of a `cdv:` image id (rebuilt when the display sets change). */
 export function imageRef(imageId: string): ImageRef | undefined {
-  const sets = useStore.getState().displaySets;
+  const { displaySets: sets, instances } = useStore.getState();
   if (sets !== refsFor) {
     refsFor = sets;
     refs = new Map();
+    const byFile = new Map<string, InstanceRecord>();
+    for (const inst of instances) byFile.set(inst.fileId, inst);
     for (const ds of Object.values(sets)) {
-      for (const image of ds.images) {
-        refs.set(image.frame ? `cdv:${image.fileId}?frame=${image.frame}` : `cdv:${image.fileId}`, { ds, image });
+      let earliest: number | undefined;
+      const members = ds.images.map((image) => byFile.get(image.fileId) ?? ds.firstInstance);
+      for (const inst of members) {
+        const t = dicomDateTimeSeconds(inst.acquisitionDate ?? inst.seriesDate, inst.acquisitionTime);
+        if (t !== undefined && (earliest === undefined || t < earliest)) earliest = t;
       }
+      ds.images.forEach((image, k) => {
+        const id = image.frame ? `cdv:${image.fileId}?frame=${image.frame}` : `cdv:${image.fileId}`;
+        refs.set(id, { ds, image, inst: members[k]!, ...(earliest !== undefined ? { earliestAcquisition: earliest } : {}) });
+      });
     }
   }
   return refs.get(imageId);
@@ -334,7 +352,7 @@ export type ScaleNote = 'uncalibrated' | 'usNoRegion' | 'usDifferentRegions' | '
 export function scaleFor(ref: ImageRef, points: readonly Point2[]): { scale?: MeasureScale; note?: ScaleNote } {
   const manual = useStore.getState().calibrations[ref.ds.seriesInstanceUid];
   if (manual) return { scale: { basis: 'manual', rowMm: manual.rowMm, columnMm: manual.columnMm } };
-  const inst = ref.ds.firstInstance;
+  const inst = ref.inst;
   const basis = spacingBasis(inst, ref.image.geometry.pixelSpacing);
   const fromBasis = scaleFromBasis(basis);
   if (fromBasis) return { scale: fromBasis };
@@ -348,7 +366,7 @@ export function scaleFor(ref: ImageRef, points: readonly Point2[]): { scale?: Me
 
 /** Image-wide scale without ultrasound regions (used by manual calibration to keep the pixel aspect ratio). */
 export function baseScale(ref: ImageRef): MeasureScale | undefined {
-  return scaleFromBasis(spacingBasis(ref.ds.firstInstance, ref.image.geometry.pixelSpacing));
+  return scaleFromBasis(spacingBasis(ref.inst, ref.image.geometry.pixelSpacing));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -398,7 +416,7 @@ function valueReader(ref: ImageRef, image: Types.IImage): ((c: number, r: number
   const scaled = Boolean((image as { preScale?: { scaled?: boolean } }).preScale?.scaled) || modalityLutApplied(image);
   const slope = scaled ? 1 : (image.slope ?? 1);
   const intercept = scaled ? 0 : (image.intercept ?? 0);
-  const inst = ref.ds.firstInstance;
+  const inst = ref.inst;
   const g = ref.image.geometry;
   const pad = inst.pixelPaddingValue;
   const padValue =
@@ -413,10 +431,10 @@ function valueReader(ref: ImageRef, image: Types.IImage): ((c: number, r: number
 }
 
 function statsUnit(ref: ImageRef): { unit: StatsUnit; factor: number; refusal?: string } {
-  const inst = ref.ds.firstInstance;
+  const inst = ref.inst;
   if (inst.modality === 'CT' || inst.rescaleType === 'HU') return { unit: 'hu', factor: 1 };
   if (inst.modality === 'PT') {
-    const suv = suvBwFactor(inst);
+    const suv = suvBwFactor(inst, ref.earliestAcquisition);
     if (suv.ok) return { unit: 'suv', factor: suv.factor };
     const refusal =
       suv.reason === 'missing'

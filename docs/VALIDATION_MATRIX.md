@@ -95,8 +95,11 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | List: rename, delete, jump to the image, undo/redo (Ctrl+Z / Ctrl+Y) | E2E | Pass |
 | Saved per study, restored after restart with identical pixel coordinates; loaded items are not undoable | E2E (two launches with the same app data) | Pass |
 | Measurement on a series that left the viewport stays listed and is saved | E2E (orient-axial → sagittal, restart) | Pass |
+| Each image measured with its own calibration (US series at 0.2 / 0.4 mm/px) | E2E (`us-multi`) | Pass |
+| Calibration kept when the study is only partly open at save time | E2E (three launches) | Pass |
+| Unreadable / oversized / foreign measurement files set aside, never trusted | fuzz `measurements.fuzz.test.ts` | Pass |
 | No CSP violation from measurement text (D-044) | every E2E (console errors fail the run) | Pass |
-| Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M2` | See report |
+| Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M2` (22 files) | Inspected |
 
 ## Performance (Windows 11 laptop, local GPU; `artifacts/perf-m1.json`)
 
