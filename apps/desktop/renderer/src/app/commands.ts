@@ -8,7 +8,7 @@ import { displaySetAt, useStore } from '../state/store';
 import { purgeAll, setLeftTool, type LeftTool } from '../viewer/cornerstone';
 import { allControllers, controllerAt } from '../viewer/registry';
 import { deleteSelected, isDrawing } from '../viewer/annotations';
-import { redo, resetMeasurements, undo } from '../viewer/measureDoc';
+import { redo, reopenMeasurements, resetMeasurements, undo } from '../viewer/measureDoc';
 import type { OpenKind } from '../../../shared/schemas';
 
 export const isMac = navigator.userAgent.includes('Mac');
@@ -81,9 +81,13 @@ export async function toggleFullscreen(): Promise<void> {
 export async function closeAll(): Promise<void> {
   for (const c of allControllers()) c.stopCine();
   // Measurements are saved per study, then removed from the viewer with the studies.
-  await resetMeasurements();
-  await window.api.clearSession();
-  useStore.getState().clearAll();
+  try {
+    await resetMeasurements();
+    await window.api.clearSession();
+    useStore.getState().clearAll();
+  } finally {
+    reopenMeasurements();
+  }
   // Viewports unmount with the start screen; release cached pixels afterwards.
   setTimeout(purgeAll, 0);
 }
@@ -160,7 +164,13 @@ export const COMMANDS: Command[] = [
     alt: [{ key: 'z', mod: true, shift: true }],
     run: redo,
   },
-  { id: 'deleteMeasurement', labelKey: 'measure.deleteSelected', group: 'tools', shortcut: { key: 'Delete' }, run: () => void deleteSelected() },
+  {
+    id: 'deleteMeasurement',
+    labelKey: 'measure.deleteSelected',
+    group: 'tools',
+    shortcut: { key: 'Delete' },
+    run: () => void deleteSelected(),
+  },
   { id: 'rotateCw', labelKey: 'toolbar.rotateCw', group: 'view', shortcut: { key: 'r' }, run: () => active()?.rotate(90) },
   { id: 'rotateCcw', labelKey: 'toolbar.rotateCcw', group: 'view', shortcut: { key: 'r', shift: true }, run: () => active()?.rotate(-90) },
   { id: 'flipH', labelKey: 'toolbar.flipH', group: 'view', shortcut: { key: 'h' }, run: () => active()?.flip('h') },

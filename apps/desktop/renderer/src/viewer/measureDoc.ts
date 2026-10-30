@@ -260,6 +260,9 @@ const unsavable = new Set<string>();
 let syncing = 0;
 /** Incremented by resetMeasurements; a load that finishes after a reset is discarded. */
 let epoch = 0;
+/** From the start of "close all" until its studies are gone: no load may start (a late scan batch could otherwise
+ * restore measurements onto display sets that are about to disappear). */
+let closing = false;
 /** Saves run one after another; two overlapping writes could otherwise finish out of order. */
 let saveChain: Promise<void> = Promise.resolve();
 
@@ -294,7 +297,8 @@ async function writeChangedStudies(): Promise<void> {
     try {
       await window.api.saveMeasurements(file);
     } catch {
-      lastSaved.delete(study);
+      // Keep the study in the write set with a value no file matches, so the write (or deletion) is retried.
+      lastSaved.set(study, '');
       console.warn('Measurements could not be saved');
       useStore.getState().notify('error', i18next.t('measurements.saveFailed'));
     }
@@ -342,7 +346,8 @@ async function restoreStudy(study: string, myEpoch: number): Promise<boolean> {
       if (!restoreItem(it)) pending.set(study, [...(pending.get(study) ?? []), it]);
     }
     const cal = useStore.getState().calibrations;
-    useStore.getState().replaceCalibrations({ ...cal, ...file.calibrations });
+    // A calibration made in this session while the study was loading wins over the saved one.
+    useStore.getState().replaceCalibrations({ ...file.calibrations, ...cal });
   } catch {
     markUnsavable(study);
     return false;
@@ -356,8 +361,10 @@ async function restoreStudy(study: string, myEpoch: number): Promise<boolean> {
 
 /** Loads saved measurements of studies seen for the first time and restores items whose images are now indexed. */
 export async function syncStudies(): Promise<void> {
+  if (closing) return;
   const myEpoch = epoch;
   syncing++;
+  bump();
   let changed = false;
   let loadedAny = false;
   try {
@@ -396,8 +403,12 @@ export async function syncStudies(): Promise<void> {
   bump();
 }
 
-/** Saves, then forgets every measurement (used when all studies are closed). */
+/**
+ * Saves, then forgets every measurement (first step of "close all"). Loads stay blocked until {@link reopenMeasurements}
+ * is called after the studies themselves have been cleared.
+ */
 export async function resetMeasurements(): Promise<void> {
+  closing = true;
   epoch++;
   await save();
   restoring = true;
@@ -438,4 +449,9 @@ export function removeMeasurement(uid: string): void {
   csAnnotation.state.removeAnnotation(uid);
   renderAll();
   commit();
+}
+
+/** Ends "close all": studies opened from now on load their saved measurements again. */
+export function reopenMeasurements(): void {
+  closing = false;
 }

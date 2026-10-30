@@ -118,7 +118,9 @@ export function initAnnotationEvents(): void {
     if (tool && tool !== 'calibrate' && !isRestoring()) commitWhenIdle();
   });
   useStore.subscribe((s, prev) => {
-    if (s.studies !== prev.studies) void syncStudies();
+    if (s.studies !== prev.studies) {
+      syncStudies().catch(() => console.warn('Saved measurements could not be restored'));
+    }
   });
 }
 
