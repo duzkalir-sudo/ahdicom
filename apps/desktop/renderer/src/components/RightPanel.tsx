@@ -285,6 +285,9 @@ function TagList(props: { fileId: string }): ReactNode {
 
   return (
     <div data-testid="tag-browser">
+      <p className="tag-intro" data-testid="tag-intro">
+        {t('tags.intro')}
+      </p>
       <label className="search">
         <Search size={14} />
         <input

@@ -107,7 +107,7 @@ Viewer
   "first series shown while scanning continues" (timing-dependent), cine frame-rate accuracy (only bounce/loop behaviour is
   checked), Intel macOS (not tested by decision D-035).
 - **STOP after M1** → UX review. Round 1 (2026-10-30) feedback implemented: splash removed, flip toggle fixed,
-  instant tooltips, sort section removed, English default + language button. Open: what the Tags tab is for.
+  instant tooltips, sort section removed, English default + language button, Tags tab renamed with an explanation (D-041).
 
 ### M2–M8
 See `docs/PRODUCT_SPEC.md` §3 and milestone acceptance criteria in the brief; detailed task lists are added when each

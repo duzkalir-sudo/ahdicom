@@ -146,7 +146,7 @@ export const tr = {
   },
   panel: {
     measurements: 'Ölçümler',
-    tags: 'Etiketler',
+    tags: 'DICOM Bilgileri',
     info: 'Bilgi',
     collapse: 'Paneli daralt',
     expand: 'Paneli genişlet',
@@ -157,6 +157,7 @@ export const tr = {
   },
   tags: {
     copyFailed: 'Panoya kopyalanamadı.',
+    intro: 'Görüntü dosyasının içinde saklanan tüm DICOM kayıtları: çekim parametreleri, cihaz, tarih, hasta bilgileri vb. Bir değeri kopyalamak için üzerine çift tıklayın.',
     search: 'Etiket, ad veya değer ara',
     copyValue: 'Değeri kopyala',
     copyAll: 'Tümünü kopyala',

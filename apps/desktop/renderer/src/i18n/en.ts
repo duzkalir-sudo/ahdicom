@@ -153,7 +153,7 @@ export const en: Shape<Resources> = {
   },
   panel: {
     measurements: 'Measurements',
-    tags: 'DICOM tags',
+    tags: 'DICOM Data',
     info: 'Info',
     collapse: 'Collapse panel',
     expand: 'Expand panel',
@@ -164,6 +164,7 @@ export const en: Shape<Resources> = {
   },
   tags: {
     copyFailed: 'Could not copy to the clipboard.',
+    intro: 'All DICOM records stored inside the image file: acquisition parameters, device, dates, patient data, etc. Double-click a value to copy it.',
     search: 'Search tag, name or value',
     copyValue: 'Copy value',
     copyAll: 'Copy all',

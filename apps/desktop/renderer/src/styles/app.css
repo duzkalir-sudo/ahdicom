@@ -870,7 +870,7 @@ select {
 }
 
 .tab {
-  flex: 1;
+  flex: 1 1 auto;
   height: 36px;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -940,6 +940,13 @@ select {
   flex: none;
   color: var(--warning);
   margin-top: 1px;
+}
+
+.tag-intro {
+  margin: 8px 10px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .search {

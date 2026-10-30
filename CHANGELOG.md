@@ -9,6 +9,7 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 - English is the default language; TR/EN button in the toolbar.
 - Tooltips appear immediately on hover for every icon, including disabled ones.
 - Sort selector removed from the Info panel (images are always in spatial order).
+- Tags tab renamed "DICOM Bilgileri" / "DICOM Data" with a short explanation.
 
 ### Fixed
 - Flip horizontal/vertical worked only once (Cornerstone `setViewPresentation` cannot un-flip).
