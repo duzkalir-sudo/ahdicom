@@ -40,7 +40,6 @@ interface State {
   leftOpen: boolean;
   rightOpen: boolean;
   rightTab: RightTab;
-  distractionFree: boolean;
   fullscreen: boolean;
   dialog: DialogKind;
   showInfoOverlay: boolean;
@@ -70,7 +69,6 @@ interface Actions {
   toggleLeft(): void;
   toggleRight(): void;
   setRightTab(t: RightTab): void;
-  setDistractionFree(on: boolean): void;
   setFullscreen(on: boolean): void;
   setDialog(d: DialogKind): void;
   toggleInfoOverlay(): void;
@@ -119,7 +117,6 @@ export const useStore = create<State & Actions>()((set, get) => {
     leftOpen: true,
     rightOpen: true,
     rightTab: 'info',
-    distractionFree: false,
     fullscreen: false,
     dialog: null,
     showInfoOverlay: true,
@@ -181,7 +178,6 @@ export const useStore = create<State & Actions>()((set, get) => {
     toggleLeft: () => set({ leftOpen: !get().leftOpen }),
     toggleRight: () => set({ rightOpen: !get().rightOpen }),
     setRightTab: (rightTab) => set({ rightTab, rightOpen: true }),
-    setDistractionFree: (distractionFree) => set({ distractionFree }),
     setFullscreen: (fullscreen) => set({ fullscreen }),
     setDialog: (dialog) => set({ dialog }),
     toggleInfoOverlay: () => set({ showInfoOverlay: !get().showInfoOverlay }),

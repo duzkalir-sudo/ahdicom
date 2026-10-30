@@ -46,7 +46,6 @@ export const tr = {
     dicomOverlays: 'DICOM overlay göster / gizle',
     hidePatient: 'Hasta bilgilerini gizle',
     fullscreen: 'Tam ekran',
-    distractionFree: 'Sade mod',
     settings: 'Ayarlar',
     help: 'Klavye kısayolları',
     about: 'Hakkında ve yasal bilgiler',
@@ -157,7 +156,8 @@ export const tr = {
   },
   tags: {
     copyFailed: 'Panoya kopyalanamadı.',
-    intro: 'Görüntü dosyasının içinde saklanan tüm DICOM kayıtları: çekim parametreleri, cihaz, tarih, hasta bilgileri vb. Bir değeri kopyalamak için üzerine çift tıklayın.',
+    intro:
+      'Görüntü dosyasının içinde saklanan tüm DICOM kayıtları: çekim parametreleri, cihaz, tarih, hasta bilgileri vb. Bir değeri kopyalamak için üzerine çift tıklayın.',
     search: 'Etiket, ad veya değer ara',
     copyValue: 'Değeri kopyala',
     copyAll: 'Tümünü kopyala',
@@ -335,7 +335,7 @@ export const tr = {
     defaultWindow: 'DICOM varsayılan penceresi',
     openFiles: 'Dosya aç',
     openFolder: 'Klasör aç',
-    escape: 'İletişim kutusunu / sade modu kapat',
+    escape: 'İletişim kutusunu / tam ekranı kapat',
     activeViewport: 'Sonraki görüntü alanı',
   },
   units: {

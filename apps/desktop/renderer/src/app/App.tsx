@@ -53,7 +53,6 @@ export function App(): ReactNode {
   const ready = useStore((s) => s.ready);
   const hasStudies = useStore((s) => s.studies.length > 0);
   const scanning = useStore((s) => Object.keys(s.scans).length > 0);
-  const df = useStore((s) => s.distractionFree);
   const [dragOver, setDragOver] = useState(false);
   useResolvedTheme();
   useApiEvents();
@@ -115,7 +114,7 @@ export function App(): ReactNode {
 
   const showViewer = hasStudies || scanning;
   return (
-    <div className={`app${df ? ' df' : ''}`} data-testid="app">
+    <div className="app" data-testid="app">
       <Toolbar />
       <div className="main">
         {showViewer ? <SeriesBar /> : <span />}

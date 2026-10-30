@@ -203,16 +203,15 @@ test('core flow: open folder → series → scroll → W/L → zoom/pan → layo
     await page.getByTestId('tag-location').click();
     await expect(page.getByTestId('tag-location-text')).toContainText('IM0001.dcm');
 
-    // Full screen and distraction-free
+    // Full screen (distraction-free mode was removed at the user's request, D-042)
     await page.keyboard.press('F11');
     await expect.poll(async () => s.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFullScreen())).toBe(true);
     // On macOS the full-screen animation runs for ~1 s; wait until the app reports it (toolbar button pressed).
     await expect(page.getByTestId('tb-fullscreen')).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('F11');
     await expect.poll(async () => s.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFullScreen())).toBe(false);
+    // F10 no longer hides the UI.
     await page.keyboard.press('F10');
-    await expect(page.getByTestId('toolbar')).toBeHidden();
-    await page.keyboard.press('Escape');
     await expect(page.getByTestId('toolbar')).toBeVisible();
     expectNoErrors(s);
   } finally {

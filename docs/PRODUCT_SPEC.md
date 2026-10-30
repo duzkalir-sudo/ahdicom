@@ -99,7 +99,7 @@ Priority: **P0** required for first clinical-research use · **P1** required for
 | Series sorting: spatial position by default (InstanceNumber fallback shown). The sort-key/direction selector was removed from the Info panel at the user's request (D-038); sorting logic remains in `dicom-core` | P1 | 1 |
 | Split multi-volume series (multi-phase CT, DWI b-values, multi-echo) into display sets; merge series into one panel | P1 | 3 |
 | Copy active viewport or all visible viewports to clipboard as one image | P1 | 6 |
-| Full screen and distraction-free mode | P1 | 1 |
+| Full screen (distraction-free mode removed by user decision, D-042) | P1 | 1 |
 
 ### 3.4 Measurements and ROI (2D and MPR)
 | Feature | Pri | M |

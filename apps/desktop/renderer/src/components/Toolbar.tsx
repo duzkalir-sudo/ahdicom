@@ -19,7 +19,6 @@ import {
   LayoutGrid,
   Link2,
   Maximize,
-  Monitor,
   Minimize2,
   MoveVertical,
   Play,
@@ -404,9 +403,6 @@ export function Toolbar(): ReactNode {
       <div className="tb-spacer" />
 
       <div className="tb-group" aria-label={t('groups.settings')}>
-        <IconButton tip={tooltip('toolbar.distractionFree', 'distractionFree')} onClick={() => s.setDistractionFree(true)} testId="tb-df">
-          <Monitor size={18} />
-        </IconButton>
         <IconButton
           tip={tooltip('toolbar.fullscreen', 'fullscreen')}
           pressed={s.fullscreen}

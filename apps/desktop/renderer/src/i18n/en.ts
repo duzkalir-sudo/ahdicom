@@ -50,7 +50,6 @@ export const en: Shape<Resources> = {
     dicomOverlays: 'Show / hide DICOM overlays',
     hidePatient: 'Hide patient data',
     fullscreen: 'Full screen',
-    distractionFree: 'Distraction-free mode',
     settings: 'Settings',
     help: 'Keyboard shortcuts',
     about: 'About and legal information',
@@ -164,7 +163,8 @@ export const en: Shape<Resources> = {
   },
   tags: {
     copyFailed: 'Could not copy to the clipboard.',
-    intro: 'All DICOM records stored inside the image file: acquisition parameters, device, dates, patient data, etc. Double-click a value to copy it.',
+    intro:
+      'All DICOM records stored inside the image file: acquisition parameters, device, dates, patient data, etc. Double-click a value to copy it.',
     search: 'Search tag, name or value',
     copyValue: 'Copy value',
     copyAll: 'Copy all',
@@ -345,7 +345,7 @@ export const en: Shape<Resources> = {
     defaultWindow: 'DICOM default window',
     openFiles: 'Open files',
     openFolder: 'Open folder',
-    escape: 'Close dialog / distraction-free mode',
+    escape: 'Close dialog / full screen',
     activeViewport: 'Next viewport',
   },
   units: {

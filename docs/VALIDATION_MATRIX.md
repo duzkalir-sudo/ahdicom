@@ -75,7 +75,7 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Cine | E2E (index advances while playing) | Pass |
 | DICOM overlays incl. per-frame, toggle | E2E (overlay colour at frame line, hidden after toggle) | Pass |
 | Tag browser search, location | E2E core flow | Pass |
-| Full screen / distraction-free | E2E core flow | Pass |
+| Full screen (F11, Esc); F10 no longer hides the UI | E2E core flow | Pass |
 | Intended-use statement in About ("i" button) and status bar | E2E m0 | Pass |
 | Screenshots 1280×800 & 1920×1080 × dark/light × tr/en inspected | `artifacts/screenshots/M0`, `M1` | Inspected; issues fixed (toolbar overflow, thumbnails, labels, tag table) |
 

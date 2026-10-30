@@ -11,6 +11,9 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 - Sort selector removed from the Info panel (images are always in spatial order).
 - Tags tab renamed "DICOM Bilgileri" / "DICOM Data" with a short explanation.
 
+### Removed
+- Distraction-free mode (toolbar button and F10); full screen (F11) remains.
+
 ### Fixed
 - Flip horizontal/vertical worked only once (Cornerstone `setViewPresentation` cannot un-flip).
 

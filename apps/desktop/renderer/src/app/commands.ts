@@ -214,13 +214,6 @@ export const COMMANDS: Command[] = [
   },
   { id: 'fullscreen', labelKey: 'toolbar.fullscreen', group: 'general', shortcut: { key: 'F11' }, run: () => void toggleFullscreen() },
   {
-    id: 'distractionFree',
-    labelKey: 'toolbar.distractionFree',
-    group: 'general',
-    shortcut: { key: 'F10' },
-    run: () => useStore.getState().setDistractionFree(!useStore.getState().distractionFree),
-  },
-  {
     id: 'help',
     labelKey: 'toolbar.help',
     group: 'general',
@@ -265,7 +258,6 @@ export function handleKey(e: KeyboardEvent): boolean {
   if (e.key === 'Escape') {
     const s = useStore.getState();
     if (s.dialog) s.setDialog(null);
-    else if (s.distractionFree) s.setDistractionFree(false);
     else if (s.fullscreen) void window.api.setFullscreen(false);
     return true;
   }
