@@ -10,3 +10,5 @@ export * from './parse.js';
 export * from './tags.js';
 export * from './lut.js';
 export * from './display.js';
+export * from './measure.js';
+export * from './suv.js';

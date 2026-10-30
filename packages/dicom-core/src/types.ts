@@ -113,10 +113,45 @@ export interface InstanceRecord {
   /** Overlay groups present (0x6000, 0x6002, …) */
   overlayGroups?: number[];
   hasUltrasoundRegions?: boolean;
+  /** Sequence of Ultrasound Regions (0018,6011), at most 16 items. */
+  ultrasoundRegions?: UltrasoundRegion[];
+  /** First item of the Radiopharmaceutical Information Sequence (0054,0016). */
+  radiopharmaceutical?: Radiopharmaceutical;
+  /** PET Decay Correction (0054,1102): NONE, START or ADMIN. */
+  decayCorrection?: string;
+  /** Corrected Image (0028,0051), e.g. ['ATTN', 'DECY']. */
+  correctedImage?: string[];
+  acquisitionDate?: string;
 
   /** Specific Character Set as stored, and whether any decoded text was uncertain. */
   specificCharacterSet?: string;
   charsetUncertain: boolean;
+}
+
+/** One item of the Sequence of Ultrasound Regions (PS3.3 C.8.5.5.1). Bounds are inclusive pixel indices. */
+export interface UltrasoundRegion {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  spatialFormat?: number;
+  dataType?: number;
+  /** Physical Units X/Y Direction (0018,6024/6026): 3 = cm, 4 = seconds, 5 = hertz, … */
+  unitsX: number;
+  unitsY: number;
+  /** Physical Delta X/Y (0018,602C/602E): physical units per pixel. */
+  deltaX: number;
+  deltaY: number;
+}
+
+/** Radiopharmaceutical Information Sequence item fields used for SUV (PS3.3 C.8.9.2). */
+export interface Radiopharmaceutical {
+  startTime?: string;
+  startDateTime?: string;
+  /** Radionuclide Total Dose in Bq. */
+  totalDose?: number;
+  /** Radionuclide Half Life in seconds. */
+  halfLife?: number;
 }
 
 export type WarningCode =

@@ -4,7 +4,7 @@
  */
 import dicomParser from 'dicom-parser';
 import { decodeText, parseSpecificCharacterSet } from './charset.js';
-import type { FrameGeometry, InstanceRecord } from './types.js';
+import type { FrameGeometry, InstanceRecord, Radiopharmaceutical, UltrasoundRegion } from './types.js';
 
 type DataSet = dicomParser.DataSet;
 
@@ -110,6 +110,53 @@ function ss(ds: DataSet, tag: string): number | undefined {
   const el = ds.elements[tag];
   if (!el || el.length < 2 || el.dataOffset + 2 > ds.byteArray.length) return undefined;
   return ds.int16(tag);
+}
+
+function ul(ds: DataSet, tag: string): number | undefined {
+  const el = ds.elements[tag];
+  if (!el || el.length < 4 || el.dataOffset + 4 > ds.byteArray.length) return undefined;
+  return ds.uint32(tag);
+}
+
+function fd(ds: DataSet, tag: string): number | undefined {
+  const el = ds.elements[tag];
+  if (!el || el.length < 8 || el.dataOffset + 8 > ds.byteArray.length) return undefined;
+  const v = ds.double(tag);
+  return v !== undefined && Number.isFinite(v) ? v : undefined;
+}
+
+/** Sequence of Ultrasound Regions; items without bounds or deltas are skipped. */
+function ultrasoundRegions(ds: DataSet): UltrasoundRegion[] | undefined {
+  const items = ds.elements.x00186011?.items ?? [];
+  const out: UltrasoundRegion[] = [];
+  for (const it of items.slice(0, 16)) {
+    const r = it.dataSet;
+    if (!r) continue;
+    const minX = ul(r, 'x00186018');
+    const minY = ul(r, 'x0018601a');
+    const maxX = ul(r, 'x0018601c');
+    const maxY = ul(r, 'x0018601e');
+    const unitsX = us(r, 'x00186024');
+    const unitsY = us(r, 'x00186026');
+    const deltaX = fd(r, 'x0018602c');
+    const deltaY = fd(r, 'x0018602e');
+    if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) continue;
+    if (unitsX === undefined || unitsY === undefined || deltaX === undefined || deltaY === undefined) continue;
+    out.push(definedOnly({ minX, minY, maxX, maxY, spatialFormat: us(r, 'x00186012'), dataType: us(r, 'x00186014'), unitsX, unitsY, deltaX, deltaY }));
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function radiopharmaceutical(ds: DataSet): Radiopharmaceutical | undefined {
+  const r = item(ds, 'x00540016');
+  if (!r) return undefined;
+  const out = definedOnly({
+    startTime: asciiString(r, 'x00181072'),
+    startDateTime: asciiString(r, 'x00181078'),
+    totalDose: number(r, 'x00181074'),
+    halfLife: number(r, 'x00181075'),
+  });
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function vec<N extends number>(ds: DataSet, tag: string, n: N): number[] | undefined {
@@ -376,6 +423,11 @@ export function parseInstance(bytes: Uint8Array, opts: ParseOptions): ParseResul
     hasVoiLutSequence: ds.elements.x00283010 ? true : undefined,
     overlayGroups: overlayGroups.length > 0 ? overlayGroups : undefined,
     hasUltrasoundRegions: ds.elements.x00186011 ? true : undefined,
+    ultrasoundRegions: ultrasoundRegions(ds),
+    radiopharmaceutical: radiopharmaceutical(ds),
+    decayCorrection: asciiString(ds, 'x00541102'),
+    correctedImage: asciiValues(ds, 'x00280051'),
+    acquisitionDate: asciiString(ds, 'x00080022'),
 
     specificCharacterSet: charsetRaw,
     charsetUncertain: false,
