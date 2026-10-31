@@ -6,7 +6,7 @@ ellipse / rectangle / polygon ROI, open polyline, freehand, arrow with text, tex
 measurement list (rename, delete, jump, ellipsoid / bullet volume), undo / redo and per-study persistence.
 Cornerstone draws the handles; every number shown comes from `dicom-core`, unit-tested against analytic phantoms (D-043).
 Also in this milestone: UX review round 1 (D-036…D-042), including the removal of distraction-free mode.
-Not done: explicit user choice of the spacing basis (R-027), DICOM SR/GSPS export (later milestone).
+Not done: DICOM SR/GSPS export (later milestone). An explicit spacing-basis choice is not needed (user decision D-051).
 **OS actually run on:** Windows 11 x64 (local). **CI:** not run yet for M2 — the push waits for the user's approval
 (one push per milestone).
 
@@ -22,7 +22,7 @@ Not done: explicit user choice of the spacing basis (R-027), DICOM SR/GSPS expor
 | Measurement list: rename, delete, jump, volume from three diameters | Done | E2E persistence test, `artifacts/screenshots/M2/measure-list-1280x800-dark-en.png` |
 | Undo / redo (Ctrl+Z / Ctrl+Y) | Done | E2E persistence test |
 | Saved per study, restored after restart; kept when the series leaves the viewport or the study is only partly open | Done | E2E restart, series-switch and partial-study tests; fuzz `measurements.fuzz.test.ts` |
-| Basis selection by the user (spec §3.4) | Not started | R-027 — question below |
+| Basis selection by the user (spec §3.4) | Not needed (user decision D-051) | Basis shown next to values and in the Info panel |
 
 ## 3. Verification results
 | Protocol step | Result | Notes |
@@ -63,14 +63,13 @@ Existing test changed (user-approved 2026-10-30): `tests/e2e/m0-shell.spec.ts` p
 - R-024: Cornerstone holds a viewport click 400 ms; very fast click sequences can drop a click; a tool chosen within that time activates after it.
 - R-025: SVG text style routed through CSSOM (D-044) — caught by the E2E console check if Cornerstone changes.
 - R-026: ROI stats of images released from memory are shown from the last computation.
-- R-027: no explicit basis choice; Pixel Spacing lengths carry no suffix (basis in the Info panel).
 - R-028: padding exclusion compares rescaled values.
 - R-029: set-aside measurement files are not cleaned up; R-030: one flaky E2E observation.
 - Remaining non-blocking verifier notes (pass 5): if "close all" fails half-way, edits to the still-open studies are not saved until the studies are reopened (the saved file is not touched); a scan batch delivered after close could re-register files (pre-existing, unverified); a write that fails during close is not retried after it. Measurement text boxes can cover image areas (75 % backing; placement is Cornerstone's).
 
 ## 7. Decisions and questions
-- Decisions: D-041…D-050.
-- Questions for the user: (1) approval to push M2 to GitHub and run the Windows + macOS CI; (2) is an explicit spacing-basis choice needed (R-027)?
+- Decisions: D-041…D-051.
+- Questions for the user: approval to push M2 to GitHub and run the Windows + macOS CI (after the user has tried the installer).
 
 ## 8. How to run, test, build
 ```

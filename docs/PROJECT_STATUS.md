@@ -10,7 +10,7 @@ _Last updated: 2026-10-30_
 |---|---|
 | M0 foundation | Done. CI green on Windows and macOS arm64. |
 | M1 viewer | Done except: concatenation merge, Presentation LUT INVERSE not E2E-asserted, pixel padding not excluded from auto ranges (see PLAN [~]). |
-| M2 | Done locally: all tools, list, undo/redo, persistence. Open: explicit basis choice (R-027). CI not run yet. |
+| M2 | Done locally: all tools, list, undo/redo, persistence. CI not run yet. |
 | M3–M8 | Not started. M8 needs explicit approval. |
 
 ## How to resume
@@ -35,7 +35,6 @@ Previous (2026-10-29, M1):
 
 ## Open questions for the user
 - Approval to push M2 and run CI.
-- Explicit spacing-basis choice needed? (R-027)
 
 ## Failing checks
 None known locally.
