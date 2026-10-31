@@ -415,6 +415,13 @@ test('manual calibration is saved with the study and shown in the Info panel', a
       await s.page.getByTestId('prompt-ok').click();
       await s.page.getByTestId('tab-info').click();
       await expect(s.page.getByTestId('info-calibration')).toContainText('(calibrated)');
+      // The 100 px line declared 50 mm gives 0.5 mm per pixel in both directions.
+      const cal = await s.page.evaluate(
+        () => (window as unknown as { __cdv: { calibrations(): Record<string, { rowMm: number; columnMm: number }> } }).__cdv.calibrations(),
+      );
+      const [only] = Object.values(cal);
+      near(only!.columnMm, 0.5, 0.01);
+      near(only!.rowMm, 0.5, 0.01);
       await s.page.waitForTimeout(500);
       expectNoErrors(s);
     } finally {
