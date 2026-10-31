@@ -32,13 +32,13 @@ Not done: explicit user choice of the spacing basis (R-027), DICOM SR/GSPS expor
 | `npm run lint` | Pass | 0 warnings |
 | `npm run license:check` | Pass | |
 | `npm audit --audit-level=high` | Pass | 6 moderate advisories via Cornerstone → vtk.js → fflate/uuid (no high) |
-| `npm run test` | Pass | 194 unit + fuzz |
-| `npm run test:e2e` | Pass | 35 tests (12 M2) |
+| `npm run test` | Pass | 194 unit + fuzz (final run on b120324) |
+| `npm run test:e2e` | Pass | 35 tests (12 M2); one flaky failure seen once under load, not reproduced in 27 runs (R-030) |
 | Built app run manually | UNVERIFIED | Only through Playwright on the built app; the user tests the installer |
 | Screenshot inspection | Done | All 22 M2 screenshots opened; no clipping/overflow; text-box background raised to 75 % opacity |
 | Performance / memory | Pass | `PERF {"firstImageMs":465,"fps":60.3,"heapAfterMB":63,"cacheAfterCloseMB":0}` |
 | CI matrix (Windows, macOS) | Not run | Waiting for push approval |
-| Verifier subagent | 1st pass **FAIL**, 2nd pass **FAIL** → fixed | Pass 1: per-image calibration; calibration dropped on partial-study save; pinned API list (updated with the user's approval). Pass 2 confirmed those fixed and found a save-during-restore race and an over-broad set-aside on read errors; pass 3 found the race still open when several studies load at once (undo during a load, studies waiting their turn). Replaced by a write gate: a study is written only after its saved file was read and restored; undo/redo disabled during loads. Pass 4 confirmed the gate and found a close-all window (late scan batch) — closed with a close gate (D-050). The race fix has no dedicated test (timing-dependent); verified by code review and the persistence E2E tests. |
+| Verifier subagent | Passes 1–4 **FAIL** → fixed; pass 5 **PASS** | Pass 1: per-image calibration; calibration dropped on partial-study save; pinned API list (updated with the user's approval). Pass 2 confirmed those fixed and found a save-during-restore race and an over-broad set-aside on read errors; pass 3 found the race still open when several studies load at once (undo during a load, studies waiting their turn). Replaced by a write gate: a study is written only after its saved file was read and restored; undo/redo disabled during loads. Pass 4 confirmed the gate and found a close-all window (late scan batch) — closed with a close gate (D-050). Pass 5: PASS (code review + unit/type checks). The race fix has no dedicated test (timing-dependent); verified by code review and the persistence E2E tests. |
 
 Existing test changed (user-approved 2026-10-30): `tests/e2e/m0-shell.spec.ts` pinned preload API list +`loadMeasurements`,
 +`saveMeasurements`; nothing else in the test changed.
@@ -65,7 +65,8 @@ Existing test changed (user-approved 2026-10-30): `tests/e2e/m0-shell.spec.ts` p
 - R-026: ROI stats of images released from memory are shown from the last computation.
 - R-027: no explicit basis choice; Pixel Spacing lengths carry no suffix (basis in the Info panel).
 - R-028: padding exclusion compares rescaled values.
-- Remaining non-blocking verifier notes: measurement text boxes can cover image areas (75 % backing); placement is Cornerstone's.
+- R-029: set-aside measurement files are not cleaned up; R-030: one flaky E2E observation.
+- Remaining non-blocking verifier notes (pass 5): if "close all" fails half-way, edits to the still-open studies are not saved until the studies are reopened (the saved file is not touched); a scan batch delivered after close could re-register files (pre-existing, unverified); a write that fails during close is not retried after it. Measurement text boxes can cover image areas (75 % backing; placement is Cornerstone's).
 
 ## 7. Decisions and questions
 - Decisions: D-041…D-050.

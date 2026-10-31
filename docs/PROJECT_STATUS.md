@@ -21,8 +21,8 @@ _Last updated: 2026-10-30_
 ## Last verification (2026-10-30, Windows 11, M2)
 | Check | Result |
 |---|---|
-| `npm run check` | Pass (194 unit/fuzz, 35 E2E, licenses, audit high, build) |
-| Verifier subagent (M2) | 1st pass FAIL (2 blocking gaps) → fixed (D-049, D-050) |
+| `npm run check` (b120324) | Pass (194 unit/fuzz, 35 E2E, licenses, audit high, build); first image 0.29 s |
+| Verifier subagent (M2) | Passes 1–4 FAIL → all blocking gaps fixed (D-049, D-050); pass 5 PASS |
 
 Previous (2026-10-29, M1):
 
