@@ -27,6 +27,7 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 - Distraction-free mode (toolbar button and F10); full screen (F11) remains.
 
 ### Fixed
+- Dialogs focus their input field (typing works at once), Esc closes them, disabled buttons look disabled; the calibration box explains an invalid number (reported by the user).
 - Flip horizontal/vertical worked only once (Cornerstone `setViewPresentation` cannot un-flip).
 
 ### Changed

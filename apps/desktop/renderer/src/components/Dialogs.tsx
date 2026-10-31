@@ -430,7 +430,10 @@ function PromptDialog(): ReactNode {
     req.resolve(v);
   };
   return (
-    <Modal title={t(calibrate ? 'measure.calibrateTitle' : 'measure.textTitle')} onClose={() => answer(null)} testId="prompt-dialog"
+    <Modal
+      title={t(calibrate ? 'measure.calibrateTitle' : 'measure.textTitle')}
+      onClose={() => answer(null)}
+      testId="prompt-dialog"
       footer={
         <>
           <button type="button" className="btn" onClick={() => answer(null)}>
@@ -461,6 +464,11 @@ function PromptDialog(): ReactNode {
             autoComplete="off"
             data-testid="prompt-input"
           />
+          {calibrate && value.trim() !== '' && !valid ? (
+            <div className="field-error" role="alert" data-testid="prompt-error">
+              {t('measure.calibrateInvalid')}
+            </div>
+          ) : null}
         </div>
       </form>
     </Modal>

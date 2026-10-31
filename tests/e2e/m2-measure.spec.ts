@@ -416,8 +416,8 @@ test('manual calibration is saved with the study and shown in the Info panel', a
       await s.page.getByTestId('tab-info').click();
       await expect(s.page.getByTestId('info-calibration')).toContainText('(calibrated)');
       // The 100 px line declared 50 mm gives 0.5 mm per pixel in both directions.
-      const cal = await s.page.evaluate(
-        () => (window as unknown as { __cdv: { calibrations(): Record<string, { rowMm: number; columnMm: number }> } }).__cdv.calibrations(),
+      const cal = await s.page.evaluate(() =>
+        (window as unknown as { __cdv: { calibrations(): Record<string, { rowMm: number; columnMm: number }> } }).__cdv.calibrations(),
       );
       const [only] = Object.values(cal);
       near(only!.columnMm, 0.5, 0.01);
@@ -553,6 +553,60 @@ test('a calibration survives a save made while only part of its study is open', 
     }
   } finally {
     rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('dialogs take keyboard input at once: calibration typed after click-move-click, Esc cancels, text prompt', async () => {
+  const s = await launch({ lang: 'tr' });
+  try {
+    await openSeries(s, 'cr-mag');
+    // Draw the calibration line the way a person often does: click, move, click.
+    await pickFromMenu(s.page, 'calibrate');
+    const a = await pixelToClient(s.page, 100, 300);
+    const b = await pixelToClient(s.page, 200, 300);
+    await s.page.mouse.click(a.x, a.y);
+    await s.page.mouse.move(b.x, b.y, { steps: 10 });
+    await s.page.waitForTimeout(450);
+    await s.page.mouse.click(b.x, b.y);
+    await expect(s.page.getByTestId('prompt-dialog')).toBeVisible();
+    // Typed keys go straight into the field (no click needed); an invalid entry explains itself.
+    await expect(s.page.getByTestId('prompt-input')).toBeFocused();
+    await s.page.keyboard.type('abc');
+    await expect(s.page.getByTestId('prompt-error')).toBeVisible();
+    await expect(s.page.getByTestId('prompt-ok')).toBeDisabled();
+    await screenshot(s.page, 'M2', 'calibrate-invalid-1280x800-dark-tr');
+    await s.page.keyboard.press('Control+a');
+    await s.page.keyboard.type('50');
+    await expect(s.page.getByTestId('prompt-error')).toHaveCount(0);
+    await s.page.keyboard.press('Enter');
+    await expect(s.page.getByTestId('prompt-dialog')).toHaveCount(0);
+    const cal = await s.page.evaluate(() =>
+      (window as unknown as { __cdv: { calibrations(): Record<string, { rowMm: number; columnMm: number }> } }).__cdv.calibrations(),
+    );
+    near(Object.values(cal)[0]!.columnMm, 0.5, 0.01);
+
+    // Esc cancels the dialog without calibrating.
+    await pickFromMenu(s.page, 'calibrate');
+    await drag(s.page, [100, 400], [150, 400]);
+    await expect(s.page.getByTestId('prompt-input')).toBeFocused();
+    await s.page.keyboard.type('7');
+    await s.page.keyboard.press('Escape');
+    await expect(s.page.getByTestId('prompt-dialog')).toHaveCount(0);
+    const after = await s.page.evaluate(() =>
+      (window as unknown as { __cdv: { calibrations(): Record<string, { rowMm: number; columnMm: number }> } }).__cdv.calibrations(),
+    );
+    near(Object.values(after)[0]!.columnMm, 0.5, 0.01);
+
+    // Arrow text is typed directly as well.
+    await pickTool(s.page, 't');
+    await drag(s.page, [300, 100], [250, 150]);
+    await expect(s.page.getByTestId('prompt-input')).toBeFocused();
+    await s.page.keyboard.type('Kırık şüphesi');
+    await s.page.keyboard.press('Enter');
+    await expect.poll(async () => (await measurements(s.page)).find((m) => m.tool === 'arrow')?.label).toBe('Kırık şüphesi');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
   }
 });
 

@@ -199,6 +199,7 @@ export const tr = {
     textLabel: 'Metin',
     calibrateTitle: 'Kalibrasyon',
     calibrateLabel: 'Çizginin gerçek uzunluğu (mm)',
+    calibrateInvalid: 'Pozitif bir sayı girin, örneğin 25 veya 12,5.',
     calibrateDetail: 'Ölçülen: {{current}}. Gerçek uzunluğu girin; bu serideki tüm ölçümler bunu kullanır.',
     calibrated: '{{series}} serisi elle kalibre edildi.',
   },

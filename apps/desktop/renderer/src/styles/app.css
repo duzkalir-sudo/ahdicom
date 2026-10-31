@@ -1212,6 +1212,19 @@ select {
   color: var(--on-accent);
 }
 
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  border-color: var(--border-strong);
+}
+
+.btn.primary:disabled:hover {
+  border-color: var(--accent-strong);
+}
+
 .field {
   display: grid;
   gap: 4px;
@@ -1477,4 +1490,10 @@ kbd {
   justify-content: space-between;
   gap: 8px;
   margin-top: 4px;
+}
+
+.field-error {
+  margin-top: 6px;
+  color: var(--danger);
+  font-size: 12px;
 }

@@ -206,6 +206,7 @@ export const en: Shape<Resources> = {
     textLabel: 'Text',
     calibrateTitle: 'Calibrate',
     calibrateLabel: 'True length of the line (mm)',
+    calibrateInvalid: 'Enter a positive number, e.g. 25 or 12.5.',
     calibrateDetail: 'Measured: {{current}}. Enter the real length; all measurements of this series will use it.',
     calibrated: 'Series {{series}} calibrated manually.',
   },

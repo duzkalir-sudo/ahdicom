@@ -131,8 +131,14 @@ export function Modal(props: {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const first = ref.current?.querySelector<HTMLElement>('input, select, button.primary, button');
+    // Focus the first field of the body so typing works at once; the close button in the header comes first in the
+    // document, so a plain "first focusable" query would land on it.
+    const el = ref.current;
+    const first =
+      el?.querySelector<HTMLElement>('.modal-body input, .modal-body select, .modal-body textarea') ??
+      el?.querySelector<HTMLElement>('.modal-foot button.primary, .modal-body button');
     first?.focus();
+    if (first instanceof HTMLInputElement) first.select();
   }, []);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
@@ -143,6 +149,12 @@ export function Modal(props: {
         aria-modal="true"
         aria-label={props.title}
         data-testid={props.testId}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            props.onClose();
+          }
+        }}
       >
         <div className="modal-head">
           <span className="title">{props.title}</span>
