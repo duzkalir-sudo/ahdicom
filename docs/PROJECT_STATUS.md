@@ -3,7 +3,7 @@
 _Last updated: 2026-10-30_
 
 ## Current milestone
-**M2 — Measurements and annotations: done.** Pushed 2026-11-01; CI green on Windows and macOS arm64 (run 41285810910, 38/38 E2E on each). Next: M3 (multi-series comparison) after the user's approval. Report: `docs/reports/M2-REPORT.md`.
+**M2 — Measurements and annotations: done.** Pushed 2026-11-01; CI green on Windows and macOS arm64 (run 41285810910, 38/38 E2E on each). M3 (comparing series) started 2026-11-01. Report: `docs/reports/M2-REPORT.md`.
 
 ## Where things are
 | Area | State |
@@ -11,7 +11,8 @@ _Last updated: 2026-10-30_
 | M0 foundation | Done. CI green on Windows and macOS arm64. |
 | M1 viewer | Done except: concatenation merge, Presentation LUT INVERSE not E2E-asserted, pixel padding not excluded from auto ranges (see PLAN [~]). |
 | M2 | Done: all tools, list, undo/redo, persistence. CI green on Windows + macOS arm64. |
-| M3–M8 | Not started. M8 needs explicit approval. |
+| M3 | In progress (started 2026-11-01): Phase A, geometry in dicom-core. |
+| M4–M8 | Not started. M8 needs explicit approval. |
 
 ## How to resume
 1. Node 24.22.2 is installed portably at `%LOCALAPPDATA%\Programs\node-v24.22.2-win-x64` (not on PATH). Prepend it to PATH.
@@ -34,7 +35,7 @@ Previous (2026-10-29, M1):
 | CI matrix (Windows, macOS Apple Silicon) | **Green** (run 40929893039); Intel macOS not tested (D-035) |
 
 ## Open questions for the user
-- Approval to start M3.
+- Multiple windows (second monitor): needed? (M3 Phase C)
 
 ## Failing checks
 None known locally.

@@ -149,7 +149,42 @@ Phase D: verification
 - [x] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent (1st pass FAIL, gaps fixed: D-049, D-050); docs; report (`docs/reports/M2-REPORT.md`)
 - [x] Push to GitHub once at the end of M2 (with approval) and check the Windows + macOS CI (first run: 4 macOS failures — Ctrl vs Cmd in tests, tool-switch timing — fixed in 7334fdc; second run green)
 
-### M3–M8
+### M3 — Comparing series — **in progress** (started 2026-11-01 with the user's approval)
+Design (D-054): linking, slice sync, reference lines and the 3D cursor are computed by `dicom-core` from patient
+geometry (IPP/IOP/spacing), unit-tested against analytic planes, and applied by a renderer sync engine. Cornerstone
+synchronizers are not used (they cannot express our tolerance, offsets and Frame-of-Reference rules, and are not
+unit-testable here).
+
+Phase A: geometry in `dicom-core`
+- [ ] Image plane model (origin, row, column, normal, spacing, size, corners); same Frame of Reference; plane angle
+- [ ] Slice for a patient position: nearest slice along the target normal, with "outside the stack" detection
+- [ ] Reference line: intersection of a source slice plane with a target image, clipped to the target image rectangle
+      (also first/last slice of the source stack); none for (near-)parallel planes
+- [ ] 3D cursor: patient point → nearest slice and pixel position in each linked display set
+- [ ] Split multi-volume series (duplicate positions) by temporal position, echo, b-value or acquisition number
+
+Phase B: viewer — automatic linking
+- [ ] Auto slice sync between viewports showing display sets in the same Frame of Reference whose planes are within
+      5° (setting); toolbar toggle; no feedback loops
+- [ ] Reference lines on non-parallel viewports for the active viewport's current slice (toggle; first/last optional)
+- [ ] 3D cursor tool: click/drag sets a patient point; linked viewports jump to it and show a marker
+
+Phase C: manual sync and comparison
+- [ ] Manual sync across studies/Frames of Reference: link selected viewports, keep the slice offset (mm) captured
+      when linking; optional W/L and zoom/pan sync; toolbar menu
+- [ ] Split display sets shown as separate thumbnails; merge them back into one panel (context menu)
+- [ ] Prior/current comparison: open the matching series of an earlier study of the same patient side by side, linked
+- [ ] Multiple windows (spec P0): question to the user about second-monitor use before implementing
+
+Phase D: verification
+- [ ] Unit tests for all Phase A geometry; fixtures: two studies of one patient (prior/current, same and different
+      FoR), multi-phase CT and DWI with b-values
+- [ ] E2E: auto sync (same FoR), no sync across FoR until linked manually, offset kept, reference line position on
+      the orientation phantom, 3D cursor jump, split/merge, W/L and zoom sync
+- [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent; docs; report
+- [ ] Push to GitHub once at the end of M3 (with approval) and check the Windows + macOS CI
+
+### M4–M8
 See `docs/PRODUCT_SPEC.md` §3 and milestone acceptance criteria in the brief; detailed task lists are added when each
 milestone starts. M8 (RT module) only after explicit user approval.
 
