@@ -7,8 +7,8 @@ measurement list (rename, delete, jump, ellipsoid / bullet volume), undo / redo 
 Cornerstone draws the handles; every number shown comes from `dicom-core`, unit-tested against analytic phantoms (D-043).
 Also in this milestone: UX review round 1 (D-036…D-042), including the removal of distraction-free mode.
 Not done: DICOM SR/GSPS export (later milestone). An explicit spacing-basis choice is not needed (user decision D-051).
-**OS actually run on:** Windows 11 x64 (local). **CI:** not run yet for M2 — the push waits for the user's approval
-(one push per milestone).
+**OS actually run on:** Windows 11 x64 (local). **CI:** green on Windows and macOS arm64 (run 41285810910; the first run 41283795806
+had 4 macOS failures — Ctrl vs Cmd in tests and a tool-switch timing issue — fixed in 7334fdc).
 
 ## 2. Feature status
 | Feature | Status | Evidence |
@@ -37,7 +37,7 @@ Not done: DICOM SR/GSPS export (later milestone). An explicit spacing-basis choi
 | Built app run manually | UNVERIFIED | Only through Playwright on the built app; the user tests the installer |
 | Screenshot inspection | Done | All 22 M2 screenshots opened; no clipping/overflow; text-box background raised to 75 % opacity |
 | Performance / memory | Pass | `PERF {"firstImageMs":465,"fps":60.3,"heapAfterMB":63,"cacheAfterCloseMB":0}` |
-| CI matrix (Windows, macOS) | Not run | Waiting for push approval |
+| CI matrix (Windows, macOS) | Pass | Run 41285810910: 38/38 E2E on Windows and macOS arm64; macOS first image 1.57 s, 56 fps (CI ceiling, D-033) |
 | Verifier subagent | Passes 1–4 **FAIL** → fixed; pass 5 **PASS** | Pass 1: per-image calibration; calibration dropped on partial-study save; pinned API list (updated with the user's approval). Pass 2 confirmed those fixed and found a save-during-restore race and an over-broad set-aside on read errors; pass 3 found the race still open when several studies load at once (undo during a load, studies waiting their turn). Replaced by a write gate: a study is written only after its saved file was read and restored; undo/redo disabled during loads. Pass 4 confirmed the gate and found a close-all window (late scan batch) — closed with a close gate (D-050). Pass 5: PASS (code review + unit/type checks). The race fix has no dedicated test (timing-dependent); verified by code review and the persistence E2E tests. |
 
 Existing test changed (user-approved 2026-10-30): `tests/e2e/m0-shell.spec.ts` pinned preload API list +`loadMeasurements`,
@@ -69,7 +69,7 @@ Existing test changed (user-approved 2026-10-30): `tests/e2e/m0-shell.spec.ts` p
 
 ## 7. Decisions and questions
 - Decisions: D-041…D-051.
-- Questions for the user: approval to push M2 to GitHub and run the Windows + macOS CI (after the user has tried the installer).
+- Questions for the user: approval to start M3.
 
 ## 8. How to run, test, build
 ```
