@@ -156,12 +156,12 @@ synchronizers are not used (they cannot express our tolerance, offsets and Frame
 unit-testable here).
 
 Phase A: geometry in `dicom-core`
-- [ ] Image plane model (origin, row, column, normal, spacing, size, corners); same Frame of Reference; plane angle
-- [ ] Slice for a patient position: nearest slice along the target normal, with "outside the stack" detection
-- [ ] Reference line: intersection of a source slice plane with a target image, clipped to the target image rectangle
+- [x] Image plane model (origin, row, column, normal, spacing, size, corners); same Frame of Reference; plane angle
+- [x] Slice for a patient position: nearest slice along the target normal, with "outside the stack" detection
+- [x] Reference line: intersection of a source slice plane with a target image, clipped to the target image rectangle
       (also first/last slice of the source stack); none for (near-)parallel planes
-- [ ] 3D cursor: patient point → nearest slice and pixel position in each linked display set
-- [ ] Split multi-volume series (duplicate positions) by temporal position, echo, b-value or acquisition number
+- [x] 3D cursor: patient point → nearest slice and pixel position in each linked display set
+- [x] Split multi-volume series (duplicate positions) by temporal position, echo, b-value or acquisition number
 
 Phase B: viewer — automatic linking
 - [ ] Auto slice sync between viewports showing display sets in the same Frame of Reference whose planes are within

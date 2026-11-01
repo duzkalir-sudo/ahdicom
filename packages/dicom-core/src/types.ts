@@ -219,7 +219,12 @@ export interface DisplaySet {
   firstInstance: InstanceRecord;
   geometry: StackGeometrySummary;
   warnings: StackWarning[];
+  /** Set when a multi-volume series was split: the attribute and value that select this volume. */
+  splitBy?: { key: VolumeSplitKey; value: number };
 }
+
+/** Attributes that separate the volumes of a multi-volume series (multi-phase, DWI, multi-echo, repeats). */
+export type VolumeSplitKey = 'temporal' | 'bValue' | 'echo' | 'acquisition';
 
 export interface SeriesNode {
   seriesInstanceUid: string;

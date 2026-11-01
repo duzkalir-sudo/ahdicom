@@ -1,4 +1,4 @@
-import { parseImageOrientation, sameOrientation, type ImageOrientation } from './geometry.js';
+import { parseImageOrientation, parseVec3, sameOrientation, sliceNormal, vec3, type ImageOrientation } from './geometry.js';
 import { analyzeStack, parseDicomTime, sortImages } from './stack.js';
 import type {
   DisplayImage,
@@ -9,6 +9,7 @@ import type {
   SortKey,
   StackWarning,
   StudyNode,
+  VolumeSplitKey,
 } from './types.js';
 
 export interface BuildOptions {
@@ -46,11 +47,57 @@ interface Group {
   instances: InstanceRecord[];
 }
 
+const VOLUME_KEYS: { key: VolumeSplitKey; value: (i: InstanceRecord) => number | undefined }[] = [
+  { key: 'temporal', value: (i) => i.geometry.temporalPositionIndex },
+  { key: 'bValue', value: (i) => i.diffusionBValue },
+  { key: 'echo', value: (i) => i.echoNumbers },
+  { key: 'acquisition', value: (i) => i.acquisitionNumber },
+];
+
+/** Tolerance (mm) below which two slice positions count as the same location. */
+const SAME_POSITION_MM = 0.01;
+
+function hasDuplicatePositions(instances: readonly InstanceRecord[], o: ImageOrientation): boolean {
+  const n = sliceNormal(o);
+  const d = instances
+    .map((i) => parseVec3(i.geometry.imagePositionPatient))
+    .filter((p): p is NonNullable<typeof p> => p !== undefined)
+    .map((p) => vec3.dot(p, n))
+    .sort((a, b) => a - b);
+  for (let k = 1; k < d.length; k++) if (d[k]! - d[k - 1]! < SAME_POSITION_MM) return true;
+  return false;
+}
+
+/**
+ * A group of same-orientation images that repeats slice positions holds several volumes (multi-phase CT, DWI
+ * b-values, multi-echo, repeated acquisitions). It is split by the first attribute that is present on every image,
+ * takes at least two values and leaves no part with repeated positions; otherwise it stays one group (and keeps its
+ * duplicate-position warning).
+ */
+export function splitVolumes(
+  instances: readonly InstanceRecord[],
+  o: ImageOrientation | undefined,
+): { instances: InstanceRecord[]; splitBy?: { key: VolumeSplitKey; value: number } }[] {
+  if (!o || instances.length < 2 || !hasDuplicatePositions(instances, o)) return [{ instances: [...instances] }];
+  for (const { key, value } of VOLUME_KEYS) {
+    const values = instances.map(value);
+    if (values.some((v) => v === undefined)) continue;
+    const byValue = new Map<number, InstanceRecord[]>();
+    instances.forEach((inst, k) => byValue.set(values[k]!, [...(byValue.get(values[k]!) ?? []), inst]));
+    if (byValue.size < 2) continue;
+    const parts = [...byValue.entries()].sort((a, b) => a[0] - b[0]);
+    if (parts.some(([, list]) => hasDuplicatePositions(list, o))) continue;
+    return parts.map(([v, list]) => ({ instances: list, splitBy: { key, value: v } }));
+  }
+  return [{ instances: [...instances] }];
+}
+
 /**
  * Splits a series into display sets:
  * - non-image instances (SR, PDF, …) → one 'nonImage' set each;
  * - multi-frame instances → one 'multiframe' set each;
- * - single-frame images → grouped by orientation and matrix size, each group sorted and analyzed.
+ * - single-frame images → grouped by orientation and matrix size, multi-volume groups split per volume
+ *   ({@link splitVolumes}), each group sorted and analyzed.
  */
 export function buildDisplaySets(series: readonly InstanceRecord[], options: BuildOptions = {}): DisplaySet[] {
   const sortKey = options.sortKey ?? 'spatial';
@@ -90,9 +137,7 @@ export function buildDisplaySets(series: readonly InstanceRecord[], options: Bui
   const splitWarnings: StackWarning[] = [];
   if (groups.length > 1) {
     const orientations = groups.map((g) => g.orientation);
-    const distinctOrient = orientations.some(
-      (o, i) => i > 0 && !(o && orientations[0] && sameOrientation(o, orientations[0])),
-    );
+    const distinctOrient = orientations.some((o, i) => i > 0 && !(o && orientations[0] && sameOrientation(o, orientations[0])));
     splitWarnings.push({ code: distinctOrient ? 'mixedOrientations' : 'mixedDimensions', value: groups.length });
   }
 
@@ -102,6 +147,7 @@ export function buildDisplaySets(series: readonly InstanceRecord[], options: Bui
     images: DisplayImage[],
     inst: InstanceRecord,
     extra: StackWarning[],
+    splitBy?: DisplaySet['splitBy'],
   ): DisplaySet => {
     const sorted = sortImages(images, kind === 'multiframe' && sortKey === 'spatial' ? 'spatial' : sortKey, sortDirection);
     // Multi-frame without per-frame geometry keeps frame order without reporting a fallback.
@@ -124,14 +170,17 @@ export function buildDisplaySets(series: readonly InstanceRecord[], options: Bui
       firstInstance: inst,
       geometry,
       warnings: [...extra, ...warnings],
+      ...(splitBy ? { splitBy } : {}),
     };
     splitIndex++;
     return ds;
   };
 
   for (const g of groups) {
-    const images = g.instances.flatMap(instanceImages);
-    result.push(makeSet(images.length > 1 ? 'stack' : 'single', images, g.instances[0]!, splitWarnings));
+    for (const part of splitVolumes(g.instances, g.orientation)) {
+      const images = part.instances.flatMap(instanceImages);
+      result.push(makeSet(images.length > 1 ? 'stack' : 'single', images, part.instances[0]!, splitWarnings, part.splitBy));
+    }
   }
   multiframes.sort((a, b) => (a.instanceNumber ?? 0) - (b.instanceNumber ?? 0));
   for (const inst of multiframes) result.push(makeSet('multiframe', instanceImages(inst), inst, []));
