@@ -49,11 +49,14 @@ let toolGroup: ToolTypes.IToolGroup | undefined;
  */
 let press: { x: number; y: number } | undefined;
 let clickHeld = false;
+/** Where the held click was released; a mouse move beyond 3 px from it makes Cornerstone deliver the click. */
+let heldAt: { x: number; y: number } | undefined;
 let pendingTool: LeftTool | undefined;
 let pendingFallback: ReturnType<typeof setTimeout> | undefined;
 
 function releaseHeldClick(): void {
   clickHeld = false;
+  heldAt = undefined;
   clearTimeout(pendingFallback);
   if (pendingTool !== undefined) {
     const tool = pendingTool;
@@ -78,8 +81,19 @@ window.addEventListener(
       releaseHeldClick();
     } else if (press && Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) <= 3) {
       clickHeld = true;
+      heldAt = { x: e.clientX, y: e.clientY };
     }
     press = undefined;
+  },
+  true,
+);
+window.addEventListener(
+  'mousemove',
+  (e) => {
+    // Cornerstone delivers a held click as soon as the mouse moves beyond its 3 px tolerance over the viewport;
+    // releaseHeldClick applies the new tool after this event, i.e. after Cornerstone has handled it.
+    if (!clickHeld || !heldAt || !(e.target instanceof Element) || !e.target.closest('.vp-element')) return;
+    if (Math.abs(e.clientX - heldAt.x) + Math.abs(e.clientY - heldAt.y) > 3) releaseHeldClick();
   },
   true,
 );

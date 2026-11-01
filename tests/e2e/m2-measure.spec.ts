@@ -357,11 +357,11 @@ test('measurement list: rename, volume from three diameters, delete, undo/redo, 
       await s.page.getByTestId('measure-row').last().getByTestId('measure-delete').click();
       await expect(s.page.getByTestId('measure-row')).toHaveCount(3);
       await s.page.getByTestId('viewport-0').hover();
-      await s.page.keyboard.press('Control+z');
+      await s.page.keyboard.press('ControlOrMeta+z');
       await expect(s.page.getByTestId('measure-row')).toHaveCount(4);
-      await s.page.keyboard.press('Control+y');
+      await s.page.keyboard.press('ControlOrMeta+y');
       await expect(s.page.getByTestId('measure-row')).toHaveCount(3);
-      await s.page.keyboard.press('Control+z');
+      await s.page.keyboard.press('ControlOrMeta+z');
       await expect(s.page.getByTestId('measure-row')).toHaveCount(4);
 
       // Jump: from another slice, clicking a row shows the measurement's image.
@@ -578,7 +578,7 @@ test('dialogs take keyboard input at once: calibration typed after click-move-cl
     await expect(s.page.getByTestId('prompt-error')).toBeVisible();
     await expect(s.page.getByTestId('prompt-ok')).toBeDisabled();
     await screenshot(s.page, 'M2', 'calibrate-invalid-1280x800-dark-tr');
-    await s.page.keyboard.press('Control+a');
+    await s.page.keyboard.press('ControlOrMeta+a');
     await s.page.keyboard.type('50');
     await expect(s.page.getByTestId('prompt-error')).toHaveCount(0);
     await s.page.keyboard.press('Enter');
@@ -726,7 +726,7 @@ test('perimeter of ellipse and rectangle ROI; trash button on hover deletes a dr
     await expect.poll(async () => (await measurements(s.page)).filter((m) => m.tool === 'length')).toHaveLength(0);
     await expect(trash).toHaveCount(0);
     await s.page.getByTestId('viewport-0').hover({ position: { x: 5, y: 5 } });
-    await s.page.keyboard.press('Control+z');
+    await s.page.keyboard.press('ControlOrMeta+z');
     await expect.poll(async () => (await measurements(s.page)).filter((m) => m.tool === 'length')).toHaveLength(1);
     // Away from any drawing, the button goes away.
     const empty = await pixelToClient(s.page, 450, 50);
