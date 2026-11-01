@@ -214,6 +214,18 @@ describe('multi-volume split', () => {
     expect(splitVolumes(list, o).map((p) => p.splitBy?.key)).toEqual(['acquisition', 'acquisition']);
   });
 
+  it('single-slice dynamics stay one stack (bolus tracking, single-slice cine)', () => {
+    // 20 images at one position, AcquisitionNumber 1…20: every "part" would be a single image.
+    const bolus = Array.from({ length: 20 }, (_, k) => inst(k, 5, { acquisitionNumber: k + 1 }));
+    expect(splitVolumes(bolus, o)).toHaveLength(1);
+    // Single-slice cine with one Temporal Position per image.
+    const cine = Array.from({ length: 12 }, (_, k) => inst(100 + k, 0, { temporal: k + 1 }));
+    expect(splitVolumes(cine, o)).toHaveLength(1);
+    // A stack with per-slice acquisition numbers and one repeated position is not split either.
+    const stack = Array.from({ length: 20 }, (_, k) => inst(200 + k, k === 19 ? 18 : k, { acquisitionNumber: k + 1 }));
+    expect(splitVolumes(stack, o)).toHaveLength(1);
+  });
+
   it('stays one group without duplicates or without a separating attribute', () => {
     expect(
       splitVolumes(

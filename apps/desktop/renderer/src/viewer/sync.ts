@@ -179,10 +179,11 @@ function onState(c: ViewportController, vs: ViewState): void {
   const opts = useStore.getState().sync;
   const active = controllerAt(useStore.getState().activeIndex);
   if (now.displaySetId !== prev.displaySetId) {
-    // A series dropped into a viewport joins the others: align it to the active viewport.
+    // A series dropped into a viewport joins the others. With a manual link it joins at its own current slice (its
+    // anchor); otherwise it is aligned to the active viewport when the geometry allows it.
     expected.delete(c.index);
     if (opts.linked) captureAnchor(c);
-    if (active && active !== c && ready(active)) moveTo(c, matchingSlice(active, c));
+    else if (active && active !== c && ready(active)) moveTo(c, matchingSlice(active, c));
   } else if (now.index !== prev.index && !consume(c.index, 'index', now.index)) {
     propagateSlice(c);
   }

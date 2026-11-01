@@ -10,10 +10,10 @@ const studyKey = (s: StudyNode): string => `${s.studyDate ?? ''}${s.studyTime ??
 
 /** The most recent earlier study of the same patient (same Patient ID), or undefined. */
 export function priorStudy(studies: readonly StudyNode[], current: StudyNode): StudyNode | undefined {
-  if (!current.patientId) return undefined;
-  const older = studies.filter(
-    (s) => s !== current && s.patientId === current.patientId && studyKey(s) !== '' && studyKey(s) < studyKey(current),
-  );
+  if (!current.patientId || !current.studyDate) return undefined;
+  const samePatient = (s: StudyNode): boolean =>
+    s.patientId === current.patientId && (!s.patientName || !current.patientName || s.patientName === current.patientName);
+  const older = studies.filter((s) => s !== current && samePatient(s) && Boolean(s.studyDate) && studyKey(s) < studyKey(current));
   return older.sort((a, b) => (studyKey(a) < studyKey(b) ? 1 : -1))[0];
 }
 

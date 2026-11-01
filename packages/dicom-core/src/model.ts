@@ -59,6 +59,18 @@ const VOLUME_KEYS: { key: VolumeSplitKey; value: (i: InstanceRecord) => number |
 /** Tolerance (mm) below which two slice positions count as the same location. */
 const SAME_POSITION_MM = 0.01;
 
+function distinctPositions(instances: readonly InstanceRecord[], o: ImageOrientation): number {
+  const n = sliceNormal(o);
+  const d = instances
+    .map((i) => parseVec3(i.geometry.imagePositionPatient))
+    .filter((p): p is NonNullable<typeof p> => p !== undefined)
+    .map((p) => vec3.dot(p, n))
+    .sort((a, b) => a - b);
+  let count = d.length > 0 ? 1 : 0;
+  for (let k = 1; k < d.length; k++) if (d[k]! - d[k - 1]! >= SAME_POSITION_MM) count++;
+  return count;
+}
+
 function hasDuplicatePositions(instances: readonly InstanceRecord[], o: ImageOrientation): boolean {
   const n = sliceNormal(o);
   const d = instances
@@ -73,8 +85,8 @@ function hasDuplicatePositions(instances: readonly InstanceRecord[], o: ImageOri
 /**
  * A group of same-orientation images that repeats slice positions holds several volumes (multi-phase CT, DWI
  * b-values, multi-echo, repeated acquisitions). It is split by the first attribute that is present on every image,
- * takes at least two values and leaves no part with repeated positions; otherwise it stays one group (and keeps its
- * duplicate-position warning).
+ * takes at least two values and leaves no part with repeated positions, and only when every part covers at least two
+ * positions (a real volume); otherwise it stays one group (and keeps its duplicate-position warning).
  */
 export function splitVolumes(
   instances: readonly InstanceRecord[],
@@ -89,6 +101,9 @@ export function splitVolumes(
     if (byValue.size < 2) continue;
     const parts = [...byValue.entries()].sort((a, b) => a[0] - b[0]);
     if (parts.some(([, list]) => hasDuplicatePositions(list, o))) continue;
+    // Only real volumes: a part with a single position is one frame of a dynamic/cine series at one location
+    // (bolus tracking, single-slice cine), which must stay one scrollable stack.
+    if (parts.some(([, list]) => distinctPositions(list, o) < 2)) continue;
     return parts.map(([v, list]) => ({ instances: list, splitBy: { key, value: v } }));
   }
   return [{ instances: [...instances] }];

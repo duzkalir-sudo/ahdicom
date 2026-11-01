@@ -224,7 +224,7 @@ test('compare with prior: matching series of the earlier study side by side, lin
     const st = await cdvState(s.page);
     const axial = st.studies.flatMap((x) => x.series).find((x) => x.description === 'AXIAL')!.displaySets[0]!.id;
     const prior = st.studies.flatMap((x) => x.series).find((x) => x.description === 'AXIAL PRIOR')!.displaySets[0]!.id;
-    // Show the sagittal first: the comparison should still pick the axial prior for the active axial series.
+    // The active series is the axial one: the comparison picks the axial prior (not the sagittal).
     await show(s, 'AXIAL', 0);
     await scrollTo(s, 0, 20);
     const button = s.page.getByTestId('compare-prior');
@@ -243,6 +243,67 @@ test('compare with prior: matching series of the earlier study side by side, lin
     await scrollTo(s, 0, 25);
     await expect.poll(async () => (await vpState(s.page, 1)).index).toBe(25);
     await screenshot(s.page, 'M3', 'compare-prior-1280x800-dark-en');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('gating: nothing crosses Frames of Reference or modalities; non-parallel planes do not sync; maximize keeps zoom', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('orient-axial'), fixture('orient-sagittal'), fixture('orient-prior'), fixture('ct-phantom')]);
+    await layout(s, '1x2');
+    // Same FoR but perpendicular: scrolling the sagittal does not move the axial (reference line only).
+    await show(s, 'AXIAL', 0);
+    await show(s, 'SAGITTAL', 1);
+    await scrollTo(s, 0, 7);
+    await scrollTo(s, 1, 30);
+    await s.page.waitForTimeout(400);
+    expect((await vpState(s.page, 0)).index).toBe(7);
+
+    // Other Frame of Reference: no reference line and no 3D cursor jump on the prior study.
+    await show(s, 'AXIAL PRIOR', 0);
+    await scrollTo(s, 0, 9);
+    await scrollTo(s, 1, 22); // active sagittal (current FoR)
+    await s.page.waitForTimeout(400);
+    expect((await guides(s.page, 0))!.lines).toHaveLength(0);
+    await s.page.keyboard.press('x');
+    await s.page.waitForTimeout(500);
+    const c = await pixelToClient(s.page, 1, 64, 64);
+    await s.page.mouse.click(c.x, c.y);
+    await s.page.waitForTimeout(400);
+    expect((await vpState(s.page, 0)).index).toBe(9);
+    expect((await guides(s.page, 0))!.marker).toBeUndefined();
+    expect((await guides(s.page, 1))!.marker).toBeDefined();
+    await s.page.keyboard.press('w');
+
+    // Window/level sync only between the same modality: a CT preset does not change the MR window.
+    await show(s, 'AXIAL', 0);
+    await show(s, 'PHANTOM 2.5mm', 1);
+    await syncMenu(s, 'windowLevel');
+    const mrBefore = (await vpState(s.page, 0)).wl;
+    await s.page.getByTestId('viewport-1').click({ position: { x: 5, y: 5 } });
+    await s.page.keyboard.press('4'); // bone preset on the CT
+    await expect.poll(async () => (await vpState(s.page, 1)).wl).toEqual({ width: 2000, center: 500 });
+    await s.page.waitForTimeout(400);
+    expect((await vpState(s.page, 0)).wl).toEqual(mrBefore);
+
+    // Double-click maximize and restore keep the user's zoom: the on-screen scale (Zoom %, screen pixels per image
+    // pixel) stays the same instead of being refitted to the new size.
+    await s.page.keyboard.press('+');
+    await s.page.keyboard.press('+');
+    await s.page.waitForTimeout(300);
+    const zoom = async (): Promise<number> => (await vpState(s.page, 1)).zoomPercent ?? 0;
+    const z0 = await zoom();
+    await s.page.getByTestId('viewport-1').dblclick({ position: { x: 5, y: 5 } });
+    await expect(s.page.getByTestId('viewport-0')).toBeHidden();
+    await s.page.waitForTimeout(400);
+    expect(Math.abs((await zoom()) / z0 - 1)).toBeLessThan(0.01);
+    await s.page.getByTestId('viewport-1').dblclick({ position: { x: 5, y: 5 } });
+    await expect(s.page.getByTestId('viewport-0')).toBeVisible();
+    await s.page.waitForTimeout(400);
+    expect(Math.abs((await zoom()) / z0 - 1)).toBeLessThan(0.01);
     expectNoErrors(s);
   } finally {
     await s.close();

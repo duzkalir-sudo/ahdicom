@@ -118,6 +118,7 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Reference line on the axial viewport for the active sagittal slice (column 63.5), toggle off/on | E2E | Pass |
 | Window/level (same modality) and zoom follow the active viewport | E2E | Pass |
 | Compare with prior: best-matching series side by side, fitted, linked | E2E | Pass |
+| Single-slice dynamics (bolus tracking, cine) are not split; nothing crosses Frames of Reference (reference line, 3D cursor); no sync between perpendicular planes; W/L sync only for the same modality; maximize keeps the zoom | unit + E2E "gating" | Pass |
 | Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M3` (19 files) | Inspected; fixed: refit on layout change, redundant "Part n" label, wrapped volumes link |
 
 ## Performance (Windows 11 laptop, local GPU; `artifacts/perf-m1.json`)

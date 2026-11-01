@@ -490,13 +490,22 @@ export function ViewportGrid(): ReactNode {
       } catch {
         return;
       }
-      // A new layout changes every viewport's size: fit the images again (side-by-side comparison starts fitted).
-      for (const c of allControllers()) {
-        c.resizeOverlay();
-        c.fit();
-      }
+      for (const c of allControllers()) c.resizeOverlay();
     });
   }, [layout, maximized]);
+
+  const laidOut = useRef(false);
+  useEffect(() => {
+    // A new layout changes every viewport's size: fit the images again (side-by-side comparison starts fitted).
+    // Not on mount (images are fitted when they load) and not on maximize/restore (keeps the user's zoom).
+    if (!laidOut.current) {
+      laidOut.current = true;
+      return;
+    }
+    requestAnimationFrame(() => {
+      for (const c of allControllers()) c.fit();
+    });
+  }, [layout]);
 
   useEffect(() => {
     const shown = new Set(slots.slice(0, n).filter((s): s is string => Boolean(s)));
