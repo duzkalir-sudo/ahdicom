@@ -3,7 +3,7 @@
  * split volumes, window/level and zoom sync. Expected positions follow from the fixture geometry.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { cdvState, expectNoErrors, fixture, launch, openPaths, screenshot, vpState, waitReady, type Session } from './harness';
+import { cdvState, expectNoErrors, fixture, launch, openPaths, screenshot, setSize, vpState, waitReady, type Session } from './harness';
 
 interface Guides {
   lines: [[number, number], [number, number]][];
@@ -246,5 +246,49 @@ test('compare with prior: matching series of the earlier study side by side, lin
     expectNoErrors(s);
   } finally {
     await s.close();
+  }
+});
+
+test('M3 screenshot matrix (sizes × themes × languages)', async () => {
+  test.setTimeout(600_000);
+  for (const lang of ['tr', 'en'] as const) {
+    for (const theme of ['dark', 'light'] as const) {
+      const s = await launch({ lang, theme });
+      try {
+        await openPaths(s, [fixture('orient-axial'), fixture('orient-sagittal'), fixture('orient-prior'), fixture('dwi')]);
+        await layout(s, '1x2');
+        await show(s, 'AXIAL', 0);
+        await show(s, 'SAGITTAL', 1);
+        await scrollTo(s, 1, 20);
+        // 3D cursor on the axial image.
+        await scrollTo(s, 0, 24);
+        await s.page.keyboard.press('x');
+        await s.page.waitForTimeout(500);
+        const c = await pixelToClient(s.page, 0, 70, 50);
+        await s.page.mouse.click(c.x, c.y);
+        await s.page.waitForTimeout(400);
+        for (const [w, h] of [
+          [1280, 800],
+          [1920, 1080],
+        ] as const) {
+          await setSize(s.app, w, h);
+          await s.page.waitForTimeout(400);
+          await screenshot(s.page, 'M3', `sync-${w}x${h}-${theme}-${lang}`);
+        }
+        await setSize(s.app, 1280, 800);
+        await s.page.keyboard.press('w');
+        await s.page.getByTestId('tb-sync').click();
+        await expect(s.page.getByTestId('sync-menu')).toBeVisible();
+        await screenshot(s.page, 'M3', `sync-menu-1280x800-${theme}-${lang}`);
+        await s.page.keyboard.press('Escape');
+        await s.page.getByTestId('compare-prior').click();
+        await waitReady(s.page, 1);
+        await s.page.waitForTimeout(500);
+        await screenshot(s.page, 'M3', `compare-prior-1280x800-${theme}-${lang}`);
+        expectNoErrors(s);
+      } finally {
+        await s.close();
+      }
+    }
   }
 });

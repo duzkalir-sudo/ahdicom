@@ -490,7 +490,11 @@ export function ViewportGrid(): ReactNode {
       } catch {
         return;
       }
-      for (const c of allControllers()) c.resizeOverlay();
+      // A new layout changes every viewport's size: fit the images again (side-by-side comparison starts fitted).
+      for (const c of allControllers()) {
+        c.resizeOverlay();
+        c.fit();
+      }
     });
   }, [layout, maximized]);
 

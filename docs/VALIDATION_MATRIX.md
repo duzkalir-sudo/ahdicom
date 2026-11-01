@@ -105,6 +105,21 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | No CSP violation from measurement text (D-044) | every E2E (console errors fail the run) | Pass |
 | Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M2` (22 files) | Inspected |
 
+## Series comparison (M3)
+
+| Requirement | Test | Evidence |
+|---|---|---|
+| Image planes, nearest slice with outside detection, auto-sync rule (same FoR, ≤ 5°), offset link | unit `compare.test.ts` (analytic planes) | Pass |
+| Reference line = intersection of both image rectangles (sagittal/axial, coronal/axial, oblique 30°, limited source extent, parallel → none) | unit | Pass |
+| 3D cursor: slice and pixel of a patient point | unit + E2E (axial click → sagittal index 14, marker at column 40 / row 83.5) | Pass |
+| Multi-volume split by temporal position / b-value / echo / acquisition; DWI and 3-phase CT fixtures | unit `compare.test.ts`, `m3-fixtures.test.ts`, E2E (labels b=1000, Phase 3; combine/split toggle) | Pass |
+| Automatic slice sync 4 mm ↔ 2 mm stacks in one FoR, both directions | E2E `m3-compare` | Pass |
+| Prior study (other FoR) not synced until linked; linked keeps the offset | E2E | Pass |
+| Reference line on the axial viewport for the active sagittal slice (column 63.5), toggle off/on | E2E | Pass |
+| Window/level (same modality) and zoom follow the active viewport | E2E | Pass |
+| Compare with prior: best-matching series side by side, fitted, linked | E2E | Pass |
+| Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M3` (19 files) | Inspected; fixed: refit on layout change, redundant "Part n" label, wrapped volumes link |
+
 ## Performance (Windows 11 laptop, local GPU; `artifacts/perf-m1.json`)
 
 | Metric | Target | Measured |

@@ -177,9 +177,9 @@ Phase C: manual sync and comparison
 - [x] Multiple windows (spec P0): not needed — no second monitor in the clinic (user decision D-055)
 
 Phase D: verification
-- [ ] Unit tests for all Phase A geometry; fixtures: two studies of one patient (prior/current, same and different
+- [x] Unit tests for all Phase A geometry; fixtures: two studies of one patient (prior/current, same and different
       FoR), multi-phase CT and DWI with b-values
-- [ ] E2E: auto sync (same FoR), no sync across FoR until linked manually, offset kept, reference line position on
+- [x] E2E: auto sync (same FoR), no sync across FoR until linked manually, offset kept, reference line position on
       the orientation phantom, 3D cursor jump, split/merge, W/L and zoom sync
 - [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent; docs; report
 - [ ] Push to GitHub once at the end of M3 (with approval) and check the Windows + macOS CI

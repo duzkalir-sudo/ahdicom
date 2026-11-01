@@ -4,6 +4,14 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 
 ## [Unreleased]
 
+### Added (M3 — comparing series)
+- Automatic slice sync between series in the same frame of reference (planes within 5°), in both directions.
+- Manual link of all visible viewports keeping the slice offset (e.g. an earlier study); window/level (same modality) and zoom/pan sync.
+- Reference lines of the active slice on the other viewports; 3D cursor tool (X): click a point, linked viewports jump to it.
+- Multi-volume series (multi-phase CT, DWI b-values, multi-echo, repeated acquisitions) split into labelled volumes; can be shown together again.
+- "Compare with prior" opens the matching series of the patient's earlier study side by side, linked.
+- Images are fitted again when the layout changes.
+
 ### Added (M2 — measurements)
 - Perimeter for ellipse and rectangle ROIs; a trash button appears when hovering a drawing and deletes it (Ctrl+Z restores).
 - "Open folder" is the first, highlighted action on the start screen and first in the toolbar.

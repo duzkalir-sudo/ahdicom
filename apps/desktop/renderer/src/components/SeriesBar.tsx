@@ -110,7 +110,7 @@ function SeriesItem(props: { ds: DisplaySet; splitCount: number }): ReactNode {
       <span className="series-text">
         <span className="desc" style={{ display: 'block' }}>
           {desc}
-          {props.splitCount > 1 ? ` · ${t('series.split', { n: ds.splitIndex + 1 })}` : ''}
+          {props.splitCount > 1 && !ds.splitBy ? ` · ${t('series.split', { n: ds.splitIndex + 1 })}` : ''}
         </span>
         <span className="sub">
           <span>{[ds.modality, ds.seriesNumber !== undefined ? `#${ds.seriesNumber}` : undefined].filter(Boolean).join(' ')}</span>
