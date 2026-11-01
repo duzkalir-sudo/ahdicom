@@ -169,21 +169,23 @@ function propagateZoomPan(source: ViewportController): void {
 }
 
 function onState(c: ViewportController, vs: ViewState): void {
-  const prev = seen.get(c.index) ?? {};
-  const now: Seen = { index: vs.index, displaySetId: vs.displaySetId, voi: voiKey(vs), zoomPan: ready(c) ? zoomPanKey(c) : undefined };
-  seen.set(c.index, now);
   if (vs.status !== 'ready') {
+    // Not recorded: the display-set change is handled once the new series is ready (index and geometry known).
     scheduleGuides();
     return;
   }
+  const prev = seen.get(c.index) ?? {};
+  const now: Seen = { index: vs.index, displaySetId: vs.displaySetId, voi: voiKey(vs), zoomPan: zoomPanKey(c) };
+  seen.set(c.index, now);
   const opts = useStore.getState().sync;
   const active = controllerAt(useStore.getState().activeIndex);
   if (now.displaySetId !== prev.displaySetId) {
     // A series dropped into a viewport joins the others. With a manual link it joins at its own current slice (its
     // anchor); otherwise it is aligned to the active viewport when the geometry allows it.
     expected.delete(c.index);
-    if (opts.linked) captureAnchor(c);
-    else if (active && active !== c && ready(active)) moveTo(c, matchingSlice(active, c));
+    // Re-anchor every viewport at its current slice, so the offsets measured from now on start where they are.
+    if (opts.linked) for (const v of allControllers()) if (ready(v)) captureAnchor(v);
+    if (!opts.linked && active && active !== c && ready(active)) moveTo(c, matchingSlice(active, c));
   } else if (now.index !== prev.index && !consume(c.index, 'index', now.index)) {
     propagateSlice(c);
   }

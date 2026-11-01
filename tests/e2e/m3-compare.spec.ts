@@ -88,6 +88,17 @@ test('automatic slice sync in one Frame of Reference; prior study only after a m
     await scrollTo(s, 0, 17);
     await expect.poll(async () => (await vpState(s.page, 1)).index).toBe(17);
     await screenshot(s.page, 'M3', 'linked-prior-1280x800-dark-en');
+
+    // A series dropped into the linked layout joins at its own slice and then moves with the others step by step
+    // (here a 2 mm series of the current study, linked to the prior study in the other Frame of Reference).
+    await show(s, 'AXIAL THIN', 0);
+    const thin = (await vpState(s.page, 0)).index;
+    const prior = (await vpState(s.page, 1)).index;
+    expect(prior).toBe(17); // the prior viewport did not move when the series was dropped
+    await s.page.keyboard.press('ArrowDown');
+    await s.page.keyboard.press('ArrowDown'); // +4 mm on the 2 mm stack
+    await expect.poll(async () => (await vpState(s.page, 0)).index).toBe(thin + 2);
+    await expect.poll(async () => (await vpState(s.page, 1)).index).toBe(prior + 1); // +4 mm = one prior slice
     expectNoErrors(s);
   } finally {
     await s.close();

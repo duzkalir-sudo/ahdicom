@@ -149,7 +149,7 @@ Phase D: verification
 - [x] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent (1st pass FAIL, gaps fixed: D-049, D-050); docs; report (`docs/reports/M2-REPORT.md`)
 - [x] Push to GitHub once at the end of M2 (with approval) and check the Windows + macOS CI (first run: 4 macOS failures — Ctrl vs Cmd in tests, tool-switch timing — fixed in 7334fdc; second run green)
 
-### M3 — Comparing series — **in progress** (started 2026-11-01 with the user's approval)
+### M3 — Comparing series — **done locally** (2026-11-01, Windows 11); CI pending the milestone push
 Design (D-054): linking, slice sync, reference lines and the 3D cursor are computed by `dicom-core` from patient
 geometry (IPP/IOP/spacing), unit-tested against analytic planes, and applied by a renderer sync engine. Cornerstone
 synchronizers are not used (they cannot express our tolerance, offsets and Frame-of-Reference rules, and are not
@@ -181,7 +181,7 @@ Phase D: verification
       FoR), multi-phase CT and DWI with b-values
 - [x] E2E: auto sync (same FoR), no sync across FoR until linked manually, offset kept, reference line position on
       the orientation phantom, 3D cursor jump, split/merge, W/L and zoom sync
-- [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent; docs; report
+- [x] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent (pass 1 FAIL → fixed, pass 2 PASS); docs; report (`docs/reports/M3-REPORT.md`)
 - [ ] Push to GitHub once at the end of M3 (with approval) and check the Windows + macOS CI
 
 ### M4–M8
