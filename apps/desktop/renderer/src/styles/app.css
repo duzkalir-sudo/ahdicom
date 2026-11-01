@@ -1518,3 +1518,22 @@ kbd {
   border-color: #c62828;
   color: #fff;
 }
+
+.menu-item.checkable {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.menu-check {
+  display: inline-flex;
+  width: 14px;
+  color: var(--accent);
+}
+
+.menu-hint {
+  max-width: 300px;
+  padding: 6px 10px 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}

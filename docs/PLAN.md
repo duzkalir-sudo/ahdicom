@@ -164,13 +164,13 @@ Phase A: geometry in `dicom-core`
 - [x] Split multi-volume series (duplicate positions) by temporal position, echo, b-value or acquisition number
 
 Phase B: viewer — automatic linking
-- [ ] Auto slice sync between viewports showing display sets in the same Frame of Reference whose planes are within
+- [x] Auto slice sync between viewports showing display sets in the same Frame of Reference whose planes are within
       5° (setting); toolbar toggle; no feedback loops
-- [ ] Reference lines on non-parallel viewports for the active viewport's current slice (toggle; first/last optional)
-- [ ] 3D cursor tool: click/drag sets a patient point; linked viewports jump to it and show a marker
+- [x] Reference lines on non-parallel viewports for the active viewport's current slice (toggle; first/last optional)
+- [x] 3D cursor tool: click/drag sets a patient point; linked viewports jump to it and show a marker
 
 Phase C: manual sync and comparison
-- [ ] Manual sync across studies/Frames of Reference: link selected viewports, keep the slice offset (mm) captured
+- [x] Manual sync across studies/Frames of Reference: link selected viewports, keep the slice offset (mm) captured
       when linking; optional W/L and zoom/pan sync; toolbar menu
 - [ ] Split display sets shown as separate thumbnails; merge them back into one panel (context menu)
 - [ ] Prior/current comparison: open the matching series of an earlier study of the same patient side by side, linked

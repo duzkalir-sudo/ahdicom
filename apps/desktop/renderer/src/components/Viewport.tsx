@@ -73,6 +73,7 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
                 inst.modality,
                 inst.seriesNumber !== undefined ? t('viewport.series', { number: inst.seriesNumber }) : undefined,
                 inst.seriesDescription,
+                props.ds.splitBy ? t(`split.${props.ds.splitBy.key}`, { value: props.ds.splitBy.value }) : undefined,
               ]
                 .filter(Boolean)
                 .join(' · ')}
@@ -247,6 +248,7 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
   const scaleOn = useStore((s) => s.settings.overlay.scaleBar);
   const elRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const guideRef = useRef<HTMLCanvasElement>(null);
   const cellRef = useRef<HTMLDivElement>(null);
   const [vs, setVs] = useState<ViewState | undefined>();
   const [ctrl, setCtrl] = useState<ViewportController | undefined>();
@@ -258,7 +260,7 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
 
   useEffect(() => {
     if (!ready || !elRef.current || !canvasRef.current) return;
-    const c = new ViewportController(props.index, elRef.current, canvasRef.current);
+    const c = new ViewportController(props.index, elRef.current, canvasRef.current, guideRef.current ?? undefined);
     registerController(props.index, c);
     setCtrl(c);
     const unsub = c.subscribe(setVs);
@@ -349,6 +351,7 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
     >
       <div ref={elRef} className="vp-element" data-testid={`viewport-element-${props.index}`} />
       <canvas ref={canvasRef} className="vp-overlay-canvas" />
+      <canvas ref={guideRef} className="vp-overlay-canvas" data-testid={`viewport-guides-${props.index}`} />
       {status === 'ready' ? <HoverDelete index={props.index} hover={vs?.hover} /> : null}
       {status === 'ready' && ds && vs ? (
         <div className="vp-info">

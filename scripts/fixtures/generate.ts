@@ -1117,6 +1117,72 @@ async function sourceHash(): Promise<string> {
   return h.digest('hex');
 }
 
+/**
+ * M3 comparison fixtures:
+ * - orient-axial-thin: axial 2 mm slices in the same study and Frame of Reference as the orientation series;
+ * - orient-prior: the same patient's earlier study (other Frame of Reference) with axial slices shifted by +8 mm;
+ * - dwi: one MR series with b = 0 and b = 1000 at the same positions; multiphase: one CT series with 3 phases.
+ */
+async function comparisonSeries(): Promise<void> {
+  const rows = 128, cols = 128, sp = 2;
+  const axial: Pick<SliceSpec, 'iop'>['iop'] = [1, 0, 0, 0, 1, 0];
+  {
+    const ps = study('orient', { studyDescription: 'ORIENTATION PHANTOM' });
+    const s = series('orient', 4, 'MR', 'AXIAL THIN');
+    const slices: SliceSpec[] = [];
+    let k = 0;
+    for (let z = -88; z <= 88; z += 2) {
+      const ipp: Vec3 = [-127, -127, z];
+      slices.push({ ipp, iop: axial, instanceNumber: ++k, values: renderPlane(rows, cols, ipp, [1, 0, 0], [0, 1, 0], sp, orientPhantom) });
+    }
+    const n = await writeStack('orient-axial-thin', ps, s, SOP.mr, { ...MONO16, rows, columns: cols }, [sp, sp], 2, slices, windowModule([500], [1000]));
+    add({ id: 'orient-axial-thin', dir: 'orient-axial-thin', kind: 'valid', files: n, description: 'Axial 2 mm slices, same study and Frame of Reference as orient-*', expect: { positions: 'z from −88 to 88 step 2 mm' } });
+  }
+  {
+    const ps = study('orientprior', { studyDescription: 'ORIENTATION PHANTOM PRIOR', studyDate: '20230305', patientId: 'CDV-ORIENT' });
+    const s = series('orientprior', 1, 'MR', 'AXIAL PRIOR');
+    const slices: SliceSpec[] = [];
+    let k = 0;
+    for (let z = -80; z <= 96; z += 4) {
+      const ipp: Vec3 = [-127, -127, z];
+      // The patient lay 8 mm further: anatomy at z appears at z + 8 in this study's coordinates.
+      slices.push({ ipp, iop: axial, instanceNumber: ++k, values: renderPlane(rows, cols, [-127, -127, z - 8], [1, 0, 0], [0, 1, 0], sp, orientPhantom) });
+    }
+    const n = await writeStack('orient-prior', ps, s, SOP.mr, { ...MONO16, rows, columns: cols }, [sp, sp], 4, slices, windowModule([500], [1000]));
+    add({ id: 'orient-prior', dir: 'orient-prior', kind: 'valid', files: n, description: 'Earlier study of the orientation patient: other Frame of Reference, anatomy shifted by +8 mm', expect: { offsetMm: 8 } });
+  }
+  {
+    const ps = study('dwi', { studyDescription: 'DWI SYNTHETIC' });
+    const s = series('dwi', 1, 'MR', 'DWI');
+    const slices: SliceSpec[] = [];
+    let k = 0;
+    for (const b of [0, 1000]) {
+      for (const z of [0, 5, 10, 15]) {
+        const ipp: Vec3 = [-127, -127, z];
+        const values = renderPlane(rows, cols, ipp, [1, 0, 0], [0, 1, 0], sp, (p) => (v.dist2(p, [0, 0, z]) < 50 * 50 ? (b === 0 ? 900 : 300) : 50));
+        slices.push({ ipp, iop: axial, instanceNumber: ++k, values, extra: [el(0x0018, 0x9087, 'FD', b)] });
+      }
+    }
+    const n = await writeStack('dwi', ps, s, SOP.mr, { ...MONO16, rows, columns: cols }, [sp, sp], 5, slices, windowModule([500], [1000]));
+    add({ id: 'dwi', dir: 'dwi', kind: 'valid', files: n, description: 'DWI: b = 0 and b = 1000 at the same 4 positions (one series)', expect: { volumes: 2, key: 'bValue' } });
+  }
+  {
+    const ps = study('multiphase', { studyDescription: 'MULTIPHASE CT SYNTHETIC' });
+    const s = series('multiphase', 1, 'CT', 'LIVER 3 PHASE');
+    const slices: SliceSpec[] = [];
+    let k = 0;
+    for (const phase of [1, 2, 3]) {
+      for (const z of [0, 3, 6]) {
+        const ipp: Vec3 = [-127, -127, z];
+        const values = renderPlane(rows, cols, ipp, [1, 0, 0], [0, 1, 0], sp, (p) => (v.dist2(p, [0, 0, z]) < 60 * 60 ? 1024 + 40 * phase : 24));
+        slices.push({ ipp, iop: axial, instanceNumber: ++k, values, extra: [el(0x0020, 0x9128, 'UL', phase)] });
+      }
+    }
+    const n = await writeStack('multiphase', ps, s, SOP.ct, { ...MONO16, rows, columns: cols }, [sp, sp], 3, slices, [...rescaleModule(-1024, 1, 'HU'), ...windowModule([40], [400])]);
+    add({ id: 'multiphase', dir: 'multiphase', kind: 'valid', files: n, description: 'CT with 3 phases (Temporal Position Index) at the same 3 positions (one series)', expect: { volumes: 3, key: 'temporal' } });
+  }
+}
+
 export async function generateAll(): Promise<void> {
   await rm(FIXTURE_DIR, { recursive: true, force: true });
   await mkdir(FIXTURE_DIR, { recursive: true });
@@ -1124,6 +1190,7 @@ export async function generateAll(): Promise<void> {
   const steps: [string, () => Promise<void>][] = [
     ['ct-phantom', ctPhantom],
     ['orientation', orientationSeries],
+    ['comparison', comparisonSeries],
     ['geometry', geometryEdgeCases],
     ['enhanced-mr', enhancedMr],
     ['pet', pet],

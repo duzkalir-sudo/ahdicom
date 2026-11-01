@@ -86,7 +86,8 @@ function SeriesItem(props: { ds: DisplaySet; splitCount: number }): ReactNode {
       : ds.kind === 'multiframe'
         ? t('series.frames', { count: ds.images.length })
         : t('series.images', { count: ds.images.length });
-  const desc = ds.seriesDescription || t('series.noDescription');
+  const part = ds.splitBy ? t(`split.${ds.splitBy.key}`, { value: ds.splitBy.value }) : undefined;
+  const desc = [ds.seriesDescription || t('series.noDescription'), part].filter(Boolean).join(' · ');
   return (
     <button
       type="button"

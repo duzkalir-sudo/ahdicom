@@ -4,6 +4,8 @@ import {
   Box,
   ChevronDown,
   Circle,
+  Crosshair,
+  Link,
   Diameter,
   DraftingCompass,
   LetterText,
@@ -65,6 +67,8 @@ import { controllerAt } from '../viewer/registry';
 import { IconButton, MenuItem, Popover } from './ui';
 import { changeLanguage } from '../app/settings';
 import { MEASURE_TOOLS, type MeasureTool } from '../viewer/measurements';
+import { setLinked } from '../viewer/sync';
+import type { SyncOptions } from '../state/store';
 
 export const MEASURE_ICONS: Record<MeasureTool, LucideIcon> = {
   length: Ruler,
@@ -84,7 +88,38 @@ export const MEASURE_ICONS: Record<MeasureTool, LucideIcon> = {
 
 /** Tools with their own toolbar button; the others are in the measurement menu. */
 const DIRECT_MEASURE_TOOLS: readonly MeasureTool[] = ['length', 'ellipse', 'angle'];
-const COMMAND_OF: Partial<Record<MeasureTool, string>> = { length: 'toolLength', ellipse: 'toolEllipse', angle: 'toolAngle', arrow: 'toolText' };
+const COMMAND_OF: Partial<Record<MeasureTool, string>> = {
+  length: 'toolLength',
+  ellipse: 'toolEllipse',
+  angle: 'toolAngle',
+  arrow: 'toolText',
+};
+
+function SyncMenu(props: { anchor: HTMLElement | null; onClose: () => void }): ReactNode {
+  const { t } = useTranslation();
+  const sync = useStore((s) => s.sync);
+  const item = (key: keyof SyncOptions, onClick?: () => void): ReactNode => (
+    <MenuItem
+      key={key}
+      checked={sync[key]}
+      onClick={() => (onClick ? onClick() : useStore.getState().setSync({ [key]: !sync[key] }))}
+      testId={`sync-${key}`}
+    >
+      {t(`sync.${key}`)}
+    </MenuItem>
+  );
+  return (
+    <Popover anchor={props.anchor} onClose={props.onClose} testId="sync-menu">
+      {item('slice')}
+      {item('referenceLines')}
+      <div className="menu-sep" />
+      {item('linked', () => setLinked(!sync.linked))}
+      {item('windowLevel')}
+      {item('zoomPan')}
+      <div className="menu-hint">{t('sync.hint')}</div>
+    </Popover>
+  );
+}
 
 function MeasureMenu(props: { anchor: HTMLElement | null; onClose: () => void }): ReactNode {
   const { t } = useTranslation();
@@ -287,9 +322,9 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
 export function Toolbar(): ReactNode {
   const { t } = useTranslation();
   const s = useStore();
-  const [menu, setMenu] = useState<null | 'layout' | 'presets' | 'measure'>(null);
+  const [menu, setMenu] = useState<null | 'layout' | 'presets' | 'measure' | 'sync'>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const toggleMenu = (m: 'layout' | 'presets' | 'measure', el: HTMLElement): void => {
+  const toggleMenu = (m: 'layout' | 'presets' | 'measure' | 'sync', el: HTMLElement): void => {
     setAnchor(el);
     setMenu(menu === m ? null : m);
   };
@@ -465,8 +500,25 @@ export function Toolbar(): ReactNode {
             </button>
           );
         })()}
-        <IconButton tip={t('toolbar.syncSoon')} disabled>
-          <Link2 size={18} />
+        <button
+          type="button"
+          className="icon-btn"
+          data-tip={t('sync.menu')}
+          aria-label={t('sync.menu')}
+          aria-pressed={s.sync.slice || s.sync.linked}
+          onClick={(e) => toggleMenu('sync', e.currentTarget)}
+          data-testid="tb-sync"
+        >
+          {s.sync.linked ? <Link size={18} /> : <Link2 size={18} />}
+          <ChevronDown size={12} className="caret" />
+        </button>
+        <IconButton
+          tip={tooltip('tools.cursor3d', 'toolCursor3d')}
+          pressed={s.tool === 'cursor3d'}
+          onClick={() => selectTool('cursor3d')}
+          testId="tb-cursor3d"
+        >
+          <Crosshair size={18} />
         </IconButton>
         <IconButton tip={t('toolbar.mprSoon')} disabled>
           <Box size={18} />
@@ -543,6 +595,7 @@ export function Toolbar(): ReactNode {
       {menu === 'layout' ? <LayoutMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
       {menu === 'presets' ? <PresetMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
       {menu === 'measure' ? <MeasureMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
+      {menu === 'sync' ? <SyncMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
     </header>
   );
 }

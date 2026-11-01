@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function IconButton(props: {
@@ -104,16 +104,21 @@ export function MenuItem(props: {
   kbd?: string;
   disabled?: boolean;
   testId?: string;
+  /** When set, the item is a checkbox item showing a tick when true. */
+  checked?: boolean;
 }): ReactNode {
+  const checkable = props.checked !== undefined;
   return (
     <button
       type="button"
-      className="menu-item"
-      role="menuitem"
+      className={`menu-item${checkable ? ' checkable' : ''}`}
+      role={checkable ? 'menuitemcheckbox' : 'menuitem'}
+      aria-checked={checkable ? props.checked : undefined}
       onClick={props.onClick}
       disabled={props.disabled}
       data-testid={props.testId}
     >
+      {checkable ? <span className="menu-check">{props.checked ? <Check size={14} /> : null}</span> : null}
       <span>{props.children}</span>
       {props.kbd ? <span className="kbd">{props.kbd}</span> : null}
     </button>

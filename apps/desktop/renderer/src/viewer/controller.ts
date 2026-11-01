@@ -123,6 +123,7 @@ export class ViewportController {
     readonly index: number,
     private readonly element: HTMLDivElement,
     private readonly overlayCanvas: HTMLCanvasElement,
+    private readonly guideCanvas?: HTMLCanvasElement,
   ) {
     this.viewportId = `vp-${index}`;
     getEngine().enableElement({
@@ -429,11 +430,93 @@ export class ViewportController {
     const dpr = window.devicePixelRatio || 1;
     const w = Math.round(this.element.clientWidth * dpr);
     const h = Math.round(this.element.clientHeight * dpr);
-    if (this.overlayCanvas.width !== w || this.overlayCanvas.height !== h) {
-      this.overlayCanvas.width = w;
-      this.overlayCanvas.height = h;
+    for (const c of [this.overlayCanvas, this.guideCanvas]) {
+      if (c && (c.width !== w || c.height !== h)) {
+        c.width = w;
+        c.height = h;
+      }
     }
     void this.drawOverlays();
+    this.drawGuides();
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // Guides: reference lines and the 3D cursor marker (image pixel coordinates, drawn by the sync engine's request)
+  // ------------------------------------------------------------------------------------------
+
+  private guides: Guides = { lines: [] };
+
+  setGuides(g: Guides): void {
+    const same =
+      g.marker?.[0] === this.guides.marker?.[0] &&
+      g.marker?.[1] === this.guides.marker?.[1] &&
+      JSON.stringify(g.lines) === JSON.stringify(this.guides.lines);
+    this.guides = g;
+    if (!same) this.drawGuides();
+  }
+
+  getGuides(): Guides {
+    return this.guides;
+  }
+
+  private drawGuides(): void {
+    const canvas = this.guideCanvas;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (this.state.status !== 'ready') return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = GUIDE_LINE_COLOR;
+    for (const [a, b] of this.guides.lines) {
+      const p = this.pixelToCanvas(a[0], a[1]);
+      const q = this.pixelToCanvas(b[0], b[1]);
+      if (!p || !q) continue;
+      ctx.beginPath();
+      ctx.moveTo(p[0], p[1]);
+      ctx.lineTo(q[0], q[1]);
+      ctx.stroke();
+    }
+    const m = this.guides.marker ? this.pixelToCanvas(this.guides.marker[0], this.guides.marker[1]) : undefined;
+    if (m) {
+      // Crosshair with a gap so the point itself stays visible.
+      ctx.strokeStyle = GUIDE_CURSOR_COLOR;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        ctx.moveTo(m[0] + dx * 4, m[1] + dy * 4);
+        ctx.lineTo(m[0] + dx * 14, m[1] + dy * 14);
+      }
+      ctx.stroke();
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  /** Zoom factor and pan of the camera (for zoom/pan sync). */
+  getZoomPan(): { zoom: number; pan: [number, number] } | undefined {
+    if (!this.hasImage()) return undefined;
+    const vp = this.viewport;
+    const pan = vp.getPan();
+    return { zoom: vp.getZoom(), pan: [pan[0], pan[1]] };
+  }
+
+  setZoomPan(z: { zoom: number; pan: [number, number] }): void {
+    if (!this.hasImage()) return;
+    const vp = this.viewport;
+    vp.setZoom(z.zoom);
+    vp.setPan(z.pan as Types.Point2);
+    vp.render();
+  }
+
+  get viewportElement(): HTMLDivElement {
+    return this.element;
   }
 
   // ------------------------------------------------------------------------------------------
@@ -526,6 +609,7 @@ export class ViewportController {
     });
     if (this.lastPointer) this.probeAt(this.lastPointer.x, this.lastPointer.y);
     void this.drawOverlays();
+    this.drawGuides();
   }
 
   // ------------------------------------------------------------------------------------------
@@ -734,6 +818,15 @@ export class ViewportController {
     this.listeners.clear();
   }
 }
+
+/** Lines (pairs of image pixel points) and an optional cursor marker drawn over the image. */
+export interface Guides {
+  lines: [readonly [number, number], readonly [number, number]][];
+  marker?: readonly [number, number];
+}
+
+const GUIDE_LINE_COLOR = 'rgba(56, 189, 248, 0.9)';
+const GUIDE_CURSOR_COLOR = 'rgba(74, 222, 128, 0.95)';
 
 export type ProbeUnit = 'hu' | 'bqml' | 'cnts' | 'gml' | 'raw';
 

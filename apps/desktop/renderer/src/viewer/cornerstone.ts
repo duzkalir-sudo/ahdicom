@@ -31,6 +31,7 @@ import dcmjs from 'dcmjs';
 import { applyLutSequences, forgetLuts, registerLuts } from './lut';
 import { MEASURE_TOOLS, measureToolConfigs, toolNameOf, type MeasureTool } from './measurements';
 import { initAnnotationEvents } from './annotations';
+import { initSync } from './sync';
 
 export const RENDERING_ENGINE_ID = 'cdv-engine';
 export const TOOL_GROUP_ID = 'cdv-stack-tools';
@@ -103,7 +104,8 @@ for (const type of [ToolEnums.Events.MOUSE_UP, ToolEnums.Events.MOUSE_CLICK]) {
 }
 
 export type NavigationTool = 'windowLevel' | 'pan' | 'zoom' | 'scroll';
-export type LeftTool = NavigationTool | MeasureTool;
+/** 'cursor3d' has no Cornerstone tool: the sync engine handles its clicks (left button unbound). */
+export type LeftTool = NavigationTool | MeasureTool | 'cursor3d';
 
 const NAV_TOOL_NAMES: Record<NavigationTool, string> = {
   windowLevel: WindowLevelTool.toolName,
@@ -362,6 +364,7 @@ export function initCornerstone(cacheSizeMB: number): void {
   }
   applyLeftTool('windowLevel');
   initAnnotationEvents();
+  initSync();
   // Measurement text on a dark translucent box stays readable over bright structures (bone, contrast).
   csAnnotation.config.style.setDefaultToolStyles({
     global: { ...csAnnotation.config.style.getDefaultToolStyles()?.global, textBoxBackground: 'rgba(0, 0, 0, 0.75)' },
@@ -416,7 +419,7 @@ function applyLeftTool(tool: LeftTool): void {
     [StackScrollTool.toolName]: [{ mouseButton: MouseBindings.Wheel }],
   };
   for (const m of MEASURE_TOOLS) bindings[toolNameOf(m)] = [];
-  bindings[isMeasureTool(tool) ? toolNameOf(tool) : NAV_TOOL_NAMES[tool]]!.push({ mouseButton: MouseBindings.Primary });
+  if (tool !== 'cursor3d') bindings[isMeasureTool(tool) ? toolNameOf(tool) : NAV_TOOL_NAMES[tool]]!.push({ mouseButton: MouseBindings.Primary });
   // setToolActive with an empty list does not remove an existing binding: clear all bindings first.
   for (const name of Object.keys(bindings)) toolGroup.setToolPassive(name, { removeAllBindings: true });
   for (const [name, b] of Object.entries(bindings)) if (b.length > 0) toolGroup.setToolActive(name, { bindings: b });

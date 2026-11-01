@@ -15,6 +15,20 @@ export function viewportCount(l: LayoutSpec): number {
   return l.kind === 'grid' ? l.rows * l.cols : 3;
 }
 
+/** Series comparison options (M3). */
+export interface SyncOptions {
+  /** Automatic slice sync between display sets in the same Frame of Reference with near-parallel planes. */
+  slice: boolean;
+  /** Reference lines of the active viewport's slice on the other viewports. */
+  referenceLines: boolean;
+  /** Manual link of all visible viewports, keeping the slice offset captured when linking. */
+  linked: boolean;
+  /** Window/level follows the active viewport (same modality only). */
+  windowLevel: boolean;
+  /** Zoom and pan follow the active viewport. */
+  zoomPan: boolean;
+}
+
 /** A modal text/number question from a measurement tool (annotation text, calibration length). */
 export interface PromptRequest {
   kind: 'text' | 'calibrate';
@@ -64,6 +78,7 @@ interface State {
   prompt?: PromptRequest;
   /** Incremented whenever measurements change (the measurement list re-reads them). */
   measureRev: number;
+  sync: SyncOptions;
 }
 
 interface Actions {
@@ -97,6 +112,7 @@ interface Actions {
   setPrompt(p: PromptRequest | undefined): void;
   replaceCalibrations(c: Record<string, { rowMm: number; columnMm: number }>): void;
   bumpMeasureRev(): void;
+  setSync(patch: Partial<SyncOptions>): void;
 }
 
 let noticeId = 0;
@@ -145,6 +161,7 @@ export const useStore = create<State & Actions>()((set, get) => {
     cine: {},
     calibrations: {},
     measureRev: 0,
+    sync: { slice: true, referenceLines: true, linked: false, windowLevel: false, zoomPan: false },
 
     setReady: (ready) => set({ ready }),
     setAppInfo: (appInfo) => set({ appInfo }),
@@ -219,6 +236,7 @@ export const useStore = create<State & Actions>()((set, get) => {
     setPrompt: (prompt) => set({ prompt }),
     replaceCalibrations: (calibrations) => set({ calibrations }),
     bumpMeasureRev: () => set({ measureRev: get().measureRev + 1 }),
+    setSync: (patch) => set({ sync: { ...get().sync, ...patch } }),
     setCalibration: (uid, c) => {
       const next = { ...get().calibrations };
       if (c) next[uid] = c;

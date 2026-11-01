@@ -52,6 +52,9 @@ export function installTestHooks(): void {
     /** Measurements with their displayed value lines. */
     measurements: () => listMeasurements(),
     calibrations: () => useStore.getState().calibrations,
+    /** Reference lines and 3D cursor marker of viewport i (image pixel coordinates). */
+    guides: (i: number) => controllerAt(i)?.getGuides(),
+    sync: () => useStore.getState().sync,
     /** Image cache + raw-bytes usage in bytes. */
     cacheBytes: () => cacheUsage().used,
     /**

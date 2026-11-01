@@ -151,6 +151,7 @@ export const COMMANDS: Command[] = [
   { id: 'toolPan', labelKey: 'toolbar.pan', group: 'tools', shortcut: { key: 'p' }, run: () => selectTool('pan') },
   { id: 'toolZoom', labelKey: 'toolbar.zoom', group: 'tools', shortcut: { key: 'z' }, run: () => selectTool('zoom') },
   { id: 'toolScroll', labelKey: 'toolbar.scroll', group: 'tools', shortcut: { key: 's' }, run: () => selectTool('scroll') },
+  { id: 'toolCursor3d', labelKey: 'tools.cursor3d', group: 'tools', shortcut: { key: 'x' }, run: () => selectTool('cursor3d') },
   { id: 'toolLength', labelKey: 'measure.tool.length', group: 'tools', shortcut: { key: 'm' }, run: () => selectTool('length') },
   { id: 'toolEllipse', labelKey: 'measure.tool.ellipse', group: 'tools', shortcut: { key: 'e' }, run: () => selectTool('ellipse') },
   { id: 'toolAngle', labelKey: 'measure.tool.angle', group: 'tools', shortcut: { key: 'n' }, run: () => selectTool('angle') },

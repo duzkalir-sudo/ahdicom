@@ -19,17 +19,9 @@ export const PARSE_LIMITS = {
 } as const;
 
 export type ParseErrorCode =
-  | 'notDicom'
-  | 'truncated'
-  | 'malformed'
-  | 'missingUids'
-  | 'unsupportedDimensions'
-  | 'truncatedPixelData'
-  | 'deflateUnsupported';
+  'notDicom' | 'truncated' | 'malformed' | 'missingUids' | 'unsupportedDimensions' | 'truncatedPixelData' | 'deflateUnsupported';
 
-export type ParseResult =
-  | { ok: true; instance: InstanceRecord }
-  | { ok: false; error: ParseErrorCode; detail?: string };
+export type ParseResult = { ok: true; instance: InstanceRecord } | { ok: false; error: ParseErrorCode; detail?: string };
 
 export interface ParseOptions {
   fileId: string;
@@ -142,7 +134,20 @@ function ultrasoundRegions(ds: DataSet): UltrasoundRegion[] | undefined {
     const deltaY = fd(r, 'x0018602e');
     if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) continue;
     if (unitsX === undefined || unitsY === undefined || deltaX === undefined || deltaY === undefined) continue;
-    out.push(definedOnly({ minX, minY, maxX, maxY, spatialFormat: us(r, 'x00186012'), dataType: us(r, 'x00186014'), unitsX, unitsY, deltaX, deltaY }));
+    out.push(
+      definedOnly({
+        minX,
+        minY,
+        maxX,
+        maxY,
+        spatialFormat: us(r, 'x00186012'),
+        dataType: us(r, 'x00186014'),
+        unitsX,
+        unitsY,
+        deltaX,
+        deltaY,
+      }),
+    );
   }
   return out.length > 0 ? out : undefined;
 }
@@ -326,6 +331,8 @@ export function parseInstance(bytes: Uint8Array, opts: ParseOptions): ParseResul
     rescaleIntercept: number(ds, 'x00281052'),
     windowCenter: numbers(ds, 'x00281050'),
     windowWidth: numbers(ds, 'x00281051'),
+    // Single-frame multi-phase series: Temporal Position Index (UL) or the classic Temporal Position Identifier (IS).
+    temporalPositionIndex: ul(ds, 'x00209128') ?? number(ds, 'x00200100'),
     ...definedOnly(sharedGeometry),
   });
 
@@ -383,7 +390,8 @@ export function parseInstance(bytes: Uint8Array, opts: ParseOptions): ParseResul
     echoTime: number(ds, 'x00180081'),
     repetitionTime: number(ds, 'x00180080'),
     magneticFieldStrength: number(ds, 'x00180087'),
-    diffusionBValue: number(ds, 'x00189087') ?? (mfi ? undefined : undefined),
+    // (0018,9087) Diffusion b-value is FD (binary).
+    diffusionBValue: fd(ds, 'x00189087') ?? (mfi ? undefined : undefined),
     kvp: number(ds, 'x00180060'),
     xRayTubeCurrent: number(ds, 'x00181151'),
     exposureTime: number(ds, 'x00181150'),
