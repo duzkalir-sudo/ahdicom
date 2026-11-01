@@ -7,7 +7,7 @@ within 5°), a manual link that keeps the slice offset (for earlier studies or o
 (multi-phase CT, DWI b-values, multi-echo, repeated acquisitions) with a "show together" toggle, and "Compare with
 prior". All geometry is computed by `dicom-core` and unit-tested against analytic planes (D-054).
 Not done by decision: separate program windows (D-055). Not offered: first/last-slice reference lines (R-033).
-**OS actually run on:** Windows 11 x64 (local). **CI:** not run yet for M3 — the push waits for the user's approval.
+**OS actually run on:** Windows 11 x64 (local). **CI:** green on `windows-latest` and `macos-latest` (arm64), run 41331379030.
 
 ## 2. Feature status
 | Feature | Status | Evidence |
@@ -34,7 +34,7 @@ Not done by decision: separate program windows (D-055). Not offered: first/last-
 | Built app run manually | UNVERIFIED | via Playwright on the built app only |
 | Screenshot inspection | Done | 19 M3 screenshots opened (1280×800 / 1920×1080 × dark/light × tr/en) |
 | Performance / memory | Pass | first image 0.26 s, 120 fps (display), heap back to 71 MB, cache 0 MB |
-| CI matrix (Windows, macOS) | Windows pass; macOS 45/46 | Run 41329587847: the reference-line test read the line mid-scroll on the slower macOS runner (test race); the test now waits for the final position. Rerun pending push approval. |
+| CI matrix (Windows, macOS) | Pass | Run 41329587847: Windows pass, macOS 45/46 (the reference-line test read the line mid-scroll on the slower runner: a test race, fixed in 6b6cc1e by waiting for the final position). Run 41331379030: both green. |
 | Verifier subagent | Pass 1 **FAIL** → fixed (D-056); pass 2 **PASS** | Pass 2's recommendation fixed as well: a series dropped into a linked layout re-anchors all viewports; the engine now records a series change only once the new series is ready (it was lost while loading, so new series were not aligned either). Remaining non-blocking: prior-study name match is exact (fails safe); single-slice dynamics keep the duplicate-position warning; no test asserts the refit on layout change (screenshots show it). |
 
 ## 4. Measured performance
@@ -62,7 +62,7 @@ Not done by decision: separate program windows (D-055). Not offered: first/last-
 
 ## 7. Decisions and questions
 - Decisions: D-054, D-055, D-056.
-- Questions for the user: approval to push M3 and run the Windows + macOS CI; should slice locations be shown as
+- Questions for the user: should slice locations be shown as
   patient coordinates with their own letter (R-034)?
 
 ## 8. How to run, test, build
