@@ -136,9 +136,10 @@ test('length, ellipse ROI (HU), angle and rectangle on the CT phantom', async ()
     near(numTr(roi.lines[0]), Math.PI * semiA * semiB, 0.06);
     near(Math.PI * semiA * semiB, Math.PI * 16, 5); // ≈ the intended 4 mm radius
     expect(roi.lines[0]).toContain('mm²');
-    expect(numTr(roi.lines[1])).toBe(1000);
-    expect(roi.lines[1]).toContain('HU');
-    expect(numTr(roi.lines[1], /(?:SS|SD) (-?\d[\d.,]*)/)).toBe(0);
+    const ctStats = roi.lines.find((l) => l.startsWith('Ort.'))!; // statistics line (after area and perimeter)
+    expect(numTr(ctStats)).toBe(1000);
+    expect(ctStats).toContain('HU');
+    expect(numTr(ctStats, /(?:SS|SD) (-?\d[\d.,]*)/)).toBe(0);
 
     await pickTool(s.page, 'n');
     const a = await pixelToClient(s.page, 300, 300);
@@ -240,8 +241,9 @@ test('PET ROI reports SUVbw; missing tags refuse SUV and name them', async () =>
     await pickTool(s.page, 'e');
     await drag(s.page, [64, 64], [67, 67]);
     const roi = await last(s.page, 'ellipse');
-    expect(roi.lines[1]).toContain('SUVbw');
-    expect(num(roi.lines[1], /Mean (-?\d[\d.,]*)/)).toBeCloseTo(5.19, 2);
+    const petStats = roi.lines.find((l) => l.startsWith('Mean'))!; // statistics line (after area and perimeter)
+    expect(petStats).toContain('SUVbw');
+    expect(num(petStats, /Mean (-?\d[\d.,]*)/)).toBeCloseTo(5.19, 2);
 
     // A click on the viewport with the ellipse tool would start an ROI: navigate with the W/L tool.
     await pickTool(s.page, 'w');
@@ -252,8 +254,9 @@ test('PET ROI reports SUVbw; missing tags refuse SUV and name them', async () =>
     const all = (await measurements(s.page)).filter((m) => m.tool === 'ellipse');
     const missing = all.find((m) => m.lines.some((l) => l.includes('SUV not available')))!;
     expect(missing.lines.join(' ')).toContain('PatientWeight, RadionuclideTotalDose');
-    expect(missing.lines[1]).toContain('Bq/ml');
-    expect(num(missing.lines[1], /Mean (-?\d[\d.,]*)/)).toBeCloseTo(20000, 0);
+    const missingStats = missing.lines.find((l) => l.startsWith('Mean'))!;
+    expect(missingStats).toContain('Bq/ml');
+    expect(num(missingStats, /Mean (-?\d[\d.,]*)/)).toBeCloseTo(20000, 0);
     expectNoErrors(s);
   } finally {
     await s.close();
@@ -637,7 +640,9 @@ test('every tool shows its value on the image: freehand circle, open polyline, d
     await s.page.mouse.up();
     const free = await last(s.page, 'freehand');
     // π · 15 mm · 15 mm ≈ 7.07 cm² (a hand-drawn 48-gon is slightly smaller).
-    near(num(free.lines[0]), 7.07, 0.25);
+    // Diagnostics for R-030: where the drawn contour starts and how many points it has.
+    const diag = `start ${JSON.stringify(free.pixels.slice(0, 3).map((p) => p.map(Math.round)))} n=${free.pixels.length}`;
+    expect(Math.abs(num(free.lines[0]) - 7.07), diag).toBeLessThanOrEqual(0.25);
     await expect.poll(() => imageText(s.page)).toContain(free.lines[0]!);
     await expect.poll(() => imageText(s.page)).toContain('Mean');
 
@@ -668,6 +673,65 @@ test('every tool shows its value on the image: freehand circle, open polyline, d
     const dev = await last(s.page, 'deviation');
     near(num(dev.lines[0]), 20, 0.6); // 40 px × 0.5 mm
     await expect.poll(() => imageText(s.page)).toContain(dev.lines[0]!);
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('perimeter of ellipse and rectangle ROI; trash button on hover deletes a drawing (undoable); open folder first', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    // Start screen: "Open folder" is the first, highlighted action.
+    const first = s.page.locator('.start-actions .big-btn').first();
+    await expect(first).toHaveAttribute('data-testid', 'start-open-folder');
+    await expect(first).toHaveClass(/primary/);
+    await expect(s.page.getByTestId('start-open-files')).not.toHaveClass(/primary/);
+
+    await openSeries(s, 'ct-phantom');
+    await scrollTo(s, 32);
+
+    // Ellipse: a circle of radius 10 px (5 mm): perimeter 2π·r from the handles actually placed.
+    await pickTool(s.page, 'e');
+    await drag(s.page, [300, 300], [310, 310]);
+    const roi = await last(s.page, 'ellipse');
+    const [bottom, top, left, right] = roi.pixels;
+    const a = (Math.abs(right![0] - left![0]) / 2) * 0.5;
+    const b = (Math.abs(top![1] - bottom![1]) / 2) * 0.5;
+    expect(roi.lines[1]).toContain('Perimeter');
+    const h = ((a - b) / (a + b)) ** 2;
+    near(num(roi.lines[1]), Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h))), 0.06);
+
+    // Rectangle 40 × 20 px = 20 × 10 mm: perimeter 60 mm.
+    await pickFromMenu(s.page, 'rectangle');
+    await drag(s.page, [100, 100], [140, 120]);
+    const rect = await last(s.page, 'rectangle');
+    expect(rect.lines[1]).toContain('Perimeter');
+    near(num(rect.lines[1]), 60, 0.6);
+
+    // Hover over a length line: the trash button appears; clicking it deletes the line; Ctrl+Z brings it back.
+    await pickTool(s.page, 'm');
+    await drag(s.page, [100, 400], [200, 400]);
+    await expect.poll(async () => (await measurements(s.page)).filter((m) => m.tool === 'length')).toHaveLength(1);
+    await pickTool(s.page, 'w');
+    const mid = await pixelToClient(s.page, 150, 400);
+    await s.page.mouse.move(mid.x, mid.y - 20, { steps: 3 });
+    await s.page.mouse.move(mid.x, mid.y, { steps: 3 });
+    const trash = s.page.getByTestId('vp-delete-0');
+    await expect(trash).toBeVisible();
+    await screenshot(s.page, 'M2', 'hover-delete-1280x800-dark-en');
+    await trash.hover();
+    await expect(trash).toBeVisible();
+    await trash.click();
+    await expect.poll(async () => (await measurements(s.page)).filter((m) => m.tool === 'length')).toHaveLength(0);
+    await expect(trash).toHaveCount(0);
+    await s.page.getByTestId('viewport-0').hover({ position: { x: 5, y: 5 } });
+    await s.page.keyboard.press('Control+z');
+    await expect.poll(async () => (await measurements(s.page)).filter((m) => m.tool === 'length')).toHaveLength(1);
+    // Away from any drawing, the button goes away.
+    const empty = await pixelToClient(s.page, 450, 50);
+    await s.page.mouse.move(empty.x, empty.y, { steps: 3 });
+    await expect(trash).toHaveCount(0, { timeout: 3000 });
     expectNoErrors(s);
   } finally {
     await s.close();

@@ -5,6 +5,8 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 ## [Unreleased]
 
 ### Added (M2 — measurements)
+- Perimeter for ellipse and rectangle ROIs; a trash button appears when hovering a drawing and deletes it (Ctrl+Z restores).
+- "Open folder" is the first, highlighted action on the start screen and first in the toolbar.
 - Measurement tools: length, angle, Cobb angle, deviation (point to line), length ratio, ellipse / rectangle / polygon ROI,
   open polyline, freehand, arrow with text, text, manual calibration.
 - Values computed by `dicom-core` with the spacing basis shown next to them (patient plane, magnification corrected,

@@ -306,11 +306,11 @@ export function Toolbar(): ReactNode {
       </div>
 
       <div className="tb-group" aria-label={t('groups.open')}>
-        <IconButton tip={tooltip('toolbar.openFiles', 'openFiles')} onClick={() => void openKind('files')} testId="tb-open-files">
-          <FilePlus2 size={18} />
-        </IconButton>
         <IconButton tip={tooltip('toolbar.openFolder', 'openFolder')} onClick={() => void openKind('folder')} testId="tb-open-folder">
           <FolderOpen size={18} />
+        </IconButton>
+        <IconButton tip={tooltip('toolbar.openFiles', 'openFiles')} onClick={() => void openKind('files')} testId="tb-open-files">
+          <FilePlus2 size={18} />
         </IconButton>
         <IconButton tip={t('toolbar.openDicomdir')} onClick={() => void openKind('dicomdir')} testId="tb-open-dicomdir">
           <Disc3 size={18} />

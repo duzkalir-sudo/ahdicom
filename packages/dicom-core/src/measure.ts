@@ -114,6 +114,25 @@ export function ellipseArea(e: Ellipse, s?: MeasureScale): Quantity {
   return { value: Math.PI * Math.abs(ux * vy - uy * vx), unit: s ? 'mm²' : 'px²' };
 }
 
+/**
+ * Perimeter of an ellipse. The semi-axes in physical space are the singular values of [u v] after scaling (anisotropic
+ * pixels can turn the drawn axes into a rotated ellipse); Ramanujan's second approximation is then used
+ * (relative error < 4·10⁻⁵ even at axis ratio 10:1, exact for circles).
+ */
+export function ellipsePerimeter(e: Ellipse, s?: MeasureScale): Quantity {
+  const [ux, uy] = toMm(e.u, s);
+  const [vx, vy] = toMm(e.v, s);
+  const t = ux * ux + uy * uy + vx * vx + vy * vy;
+  const d = Math.abs(ux * vy - uy * vx);
+  const root = Math.sqrt(Math.max(0, t * t - 4 * d * d));
+  const a = Math.sqrt((t + root) / 2);
+  const b = Math.sqrt(Math.max(0, (t - root) / 2));
+  const unit = s ? 'mm' : 'px';
+  if (a + b === 0) return { value: 0, unit };
+  const h = ((a - b) / (a + b)) ** 2;
+  return { value: Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h))), unit };
+}
+
 /** True when pixel centre (c, r) lies inside or on the ellipse. */
 export function insideEllipse(e: Ellipse, c: number, r: number): boolean {
   const det = e.u[0] * e.v[1] - e.u[1] * e.v[0];

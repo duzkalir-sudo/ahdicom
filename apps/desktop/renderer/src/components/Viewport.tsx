@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, ImageOff, Loader2 } from 'lucide-react';
+import { FileText, ImageOff, Loader2, Trash2 } from 'lucide-react';
+import { removeMeasurement } from '../viewer/measureDoc';
 import {
   CT_PRESETS,
   type DisplaySet,
@@ -184,6 +185,56 @@ function SliceSlider(props: { vs: ViewState; index: number }): ReactNode {
   );
 }
 
+/**
+ * Small delete button for the measurement under the cursor. It stays for a moment after the cursor leaves the
+ * outline so that it can be reached, and while the cursor is on it.
+ */
+function HoverDelete(props: { index: number; hover: ViewState['hover'] }): ReactNode {
+  const { t } = useTranslation();
+  // The last hovered measurement, kept briefly after the cursor leaves it (state derived during render).
+  const [last, setLast] = useState<ViewState['hover']>();
+  if (props.hover && props.hover !== last) setLast(props.hover);
+  const onButton = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    if (props.hover) return;
+    timer.current = setTimeout(() => {
+      if (!onButton.current) setLast(undefined);
+    }, 600);
+    return () => clearTimeout(timer.current);
+  }, [props.hover]);
+  const shown = props.hover ?? last;
+  const setShown = setLast;
+  if (!shown) return null;
+  return (
+    <button
+      type="button"
+      className="vp-delete"
+      style={{ left: shown.x, top: shown.y }}
+      data-tip={t('measurements.delete')}
+      aria-label={t('measurements.delete')}
+      onMouseEnter={() => {
+        onButton.current = true;
+        clearTimeout(timer.current);
+      }}
+      onMouseLeave={() => {
+        onButton.current = false;
+        timer.current = setTimeout(() => setShown(undefined), 300);
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onButton.current = false;
+        removeMeasurement(shown.uid);
+        setShown(undefined);
+      }}
+      data-testid={`vp-delete-${props.index}`}
+    >
+      <Trash2 size={14} />
+    </button>
+  );
+}
+
 function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNode {
   const { t } = useTranslation();
   const ready = useStore((s) => s.ready);
@@ -298,6 +349,7 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
     >
       <div ref={elRef} className="vp-element" data-testid={`viewport-element-${props.index}`} />
       <canvas ref={canvasRef} className="vp-overlay-canvas" />
+      {status === 'ready' ? <HoverDelete index={props.index} hover={vs?.hover} /> : null}
       {status === 'ready' && ds && vs ? (
         <div className="vp-info">
           {showInfo ? <Corners ds={ds} vs={vs} /> : null}

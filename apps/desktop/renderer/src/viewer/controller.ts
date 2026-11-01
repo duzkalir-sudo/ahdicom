@@ -26,7 +26,9 @@ import {
 } from '@ahdicom/dicom-core';
 import { RENDERING_ENGINE_ID, TOOL_GROUP_ID, frameOf, fileIdOf, getEngine, getToolGroup, imageIdsFor } from './cornerstone';
 import { lutsFor, modalityLutApplied } from './lut';
-import { cancelDrawingOn } from './annotations';
+import { cancelDrawingOn, isDrawing } from './annotations';
+import { definingPoints } from './measureDoc';
+import { measureToolOf } from './measurements';
 import { useStore } from '../state/store';
 
 export type ViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'nonImage';
@@ -61,6 +63,8 @@ export interface ViewState {
   /** Millimetres per CSS pixel along the screen x axis (undefined when uncalibrated). */
   mmPerCssPx?: number;
   probe?: ProbeValue;
+  /** Measurement under the cursor and where its delete button goes (canvas CSS pixels). */
+  hover?: { uid: string; x: number; y: number };
   cine: boolean;
   fps: number;
 }
@@ -76,6 +80,7 @@ const EMPTY: ViewState = {
   labels: undefined,
   mmPerCssPx: undefined,
   probe: undefined,
+  hover: undefined,
   index: 0,
   total: 0,
   voiFn: 'LINEAR',
@@ -531,12 +536,38 @@ export class ViewportController {
     const rect = this.element.getBoundingClientRect();
     this.lastPointer = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     this.probeAt(this.lastPointer.x, this.lastPointer.y);
+    this.hoverAt(this.lastPointer.x, this.lastPointer.y);
   };
 
   private readonly onPointerLeave = (): void => {
     this.lastPointer = undefined;
     if (this.state.probe) this.emit({ probe: undefined });
+    if (this.state.hover) this.emit({ hover: undefined });
   };
+
+  /** Finds the measurement under the cursor; its delete button sits at the top-right corner of its outline. */
+  private hoverAt(x: number, y: number): void {
+    let next: ViewState['hover'];
+    if (this.state.status === 'ready' && !isDrawing()) {
+      const a = toolUtils.getAnnotationNearPoint(this.element, [x, y], 6);
+      const tool = a ? measureToolOf(a.metadata?.toolName ?? '') : undefined;
+      if (a?.annotationUID && tool && tool !== 'calibrate') {
+        const pts = definingPoints(tool, a.data).map((p) => this.viewport.worldToCanvas(p));
+        if (pts.length > 0) {
+          const size = 24;
+          const maxX = Math.max(...pts.map((p) => p[0]));
+          const minY = Math.min(...pts.map((p) => p[1]));
+          next = {
+            uid: a.annotationUID,
+            x: Math.round(Math.min(Math.max(0, maxX + 6), this.element.clientWidth - size)),
+            y: Math.round(Math.min(Math.max(0, minY - size - 6), this.element.clientHeight - size)),
+          };
+        }
+      }
+    }
+    const cur = this.state.hover;
+    if (next?.uid !== cur?.uid || next?.x !== cur?.x || next?.y !== cur?.y) this.emit({ hover: next });
+  }
 
   /** Image (column,row) of a canvas point using the DICOM-correct inverse mapping (not csUtils.worldToImageCoords). */
   canvasToPixel(x: number, y: number): [number, number] | undefined {

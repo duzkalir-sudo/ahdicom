@@ -116,13 +116,14 @@ export function StartScreen(): ReactNode {
           <h1>{t('start.title')}</h1>
           <p>{t('start.subtitle')}</p>
           <div className="start-actions">
-            <button type="button" className="big-btn primary" onClick={() => void openKind('files')} data-testid="start-open-files">
-              <FilePlus2 size={20} />
-              <span>{t('start.openFiles')}</span>
-            </button>
-            <button type="button" className="big-btn" onClick={() => void openKind('folder')} data-testid="start-open-folder">
+            {/* A study is usually a folder (CD, export), so opening a folder is the default action (user request). */}
+            <button type="button" className="big-btn primary" onClick={() => void openKind('folder')} data-testid="start-open-folder">
               <FolderOpen size={20} />
               <span>{t('start.openFolder')}</span>
+            </button>
+            <button type="button" className="big-btn" onClick={() => void openKind('files')} data-testid="start-open-files">
+              <FilePlus2 size={20} />
+              <span>{t('start.openFiles')}</span>
             </button>
             <button type="button" className="big-btn" onClick={() => void openKind('dicomdir')} data-testid="start-open-dicomdir">
               <Disc3 size={20} />

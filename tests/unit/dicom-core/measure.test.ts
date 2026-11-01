@@ -9,6 +9,7 @@ import {
   ellipseArea,
   ellipseBBox,
   ellipseFromHandles,
+  ellipsePerimeter,
   ellipsoidVolume,
   insideEllipse,
   insidePolygon,
@@ -366,5 +367,27 @@ describe('us-regions fixture', () => {
       [150, 400],
     ]);
     expect(s.ok && segmentLength([150, 100], [150, 400], s.scale).value).toBeCloseTo(60, 9);
+  });
+});
+
+describe('ellipse perimeter', () => {
+  it('circle: exactly 2πr; anisotropic pixels turn it into a true ellipse', () => {
+    const e = ellipseFromHandles([100, 50], [100, 150], [50, 100], [150, 100]); // r = 50 px
+    expect(ellipsePerimeter(e, iso).value).toBeCloseTo(2 * Math.PI * 25, 9);
+    expect(ellipsePerimeter(e).unit).toBe('px');
+    // On 0.5 × 1.0 mm pixels the same handles are an ellipse with semi-axes 25 mm and 50 mm.
+    // Reference (numerical integration of the arc length): 242.2112 mm.
+    expect(ellipsePerimeter(e, aniso).value).toBeCloseTo(242.2112, 3);
+  });
+
+  it('rotated conjugate semi-axes give the principal axes; very elongated ellipse stays accurate', () => {
+    // u = (30, 40) and v = (-8, 6) are perpendicular: semi-axes 50 and 10. Reference (numerical integration): 210.1004.
+    expect(ellipsePerimeter({ center: [0, 0], u: [30, 40], v: [-8, 6] }).value).toBeCloseTo(210.1004, 3);
+    // Non-perpendicular conjugate diameters of the same ellipse (x²/50² + y²/10² = 1, θ = 30°) give the same perimeter.
+    const t = Math.PI / 6;
+    const u: Point2 = [50 * Math.cos(t), 10 * Math.sin(t)];
+    const v: Point2 = [-50 * Math.sin(t), 10 * Math.cos(t)];
+    expect(ellipsePerimeter({ center: [0, 0], u, v }).value).toBeCloseTo(210.1004, 3);
+    expect(ellipsePerimeter({ center: [0, 0], u: [0, 0], v: [0, 0] }).value).toBe(0);
   });
 });

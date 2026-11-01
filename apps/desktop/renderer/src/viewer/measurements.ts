@@ -31,6 +31,7 @@ import {
   ellipseArea,
   ellipseBBox,
   ellipseFromHandles,
+  ellipsePerimeter,
   insideEllipse,
   insidePolygon,
   lengthDecimals,
@@ -175,11 +176,9 @@ class PolylineTool extends SplineROITool {
   constructor(toolProps = {}) {
     super(toolProps);
     // SplineROITool draws its text box only for closed splines; an open polyline shows its length too.
-    (this as unknown as { _renderStats: (a: AnyAnnotation, e: Types.IEnabledElement, svg: ToolTypes.SVGDrawingHelper) => void })._renderStats = (
-      annotation,
-      enabledElement,
-      svgDrawingHelper,
-    ) => {
+    (
+      this as unknown as { _renderStats: (a: AnyAnnotation, e: Types.IEnabledElement, svg: ToolTypes.SVGDrawingHelper) => void }
+    )._renderStats = (annotation, enabledElement, svgDrawingHelper) => {
       const { viewport } = enabledElement;
       const data = annotation.data as Data;
       const points = data.handles?.points ?? [];
@@ -190,7 +189,12 @@ class PolylineTool extends SplineROITool {
         enabledElement,
         svgDrawingHelper,
         annotation,
-        styleSpecifier: { toolGroupId: this.toolGroupId, toolName: this.getToolName(), viewportId: viewport.id, annotationUID: annotation.annotationUID },
+        styleSpecifier: {
+          toolGroupId: this.toolGroupId,
+          toolName: this.getToolName(),
+          viewportId: viewport.id,
+          annotationUID: annotation.annotationUID,
+        },
         textLines,
         canvasCoordinates: points.map((p) => viewport.worldToCanvas(p)),
         textBoxUID: 'textBox',
@@ -570,7 +574,12 @@ export function measurementValue(tool: MeasureTool, data: Data, imageId: string)
       const s = areaStats(ref, imageId, ellipseBBox(e), (c, r) => insideEllipse(e, c, r));
       return {
         tool,
-        lines: [`${i18next.t('measure.area')} ${formatArea(ellipseArea(e, scale).value, scale)}`, ...statsLines(ref, s), ...notes],
+        lines: [
+          `${i18next.t('measure.area')} ${formatArea(ellipseArea(e, scale).value, scale)}`,
+          `${i18next.t('measure.perimeter')} ${formatLength(ellipsePerimeter(e, scale).value, scale)}`,
+          ...statsLines(ref, s),
+          ...notes,
+        ],
         note,
       };
     }
@@ -580,7 +589,12 @@ export function measurementValue(tool: MeasureTool, data: Data, imageId: string)
       const s = areaStats(ref, imageId, polygonBBox(ring), (c, r) => insidePolygon(ring, c, r));
       return {
         tool,
-        lines: [`${i18next.t('measure.area')} ${formatArea(polygonArea(ring, scale).value, scale)}`, ...statsLines(ref, s), ...notes],
+        lines: [
+          `${i18next.t('measure.area')} ${formatArea(polygonArea(ring, scale).value, scale)}`,
+          `${i18next.t('measure.perimeter')} ${formatLength(polygonPerimeter(ring, scale).value, scale)}`,
+          ...statsLines(ref, s),
+          ...notes,
+        ],
         note,
       };
     }
