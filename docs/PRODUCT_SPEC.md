@@ -116,7 +116,7 @@ Priority: **P0** required for first clinical-research use · **P1** required for
 ### 3.5 Comparing series
 | Feature | Pri | M |
 |---|---|---|
-| Multiple series in one window and multiple windows | P0 | 3 |
+| Multiple series in one window (separate windows not needed: user decision D-055) | P0 | 3 |
 | Automatic slice sync for series in the same Frame of Reference and near-parallel planes (≤ 5° default) | P0 | 3 |
 | Manual sync across studies (slice offset, zoom/pan, W/L), sync-mode toolbar toggle | P1 | 3 |
 | Reference (scout/cross-reference) lines between non-parallel series | P0 | 3 |

@@ -174,7 +174,7 @@ Phase C: manual sync and comparison
       when linking; optional W/L and zoom/pan sync; toolbar menu
 - [x] Split display sets shown as separate thumbnails; merge them back into one panel (context menu)
 - [x] Prior/current comparison: open the matching series of an earlier study of the same patient side by side, linked
-- [ ] Multiple windows (spec P0): question to the user about second-monitor use before implementing
+- [x] Multiple windows (spec P0): not needed — no second monitor in the clinic (user decision D-055)
 
 Phase D: verification
 - [ ] Unit tests for all Phase A geometry; fixtures: two studies of one patient (prior/current, same and different

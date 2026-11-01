@@ -35,7 +35,6 @@ Previous (2026-10-29, M1):
 | CI matrix (Windows, macOS Apple Silicon) | **Green** (run 40929893039); Intel macOS not tested (D-035) |
 
 ## Open questions for the user
-- Multiple windows (second monitor): needed? (M3 Phase C)
 
 ## Failing checks
 None known locally.
