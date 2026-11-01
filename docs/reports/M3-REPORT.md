@@ -34,7 +34,7 @@ Not done by decision: separate program windows (D-055). Not offered: first/last-
 | Built app run manually | UNVERIFIED | via Playwright on the built app only |
 | Screenshot inspection | Done | 19 M3 screenshots opened (1280×800 / 1920×1080 × dark/light × tr/en) |
 | Performance / memory | Pass | first image 0.26 s, 120 fps (display), heap back to 71 MB, cache 0 MB |
-| CI matrix (Windows, macOS) | Not run | waiting for push approval |
+| CI matrix (Windows, macOS) | Windows pass; macOS 45/46 | Run 41329587847: the reference-line test read the line mid-scroll on the slower macOS runner (test race); the test now waits for the final position. Rerun pending push approval. |
 | Verifier subagent | Pass 1 **FAIL** → fixed (D-056); pass 2 **PASS** | Pass 2's recommendation fixed as well: a series dropped into a linked layout re-anchors all viewports; the engine now records a series change only once the new series is ready (it was lost while loading, so new series were not aligned either). Remaining non-blocking: prior-study name match is exact (fails safe); single-slice dynamics keep the duplicate-position warning; no test asserts the refit on layout change (screenshots show it). |
 
 ## 4. Measured performance

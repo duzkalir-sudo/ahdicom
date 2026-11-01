@@ -115,7 +115,9 @@ test('reference line of the active sagittal slice on the axial viewport, and the
     await show(s, 'SAGITTAL', 1);
     // Active sagittal at x = 0 (index 22): on the axial image (2 mm pixels from −127) the line is column 63.5.
     await scrollTo(s, 1, 22);
-    await expect.poll(async () => (await guides(s.page, 0))?.lines.length).toBe(1);
+    // The line follows the active slice on the next animation frame: wait for the final position (slow CI runners
+    // can be read mid-scroll).
+    await expect.poll(async () => Math.round(((await guides(s.page, 0))?.lines[0]?.[0][0] ?? -1) * 10) / 10).toBe(63.5);
     const [a, b] = (await guides(s.page, 0))!.lines[0]!;
     expect(a[0]).toBeCloseTo(63.5, 6);
     expect(b[0]).toBeCloseTo(63.5, 6);
