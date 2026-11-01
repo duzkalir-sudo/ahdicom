@@ -97,6 +97,7 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Measurement on a series that left the viewport stays listed and is saved | E2E (orient-axial → sagittal, restart) | Pass |
 | Each image measured with its own calibration (US series at 0.2 / 0.4 mm/px) | E2E (`us-multi`) | Pass |
 | Calibration kept when the study is only partly open at save time | E2E (three launches) | Pass |
+| Values drawn on the image (SVG text) for freehand circle, open polyline and deviation | E2E "every tool shows its value on the image" | Pass |
 | Dialogs take typed input at once (real key presses), invalid calibration explained, Esc cancels; calibration drawn click-move-click | E2E "dialogs take keyboard input at once" | Pass |
 | Unreadable / oversized / foreign measurement files set aside, never trusted | fuzz `measurements.fuzz.test.ts` | Pass |
 | No CSP violation from measurement text (D-044) | every E2E (console errors fail the run) | Pass |

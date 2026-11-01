@@ -40,29 +40,53 @@ const NATURALIZED = MetadataEnums.MetadataModules.NATURALIZED;
 let engine: RenderingEngine | undefined;
 let toolGroup: ToolTypes.IToolGroup | undefined;
 
-/** Cornerstone's double-click detection window (DOUBLE_CLICK_TOLERANCE_MS) plus a margin. */
-const DOUBLE_CLICK_WINDOW_MS = 450;
-/** End of the window in which Cornerstone may still replay a viewport click (a press released in place). */
-let heldClickUntil = -Infinity;
-let press: { time: number; x: number; y: number } | undefined;
-let pendingToolSwitch: ReturnType<typeof setTimeout> | undefined;
+/*
+ * Cornerstone holds a viewport click (press and release within 3 px) to detect a double-click, then replays it to the
+ * tool that is active at that moment: after its 400 ms timer, at the next mouse move beyond 3 px, or never (a second
+ * release anywhere drops it). A tool switched while a click is held would receive that old click and start a phantom
+ * measurement, so the switch waits until Cornerstone has delivered (or dropped) the click. Timers can fire late while
+ * the app is busy, so this follows Cornerstone's own events instead of the clock (D-045).
+ */
+let press: { x: number; y: number } | undefined;
+let clickHeld = false;
+let pendingTool: LeftTool | undefined;
+let pendingFallback: ReturnType<typeof setTimeout> | undefined;
+
+function releaseHeldClick(): void {
+  clickHeld = false;
+  clearTimeout(pendingFallback);
+  if (pendingTool !== undefined) {
+    const tool = pendingTool;
+    pendingTool = undefined;
+    // After Cornerstone's own listeners for this event have run.
+    setTimeout(() => applyLeftTool(tool), 0);
+  }
+}
+
 window.addEventListener(
   'mousedown',
   (e) => {
-    press =
-      e.target instanceof Element && e.target.closest('.vp-element') ? { time: performance.now(), x: e.clientX, y: e.clientY } : undefined;
+    press = e.target instanceof Element && e.target.closest('.vp-element') ? { x: e.clientX, y: e.clientY } : undefined;
   },
   true,
 );
 window.addEventListener(
   'mouseup',
   (e) => {
-    // Only a click (release within Cornerstone's 3 px drag tolerance) is held; a drag is handled immediately.
-    if (press && Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) <= 3) heldClickUntil = press.time + DOUBLE_CLICK_WINDOW_MS;
+    if (clickHeld) {
+      // A second release while a click is held: Cornerstone treats it as a double-click or drops the held click.
+      releaseHeldClick();
+    } else if (press && Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) <= 3) {
+      clickHeld = true;
+    }
     press = undefined;
   },
   true,
 );
+// Cornerstone dispatches these on the viewport element (not bubbling); a capturing listener on window still sees them.
+for (const type of [ToolEnums.Events.MOUSE_UP, ToolEnums.Events.MOUSE_CLICK]) {
+  window.addEventListener(type, () => clickHeld && releaseHeldClick(), true);
+}
 
 export type NavigationTool = 'windowLevel' | 'pan' | 'zoom' | 'scroll';
 export type LeftTool = NavigationTool | MeasureTool;
@@ -357,15 +381,14 @@ export function setCacheSize(cacheSizeMB: number): void {
  * Measurement tools that are not selected stay passive, so their annotations remain visible and editable.
  */
 export function setLeftTool(tool: LeftTool): void {
-  // Cornerstone holds a viewport click for up to 400 ms to detect a double-click and then replays it to the tool that
-  // is active at that moment. A tool switched within that window (click, then a shortcut key) would receive the old
-  // click and start a phantom measurement, so the switch takes effect once the held click has been handled.
-  clearTimeout(pendingToolSwitch);
-  const wait = heldClickUntil - performance.now();
-  if (wait > 0) {
-    pendingToolSwitch = setTimeout(() => applyLeftTool(tool), wait);
+  if (clickHeld) {
+    pendingTool = tool;
+    clearTimeout(pendingFallback);
+    // Safety net in case the held click is resolved in a way no event reports.
+    pendingFallback = setTimeout(releaseHeldClick, 2000);
     return;
   }
+  pendingTool = undefined;
   applyLeftTool(tool);
 }
 

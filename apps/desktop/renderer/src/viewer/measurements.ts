@@ -171,6 +171,32 @@ class PolygonTool extends SplineROITool {
 /** Open polyline, clicked point by point (double-click ends it). */
 class PolylineTool extends SplineROITool {
   static override toolName = 'CdvPolyline';
+
+  constructor(toolProps = {}) {
+    super(toolProps);
+    // SplineROITool draws its text box only for closed splines; an open polyline shows its length too.
+    (this as unknown as { _renderStats: (a: AnyAnnotation, e: Types.IEnabledElement, svg: ToolTypes.SVGDrawingHelper) => void })._renderStats = (
+      annotation,
+      enabledElement,
+      svgDrawingHelper,
+    ) => {
+      const { viewport } = enabledElement;
+      const data = annotation.data as Data;
+      const points = data.handles?.points ?? [];
+      if (points.length < 2) return;
+      const textLines = textLinesFor('polyline', data, this.getTargetId(viewport as unknown as Types.IViewport) ?? '');
+      if (textLines.length === 0) return;
+      this.renderLinkedTextBoxAnnotation({
+        enabledElement,
+        svgDrawingHelper,
+        annotation,
+        styleSpecifier: { toolGroupId: this.toolGroupId, toolName: this.getToolName(), viewportId: viewport.id, annotationUID: annotation.annotationUID },
+        textLines,
+        canvasCoordinates: points.map((p) => viewport.worldToCanvas(p)),
+        textBoxUID: 'textBox',
+      });
+    };
+  }
 }
 
 /** A line whose true length the user enters to calibrate the series. */
@@ -237,7 +263,9 @@ export function measureToolConfigs(): { cls: unknown; name: string; config: Reco
       name: PolylineTool.toolName,
       config: { ...base('polyline'), calculateStats: false, allowOpenSplines: true, spline: { type: 'LINEAR' } },
     },
-    { cls: PlanarFreehandROITool, name: PlanarFreehandROITool.toolName, config: { ...base('freehand'), calculateStats: false } },
+    // PlanarFreehandROITool draws its text box only when calculateStats is on; Cornerstone's own statistics are computed
+    // but never shown (the text comes from getTextLines).
+    { cls: PlanarFreehandROITool, name: PlanarFreehandROITool.toolName, config: { ...base('freehand'), calculateStats: true } },
     { cls: ArrowAnnotateTool, name: ArrowAnnotateTool.toolName, config: { getTextCallback: textCallback, changeTextCallback } },
     { cls: LabelTool, name: LabelTool.toolName, config: { getTextCallback: textCallback, changeTextCallback } },
     { cls: CalibrationTool, name: CalibrationTool.toolName, config: base('calibrate') },

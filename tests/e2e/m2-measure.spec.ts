@@ -610,6 +610,70 @@ test('dialogs take keyboard input at once: calibration typed after click-move-cl
   }
 });
 
+/** Text of the measurement labels drawn on the image (Cornerstone's SVG layer of viewport i). */
+async function imageText(page: Page, i = 0): Promise<string> {
+  return page.evaluate((idx) => {
+    const el = document.querySelector(`[data-testid="viewport-element-${idx}"]`);
+    return [...(el?.querySelectorAll('svg text') ?? [])].map((t) => t.textContent ?? '').join(' | ');
+  }, i);
+}
+
+test('every tool shows its value on the image: freehand circle, open polyline, deviation, ratio, Cobb', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openSeries(s, 'ct-phantom');
+    await scrollTo(s, 32);
+
+    // Freehand: a circle of radius 30 px drawn by hand around pixel (300, 300), released at its start.
+    await pickFromMenu(s.page, 'freehand');
+    const pts: { x: number; y: number }[] = [];
+    for (let k = 0; k <= 48; k++) {
+      const t = (k / 48) * 2 * Math.PI;
+      pts.push(await pixelToClient(s.page, 300 + 30 * Math.cos(t), 300 + 30 * Math.sin(t)));
+    }
+    await s.page.mouse.move(pts[0]!.x, pts[0]!.y);
+    await s.page.mouse.down();
+    for (const p of pts.slice(1)) await s.page.mouse.move(p.x, p.y);
+    await s.page.mouse.up();
+    const free = await last(s.page, 'freehand');
+    // π · 15 mm · 15 mm ≈ 7.07 cm² (a hand-drawn 48-gon is slightly smaller).
+    near(num(free.lines[0]), 7.07, 0.25);
+    await expect.poll(() => imageText(s.page)).toContain(free.lines[0]!);
+    await expect.poll(() => imageText(s.page)).toContain('Mean');
+
+    // Open polyline: three clicks and a double-click; its length is shown on the image too.
+    await pickFromMenu(s.page, 'polyline');
+    await clickPixel(s.page, [100, 400]);
+    await clickPixel(s.page, [140, 400]);
+    const end = await pixelToClient(s.page, 140, 440);
+    await s.page.mouse.move(end.x, end.y, { steps: 3 });
+    await s.page.mouse.dblclick(end.x, end.y);
+    await s.page.waitForTimeout(500);
+    const poly = await last(s.page, 'polyline');
+    near(num(poly.lines[0]), 40, 0.6); // 2 × 40 px × 0.5 mm
+    await expect.poll(() => imageText(s.page)).toContain(poly.lines[0]!);
+
+    // Deviation: reference line, then the measured point.
+    await pickFromMenu(s.page, 'deviation');
+    const d0 = await pixelToClient(s.page, 200, 120);
+    const d1 = await pixelToClient(s.page, 300, 120);
+    const d2 = await pixelToClient(s.page, 250, 160);
+    await s.page.mouse.move(d0.x, d0.y);
+    await s.page.mouse.down();
+    await s.page.mouse.move(d1.x, d1.y, { steps: 6 });
+    await s.page.mouse.up();
+    await s.page.mouse.move(d2.x, d2.y, { steps: 4 });
+    await s.page.mouse.click(d2.x, d2.y);
+    await s.page.waitForTimeout(500);
+    const dev = await last(s.page, 'deviation');
+    near(num(dev.lines[0]), 20, 0.6); // 40 px × 0.5 mm
+    await expect.poll(() => imageText(s.page)).toContain(dev.lines[0]!);
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
 test('M2 screenshot matrix (sizes × themes × languages)', async () => {
   test.setTimeout(600_000);
   for (const lang of ['tr', 'en'] as const) {
