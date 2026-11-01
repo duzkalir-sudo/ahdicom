@@ -172,8 +172,8 @@ Phase B: viewer — automatic linking
 Phase C: manual sync and comparison
 - [x] Manual sync across studies/Frames of Reference: link selected viewports, keep the slice offset (mm) captured
       when linking; optional W/L and zoom/pan sync; toolbar menu
-- [ ] Split display sets shown as separate thumbnails; merge them back into one panel (context menu)
-- [ ] Prior/current comparison: open the matching series of an earlier study of the same patient side by side, linked
+- [x] Split display sets shown as separate thumbnails; merge them back into one panel (context menu)
+- [x] Prior/current comparison: open the matching series of an earlier study of the same patient side by side, linked
 - [ ] Multiple windows (spec P0): question to the user about second-monitor use before implementing
 
 Phase D: verification

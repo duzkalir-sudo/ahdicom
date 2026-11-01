@@ -15,6 +15,8 @@ import type {
 export interface BuildOptions {
   sortKey?: SortKey;
   sortDirection?: SortDirection;
+  /** Series (SeriesInstanceUID) whose volumes are shown together instead of split. */
+  combineVolumes?: ReadonlySet<string>;
 }
 
 /** Expands an instance into displayable images (one per frame). */
@@ -177,7 +179,10 @@ export function buildDisplaySets(series: readonly InstanceRecord[], options: Bui
   };
 
   for (const g of groups) {
-    for (const part of splitVolumes(g.instances, g.orientation)) {
+    const parts = options.combineVolumes?.has(first.seriesInstanceUid)
+      ? [{ instances: g.instances }]
+      : splitVolumes(g.instances, g.orientation);
+    for (const part of parts as { instances: InstanceRecord[]; splitBy?: DisplaySet['splitBy'] }[]) {
       const images = part.instances.flatMap(instanceImages);
       result.push(makeSet(images.length > 1 ? 'stack' : 'single', images, part.instances[0]!, splitWarnings, part.splitBy));
     }

@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, FileText, ImageOff, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { AlertTriangle, FileText, GitCompare, ImageOff, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { compareWithPrior, priorStudy } from '../viewer/compare';
 import { utilities as csUtils } from '@cornerstonejs/core';
 import { type DisplaySet, type StudyNode, formatDicomDate, formatPersonName } from '@ahdicom/dicom-core';
 import { useStore, viewportCount } from '../state/store';
@@ -129,7 +130,10 @@ function StudyBlock(props: { study: StudyNode }): ReactNode {
   const { t, i18n } = useTranslation();
   const locale = (i18n.language === 'en' ? 'en' : 'tr') as 'tr' | 'en';
   const hide = useStore((s) => s.settings.hidePatientData);
+  const combinedSeries = useStore((s) => s.combinedSeries);
+  const studies = useStore((s) => s.studies);
   const st = props.study;
+  const prior = priorStudy(studies, st);
   return (
     <section className="study" data-testid="study">
       <div className="study-head">
@@ -143,8 +147,39 @@ function StudyBlock(props: { study: StudyNode }): ReactNode {
           {[hide ? undefined : st.patientId, t('series.studyCount', { count: st.series.length })].filter(Boolean).join(' · ')}
         </div>
       </div>
+      {prior ? (
+        <button
+          type="button"
+          className="study-action"
+          onClick={() => void compareWithPrior(st.studyInstanceUid)}
+          data-testid="compare-prior"
+        >
+          <GitCompare size={14} />
+          {t('compare.withPrior', { date: formatDicomDate(prior.studyDate, locale) })}
+        </button>
+      ) : null}
       <div className="series-list">
-        {st.series.flatMap((se) => se.displaySets.map((ds) => <SeriesItem key={ds.id} ds={ds} splitCount={se.displaySets.length} />))}
+        {st.series.map((se) => {
+          const split = se.displaySets.some((d) => d.splitBy);
+          const combined = combinedSeries.includes(se.seriesInstanceUid);
+          return (
+            <div key={se.seriesInstanceUid}>
+              {se.displaySets.map((ds) => (
+                <SeriesItem key={ds.id} ds={ds} splitCount={se.displaySets.length} />
+              ))}
+              {split || combined ? (
+                <button
+                  type="button"
+                  className="series-volumes"
+                  onClick={() => useStore.getState().toggleCombined(se.seriesInstanceUid)}
+                  data-testid="series-volumes"
+                >
+                  {t(combined ? 'compare.splitVolumes' : 'compare.combineVolumes')}
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

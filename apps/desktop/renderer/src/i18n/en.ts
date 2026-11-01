@@ -134,6 +134,11 @@ export const en: Shape<Resources> = {
     cursor3d: '3D cursor',
   },
   split: { temporal: 'Phase {{value}}', bValue: 'b={{value}}', echo: 'Echo {{value}}', acquisition: 'Acq. {{value}}' },
+  compare: {
+    withPrior: 'Compare with prior ({{date}})',
+    combineVolumes: 'Show volumes together',
+    splitVolumes: 'Show volumes separately',
+  },
   sync: {
     menu: 'Series synchronization',
     slice: 'Sync slices (same frame of reference)',

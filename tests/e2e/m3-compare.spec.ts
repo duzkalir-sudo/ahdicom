@@ -173,13 +173,76 @@ test('window/level and zoom follow the active viewport when enabled', async () =
     await s.page.mouse.down();
     await s.page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2 + 30, { steps: 8 });
     await s.page.mouse.up();
-    await expect.poll(async () => (await vpState(s.page, 1)).wl).toEqual((await vpState(s.page, 0)).wl);
+    // Both values are read in the same poll: the active viewport updates on the next animation frame too.
+    await expect
+      .poll(async () => {
+        const [a, b] = [await vpState(s.page, 0), await vpState(s.page, 1)];
+        return JSON.stringify(a.wl) === JSON.stringify(b.wl) && a.wl !== undefined;
+      })
+      .toBe(true);
     // Zoom in with the keyboard on viewport 0.
+    const before = (await vpState(s.page, 0)).zoomPercent ?? 0;
     await s.page.keyboard.press('+');
     await s.page.keyboard.press('+');
     await expect
-      .poll(async () => Math.round((await vpState(s.page, 1)).zoomPercent ?? 0))
-      .toBe(Math.round((await vpState(s.page, 0)).zoomPercent ?? -1));
+      .poll(async () => {
+        const [a, b] = [await vpState(s.page, 0), await vpState(s.page, 1)];
+        return a.zoomPercent! > before * 1.5 && Math.round(a.zoomPercent!) === Math.round(b.zoomPercent!);
+      })
+      .toBe(true);
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('split volumes can be shown together and separately again', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('dwi')]);
+    const parts = async (): Promise<number[]> =>
+      (await cdvState(s.page)).studies
+        .flatMap((x) => x.series)
+        .find((x) => x.description === 'DWI')!
+        .displaySets.map((d) => d.images);
+    expect(await parts()).toEqual([4, 4]);
+    await s.page.getByTestId('series-volumes').click();
+    await expect.poll(parts).toEqual([8]);
+    await expect(s.page.getByTestId('series-volumes')).toHaveText('Show volumes separately');
+    await s.page.getByTestId('series-volumes').click();
+    await expect.poll(parts).toEqual([4, 4]);
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('compare with prior: matching series of the earlier study side by side, linked', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('orient-axial'), fixture('orient-sagittal'), fixture('orient-prior')]);
+    const st = await cdvState(s.page);
+    const axial = st.studies.flatMap((x) => x.series).find((x) => x.description === 'AXIAL')!.displaySets[0]!.id;
+    const prior = st.studies.flatMap((x) => x.series).find((x) => x.description === 'AXIAL PRIOR')!.displaySets[0]!.id;
+    // Show the sagittal first: the comparison should still pick the axial prior for the active axial series.
+    await show(s, 'AXIAL', 0);
+    await scrollTo(s, 0, 20);
+    const button = s.page.getByTestId('compare-prior');
+    await expect(button).toHaveCount(1); // only on the newer study
+    await expect(button).toContainText('2023-03-05');
+    await button.click();
+    await expect.poll(async () => (await cdvState(s.page)).slots.slice(0, 2)).toEqual([axial, prior]);
+    await waitReady(s.page, 1);
+    await expect
+      .poll(
+        async () => (await s.page.evaluate(() => (window as unknown as { __cdv: { sync(): { linked: boolean } } }).__cdv.sync())).linked,
+      )
+      .toBe(true);
+    // Same relative position (index 20 of 45 → 20 of 45), then linked scrolling keeps the offset.
+    await expect.poll(async () => (await vpState(s.page, 1)).index).toBe(20);
+    await scrollTo(s, 0, 25);
+    await expect.poll(async () => (await vpState(s.page, 1)).index).toBe(25);
+    await screenshot(s.page, 'M3', 'compare-prior-1280x800-dark-en');
     expectNoErrors(s);
   } finally {
     await s.close();

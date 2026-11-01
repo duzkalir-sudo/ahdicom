@@ -79,6 +79,8 @@ interface State {
   /** Incremented whenever measurements change (the measurement list re-reads them). */
   measureRev: number;
   sync: SyncOptions;
+  /** Series whose volumes the user combined into one display set. */
+  combinedSeries: string[];
 }
 
 interface Actions {
@@ -113,6 +115,7 @@ interface Actions {
   replaceCalibrations(c: Record<string, { rowMm: number; columnMm: number }>): void;
   bumpMeasureRev(): void;
   setSync(patch: Partial<SyncOptions>): void;
+  toggleCombined(seriesInstanceUid: string): void;
 }
 
 let noticeId = 0;
@@ -121,8 +124,8 @@ let rebuildTimer: ReturnType<typeof setTimeout> | undefined;
 export const useStore = create<State & Actions>()((set, get) => {
   const rebuild = (): void => {
     rebuildTimer = undefined;
-    const { instances, sortKey, sortDirection, slots } = get();
-    const studies = buildStudies(instances, { sortKey, sortDirection });
+    const { instances, sortKey, sortDirection, slots, combinedSeries } = get();
+    const studies = buildStudies(instances, { sortKey, sortDirection, combineVolumes: new Set(combinedSeries) });
     const displaySets: Record<string, DisplaySet> = {};
     for (const st of studies) for (const se of st.series) for (const ds of se.displaySets) displaySets[ds.id] = ds;
     let nextSlots = slots;
@@ -162,6 +165,7 @@ export const useStore = create<State & Actions>()((set, get) => {
     calibrations: {},
     measureRev: 0,
     sync: { slice: true, referenceLines: true, linked: false, windowLevel: false, zoomPan: false },
+    combinedSeries: [],
 
     setReady: (ready) => set({ ready }),
     setAppInfo: (appInfo) => set({ appInfo }),
@@ -237,6 +241,11 @@ export const useStore = create<State & Actions>()((set, get) => {
     replaceCalibrations: (calibrations) => set({ calibrations }),
     bumpMeasureRev: () => set({ measureRev: get().measureRev + 1 }),
     setSync: (patch) => set({ sync: { ...get().sync, ...patch } }),
+    toggleCombined: (uid) => {
+      const cur = get().combinedSeries;
+      set({ combinedSeries: cur.includes(uid) ? cur.filter((u) => u !== uid) : [...cur, uid] });
+      rebuild();
+    },
     setCalibration: (uid, c) => {
       const next = { ...get().calibrations };
       if (c) next[uid] = c;

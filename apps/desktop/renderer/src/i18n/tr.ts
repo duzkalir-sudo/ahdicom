@@ -127,6 +127,11 @@ export const tr = {
     cursor3d: '3B imleç',
   },
   split: { temporal: 'Faz {{value}}', bValue: 'b={{value}}', echo: 'Eko {{value}}', acquisition: 'Çekim {{value}}' },
+  compare: {
+    withPrior: 'Öncekiyle karşılaştır ({{date}})',
+    combineVolumes: 'Hacimleri birlikte göster',
+    splitVolumes: 'Hacimleri ayrı göster',
+  },
   sync: {
     menu: 'Seri senkronizasyonu',
     slice: 'Kesitleri eşle (aynı referans çerçevesi)',
