@@ -184,7 +184,7 @@ Phase D: verification
 - [x] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent (pass 1 FAIL → fixed, pass 2 PASS); docs; report (`docs/reports/M3-REPORT.md`)
 - [x] Push to GitHub once at the end of M3 (with approval) and check the Windows + macOS CI (run 41329587847: macOS test race fixed in 6b6cc1e; run 41331379030 green)
 
-### M4 — Advanced visualization — **in progress** (started 2026-11-02)
+### M4 — Advanced visualization — **done locally** (2026-11-02, Windows 11); CI pending the milestone push
 Scope (user decisions 2026-11-02): fusion and time-intensity curves are deferred (D-057); DSA is for viewing only,
 kept simple, but subtraction is required (D-058). Two user test rounds: Part 1 (MPR, 3D, STL), then Part 2 (DSA,
 SUV window). One push at the end of M4.
@@ -228,7 +228,7 @@ Part 2
 - [x] DSA for XA multi-frame: subtraction with a selectable mask frame, manual pixel shift (arrow keys), automatic
       pixel shift; unit tests on synthetic frames with a known shift; XA fixture with a moving mask
 - [x] SUV window values (PET window/level shown and set in SUVbw)
-- [ ] E2E, screenshots, verifier subagent, docs, report (`docs/reports/M4-REPORT.md`); user test round 2
+- [x] E2E, screenshots, verifier subagent, docs, report (`docs/reports/M4-REPORT.md`); user test round 2 (verifier pass 1 FAIL → fixed, pass 2 PASS; user test round 2 2026-11-02: no problems found)
 - [ ] Push to GitHub once at the end of M4 (with approval) and check the Windows + macOS CI
 
 ### M5–M8

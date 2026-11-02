@@ -43,7 +43,7 @@ By the user's decision, fusion and time-intensity curves are deferred (D-057).
 | `npm run license:check` / `npm audit --audit-level=high` | Pass | `@kitware/vtk.js` 36.4.1 (BSD-3, already Cornerstone's renderer) pinned directly |
 | `npm run test` | Pass | 252 unit + fuzz |
 | `npm run test:e2e` | Pass | full `npm run check` at 879d09e: 61 E2E passed (6.5 min), 252 unit; installer built (`npm run dist`) |
-| Built app run manually | User test round 1 (MPR/3D) | User: "gördüğüm kadarıyla şimdilik bir sıkıntı yok"; round 2 (DSA/SUV) pending |
+| Built app run manually | User tests rounds 1 and 2 | Round 1 (MPR/3D): "gördüğüm kadarıyla şimdilik bir sıkıntı yok"; round 2 (DSA): "Anlayabildiğim kadarıyla bir sıkıntı yok" |
 | Screenshot inspection | Done | M4 matrix (MPR + 3D, DSA, PET W/L in SUV: 1280×800 / 1920×1080 × dark/light × tr/en) and feature shots opened |
 | Performance / memory | Not measured for volumes | M1 performance test still runs in the suite |
 | CI matrix (Windows, macOS) | Not run | waiting for push approval |
@@ -78,7 +78,7 @@ Not measured: large volumes (500+ slices) in MPR/3D, scalpel time on large volum
 
 ## 7. Decisions and questions
 - **Decisions:** D-057…D-066.
-- **Questions for the user:** test round 2 (DSA, SUV); then approval to push M4 and run the Windows + macOS CI.
+- **Questions for the user:** approval to push M4 and run the Windows + macOS CI. Open item R-043 (orientation split on some coronal/sagittal series) deferred by the user.
 
 ## 8. How to run, test, build
 ```
