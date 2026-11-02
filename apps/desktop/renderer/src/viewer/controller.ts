@@ -1,14 +1,20 @@
 /**
- * One stack viewport: wraps a Cornerstone StackViewport and derives everything the overlay shows.
- * Clinical math (labels, spacing basis, VOI formulas, pixel mapping) comes from @ahdicom/dicom-core.
+ * One viewport: wraps a Cornerstone viewport and derives everything the overlay shows. It shows its display set as
+ * the original image stack, as a reformat through the volume (axial / coronal / sagittal, MPR) or in 3D (D-059).
+ * Clinical math (labels, spacing basis, VOI formulas, pixel mapping, reformat planes) comes from @ahdicom/dicom-core.
  */
 import { Enums, cache, eventTarget, imageLoader, metaData, utilities as csUtils, type Types } from '@cornerstonejs/core';
 import { utilities as toolUtils } from '@cornerstonejs/tools';
 import {
   type DisplaySet,
   type EdgeLabels,
+  type ImagePlane,
+  type MprRefusal,
+  type ReformatStack,
   type SpacingBasis,
+  type StackWarning,
   type Vec3,
+  type VolumeGeometry,
   type VoiLutFunction,
   type VoiRange,
   type WindowLevel,
@@ -18,18 +24,39 @@ import {
   parseImageOrientation,
   patientImageAxes,
   patientToPixel,
+  STANDARD_VIEWS,
+  mprCheck,
+  nearestVoxel,
+  planePixel,
+  planePoint,
   rangeToWindow,
+  reformatIndex,
+  reformatStack,
+  sliceLocation,
   spacingBasis,
   vec3,
   viewLabels,
+  volumeGeometry,
   windowToRange,
 } from '@ahdicom/dicom-core';
-import { RENDERING_ENGINE_ID, TOOL_GROUP_ID, frameOf, fileIdOf, getEngine, getToolGroup, imageIdsFor } from './cornerstone';
+import {
+  RENDERING_ENGINE_ID,
+  TOOL_GROUP_ID,
+  VolumeLoadError,
+  frameOf,
+  fileIdOf,
+  getEngine,
+  getToolGroup,
+  imageIdsFor,
+  loadVolume,
+  type ToolGroupKind,
+} from './cornerstone';
 import { lutsFor, modalityLutApplied } from './lut';
 import { cancelDrawingOn, isDrawing } from './annotations';
 import { definingPoints } from './measureDoc';
 import { measureToolOf } from './measurements';
-import { useStore } from '../state/store';
+import { type ViewKind, useStore } from '../state/store';
+import { planesOf } from './sync';
 
 export type ViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'nonImage';
 
@@ -42,8 +69,18 @@ export interface ProbeValue {
   padding?: boolean;
 }
 
+/** Why a display set cannot be shown as a volume (geometry, memory or decoding). */
+export type VolumeRefusal = MprRefusal | 'tooLarge' | 'decodeFailed';
+
 export interface ViewState {
   status: ViewStatus;
+  view: ViewKind;
+  /** Loading progress of a volume (0..1). */
+  progress?: number;
+  /** Set with status 'error' when the display set cannot be shown in a volume view. */
+  refusal?: VolumeRefusal;
+  /** Reformat details: slice position, spacing between reformatted slices, volume geometry warnings. */
+  reformat?: { location?: { mm: number; towards: string }; spacing: number; warnings: StackWarning[] };
   displaySetId?: string;
   index: number;
   total: number;
@@ -71,6 +108,10 @@ export interface ViewState {
 
 const EMPTY: ViewState = {
   status: 'empty',
+  view: 'stack',
+  progress: undefined,
+  refusal: undefined,
+  reformat: undefined,
   displaySetId: undefined,
   imageId: undefined,
   voi: undefined,
@@ -118,6 +159,9 @@ export class ViewportController {
   private showOverlays = true;
   private loadToken = 0;
   private disposed = false;
+  private kind: ViewKind = 'stack';
+  /** Volume views: the volume grid and the stack of reformatted planes for the current camera. */
+  private vol?: { volumeId: string; geometry: VolumeGeometry; warnings: StackWarning[]; stack?: ReformatStack };
 
   constructor(
     readonly index: number,
@@ -126,13 +170,7 @@ export class ViewportController {
     private readonly guideCanvas?: HTMLCanvasElement,
   ) {
     this.viewportId = `vp-${index}`;
-    getEngine().enableElement({
-      viewportId: this.viewportId,
-      type: Enums.ViewportType.STACK,
-      element,
-      defaultOptions: { background: [0, 0, 0] },
-    });
-    getToolGroup().addViewport(this.viewportId, RENDERING_ENGINE_ID);
+    this.enable('stack');
     for (const ev of [Enums.Events.STACK_NEW_IMAGE, Enums.Events.VOI_MODIFIED, Enums.Events.CAMERA_MODIFIED, Enums.Events.IMAGE_RENDERED]) {
       element.addEventListener(ev, this.onViewportEvent);
     }
@@ -143,8 +181,42 @@ export class ViewportController {
     element.addEventListener('pointerleave', this.onPointerLeave);
   }
 
+  /** The Cornerstone viewport. Typed as a stack viewport; stack-only methods are used only in the stack view. */
   get viewport(): Types.IStackViewport {
     return getEngine().getViewport(this.viewportId) as Types.IStackViewport;
+  }
+
+  private get volumeViewport(): Types.IVolumeViewport {
+    return getEngine().getViewport(this.viewportId) as Types.IVolumeViewport;
+  }
+
+  get view(): ViewKind {
+    return this.kind;
+  }
+
+  private enable(kind: ViewKind): void {
+    getEngine().enableElement({
+      viewportId: this.viewportId,
+      type: viewportType(kind),
+      element: this.element,
+      defaultOptions: { background: [0, 0, 0] },
+    });
+    getToolGroup(toolGroupKind(kind)).addViewport(this.viewportId, RENDERING_ENGINE_ID);
+  }
+
+  /** Changes the Cornerstone viewport type when the view needs another one (stack, orthographic, 3D). */
+  private switchKind(kind: ViewKind): void {
+    if (viewportType(kind) !== viewportType(this.kind)) {
+      try {
+        toolUtils.stackPrefetch.disable(this.element);
+      } catch {
+        // prefetch was not enabled
+      }
+      getToolGroup(toolGroupKind(this.kind)).removeViewports(RENDERING_ENGINE_ID, this.viewportId);
+      getEngine().disableElement(this.viewportId);
+      this.enable(kind);
+    }
+    this.kind = kind;
   }
 
   get displaySet(): DisplaySet | undefined {
@@ -170,9 +242,15 @@ export class ViewportController {
   // Display set
   // ------------------------------------------------------------------------------------------
 
-  async setDisplaySet(ds: DisplaySet | undefined): Promise<void> {
+  async setDisplaySet(ds: DisplaySet | undefined, view: ViewKind = 'stack'): Promise<void> {
+    if (!ds) view = 'stack';
     const ids = ds ? imageIdsFor(ds) : [];
-    if (ds && this.ds?.id === ds.id) {
+    if (ds && this.ds?.id === ds.id && view === this.kind && view !== 'stack') {
+      // A volume is built once; images arriving later do not change it.
+      this.ds = ds;
+      return;
+    }
+    if (ds && this.ds?.id === ds.id && view === this.kind) {
       if (ids.join('|') === this.imageIds.join('|')) return;
       // Same series, more images arrived (or re-sorted): keep the current image.
       const current = this.imageIds[this.viewport.getCurrentImageIdIndex()];
@@ -186,10 +264,12 @@ export class ViewportController {
     this.stopCine();
     // A VOI LUT transfer function of the previous series must not carry over.
     if (this.state.voiLutName) this.clearVoiLut();
-    this.ds = ds;
-    this.imageIds = ids;
-    this.overlayCache.clear();
     const token = ++this.loadToken;
+    this.switchKind(view);
+    this.ds = ds;
+    this.imageIds = view === 'stack' ? ids : [];
+    this.vol = undefined;
+    this.overlayCache.clear();
     if (!ds) {
       this.emit({ ...EMPTY });
       this.clearOverlayCanvas();
@@ -198,6 +278,10 @@ export class ViewportController {
     if (ds.kind === 'nonImage' || ids.length === 0) {
       this.emit({ ...EMPTY, status: 'nonImage', displaySetId: ds.id });
       this.clearOverlayCanvas();
+      return;
+    }
+    if (view !== 'stack') {
+      await this.loadVolumeView(ds, view, token);
       return;
     }
     this.emit({
@@ -222,6 +306,103 @@ export class ViewportController {
     } catch {
       if (token === this.loadToken) this.emit({ status: 'error' });
     }
+  }
+
+  /** Builds the volume of a display set and shows it as a reformat or in 3D. */
+  private async loadVolumeView(ds: DisplaySet, view: ViewKind, token: number): Promise<void> {
+    const base: ViewState = { ...EMPTY, view, displaySetId: ds.id };
+    this.clearOverlayCanvas();
+    const check = mprCheck(ds);
+    const geometry = check.ok ? volumeGeometry(ds) : undefined;
+    if (!geometry) {
+      this.emit({ ...base, status: 'error', refusal: check.refusal ?? 'missingGeometry' });
+      return;
+    }
+    const px = Math.min(geometry.spacing[0], geometry.spacing[1], geometry.spacing[2]);
+    this.emit({ ...base, status: 'loading', progress: 0, basis: { kind: 'pixelSpacing', rowMm: px, columnMm: px } });
+    const stale = (): boolean => token !== this.loadToken || this.disposed;
+    try {
+      const volume = await loadVolume(
+        ds,
+        (f) => {
+          if (!stale() && Math.round(f * 100) !== Math.round((this.state.progress ?? 0) * 100)) this.emit({ progress: f });
+        },
+        stale,
+      );
+      if (stale()) return;
+      this.vol = { volumeId: volume.volumeId, geometry, warnings: check.warnings };
+      await this.volumeViewport.setVolumes([{ volumeId: volume.volumeId }]);
+      if (stale()) return;
+      if (view === '3d') this.apply3dDefaults();
+      else this.applyStandardView(view);
+      this.viewport.render();
+      this.emit({ status: 'ready', progress: undefined });
+      this.update();
+    } catch (e) {
+      if (stale()) return;
+      this.emit({ status: 'error', progress: undefined, refusal: e instanceof VolumeLoadError ? e.reason : 'decodeFailed' });
+    }
+  }
+
+  /** Axial / coronal / sagittal camera through the middle of the volume. */
+  private applyStandardView(view: ViewKind): void {
+    const vol = this.vol;
+    if (!vol || view === 'stack' || view === '3d') return;
+    const { normal, viewUp } = STANDARD_VIEWS[view];
+    this.volumeViewport.setOrientation({ viewPlaneNormal: [...normal], viewUp: [...viewUp] } as Types.OrientationVectors);
+    vol.stack = reformatStack(vol.geometry, normal, viewUp);
+    const n = vol.stack?.planes.length ?? 0;
+    if (n > 0) this.moveToSlice(Math.floor((n - 1) / 2));
+  }
+
+  private apply3dDefaults(): void {
+    const vp = this.volumeViewport;
+    vp.setProperties({ preset: this.ds?.modality === 'CT' ? 'CT-Bone' : 'MR-Default' });
+    // Seen from the front, head up.
+    vp.setCamera({ viewPlaneNormal: [0, -1, 0], viewUp: [0, 0, 1] });
+    vp.resetCamera();
+  }
+
+  /** Moves the reformat camera along its normal onto plane k (keeping zoom and pan). */
+  private moveToSlice(k: number): void {
+    const stack = this.vol?.stack;
+    if (!stack) return;
+    const vp = this.viewport;
+    const cam = vp.getCamera();
+    if (!cam.focalPoint || !cam.position) return;
+    const i = Math.min(stack.planes.length - 1, Math.max(0, k));
+    const d = stack.start + i * stack.spacing - vec3.dot(cam.focalPoint as unknown as Vec3, stack.normal);
+    const shift = vec3.scale(stack.normal, d);
+    vp.setCamera({
+      focalPoint: vec3.add(cam.focalPoint as unknown as Vec3, shift) as unknown as Types.Point3,
+      position: vec3.add(cam.position as unknown as Vec3, shift) as unknown as Types.Point3,
+    });
+    vp.render();
+  }
+
+  /** Plane of the image shown now (original or reformatted); undefined in 3D or before the image is ready. */
+  currentPlane(): ImagePlane | undefined {
+    if (this.state.status !== 'ready' || !this.ds) return undefined;
+    if (this.kind === 'stack') return planesOf(this.ds)[this.state.index];
+    return this.kind === '3d' ? undefined : this.vol?.stack?.planes[this.state.index];
+  }
+
+  /** Planes of all images this viewport can scroll through, with their indices (images without geometry left out). */
+  slicePlanes(): { planes: ImagePlane[]; indices: number[] } {
+    if (this.kind === 'stack') {
+      const planes: ImagePlane[] = [];
+      const indices: number[] = [];
+      if (this.ds)
+        planesOf(this.ds).forEach((p, k) => {
+          if (p) {
+            planes.push(p);
+            indices.push(k);
+          }
+        });
+      return { planes, indices };
+    }
+    const planes = this.kind === '3d' ? [] : (this.vol?.stack?.planes ?? []);
+    return { planes, indices: planes.map((_, k) => k) };
   }
 
   /** VOI LUT Sequence (when no window is stored) and Presentation LUT Shape INVERSE. */
@@ -280,6 +461,7 @@ export class ViewportController {
   // ------------------------------------------------------------------------------------------
 
   currentImageId(): string | undefined {
+    if (this.kind !== 'stack') return undefined;
     return this.imageIds[this.viewport.getCurrentImageIdIndex()];
   }
 
@@ -289,6 +471,13 @@ export class ViewportController {
 
   scrollBy(delta: number): void {
     if (!this.hasImage()) return;
+    if (this.kind !== 'stack') {
+      // From the camera, not the (asynchronously updated) state: repeated key presses must each move one slice.
+      const stack = this.vol?.stack;
+      const fp = this.viewport.getCamera().focalPoint;
+      if (stack && fp) this.moveToSlice(reformatIndex(stack, fp as unknown as Vec3) + delta);
+      return;
+    }
     const vp = this.viewport;
     const i = Math.min(this.imageIds.length - 1, Math.max(0, vp.getCurrentImageIdIndex() + delta));
     void vp.setImageIdIndex(i);
@@ -296,6 +485,10 @@ export class ViewportController {
 
   scrollTo(i: number): void {
     if (!this.hasImage()) return;
+    if (this.kind !== 'stack') {
+      this.moveToSlice(i);
+      return;
+    }
     void this.viewport.setImageIdIndex(Math.min(this.imageIds.length - 1, Math.max(0, i)));
   }
 
@@ -388,6 +581,13 @@ export class ViewportController {
   reset(): void {
     if (!this.hasImage()) return;
     const vp = this.viewport;
+    if (this.kind !== 'stack') {
+      vp.resetProperties();
+      if (this.kind === '3d') this.apply3dDefaults();
+      else this.applyStandardView(this.kind);
+      vp.render();
+      return;
+    }
     this.clearVoiLut();
     vp.resetCamera();
     vp.resetProperties();
@@ -398,7 +598,7 @@ export class ViewportController {
   }
 
   toggleCine(fps: number, mode: 'loop' | 'bounce'): boolean {
-    if (!this.hasImage() || this.imageIds.length < 2) return false;
+    if (!this.hasImage() || this.kind !== 'stack' || this.imageIds.length < 2) return false;
     if (this.state.cine) {
       this.stopCine();
       return false;
@@ -545,7 +745,21 @@ export class ViewportController {
     }
   }
 
+  /** Millimetres per CSS pixel along the screen x axis, from the camera. */
+  private mmPerCssPx(): number | undefined {
+    const vp = this.viewport;
+    const p0 = vp.canvasToWorld([0, 0]);
+    const p1 = vp.canvasToWorld([100, 0]);
+    const mm = vec3.length(vec3.sub(p1 as unknown as Vec3, p0 as unknown as Vec3)) / 100;
+    return mm > 0 ? mm : undefined;
+  }
+
   private imagePixelsPerCssPx(): number | undefined {
+    if (this.kind !== 'stack') {
+      const plane = this.currentPlane();
+      const mm = this.mmPerCssPx();
+      return plane && mm ? mm / plane.columnSpacing : undefined;
+    }
     const vp = this.viewport;
     const id = this.currentImageId();
     const plane = id ? (metaData.get('imagePlaneModule', id) as { columnPixelSpacing?: number } | undefined) : undefined;
@@ -558,6 +772,10 @@ export class ViewportController {
 
   private update(): void {
     if (this.state.status !== 'ready' || !this.ds) return;
+    if (this.kind !== 'stack') {
+      this.updateVolume();
+      return;
+    }
     const vp = this.viewport;
     const index = vp.getCurrentImageIdIndex();
     const imageId = this.imageIds[index];
@@ -612,6 +830,57 @@ export class ViewportController {
     this.drawGuides();
   }
 
+  /** Reformat/3D state: current reformatted plane (recomputed when the camera direction changes), labels, W/L. */
+  private updateVolume(): void {
+    const vol = this.vol;
+    if (!vol || !this.ds) return;
+    const vp = this.viewport;
+    const props = vp.getProperties();
+    const voiFn = normalizeVoiLutFunction(String(props.VOILUTFunction ?? 'LINEAR'));
+    const voi = props.voiRange;
+    const wl = voi ? rangeToWindow(voi, voiFn === 'LINEAR_EXACT' ? 'LINEAR_EXACT' : 'LINEAR') : undefined;
+    if (this.kind === '3d') {
+      this.emit({ index: 0, total: 0, voi, wl, voiFn, labels: undefined, zoomPercent: undefined, mmPerCssPx: undefined });
+      return;
+    }
+    const cam = vp.getCamera();
+    if (!cam.viewPlaneNormal || !cam.viewUp || !cam.focalPoint) return;
+    const n = cam.viewPlaneNormal as unknown as Vec3;
+    const up = cam.viewUp as unknown as Vec3;
+    let stack = vol.stack;
+    const sameDirection =
+      stack && vec3.dot(stack.normal, n) > 1 - 1e-9 && vec3.dot(vec3.negate(stack.planes[0]!.orientation.column), up) > 1 - 1e-9;
+    if (!sameDirection) stack = vol.stack = reformatStack(vol.geometry, n, up);
+    if (!stack) return;
+    const index = reformatIndex(stack, cam.focalPoint as unknown as Vec3);
+    const plane = stack.planes[index]!;
+    const axes = { row: plane.orientation.row, column: plane.orientation.column };
+    const mm = this.mmPerCssPx();
+    const pres = vp.getViewPresentation();
+    // Location along the patient axis the normal is closest to, signed towards L / P / H (as for original stacks).
+    const major = n.map(Math.abs).indexOf(Math.max(...n.map(Math.abs)));
+    const towards = n[major]! < 0 ? vec3.negate(n) : n;
+    this.emit({
+      index,
+      total: stack.planes.length,
+      imageId: undefined,
+      voi,
+      wl,
+      voiFn,
+      zoomPercent: mm ? (100 * (window.devicePixelRatio || 1) * plane.columnSpacing) / mm : undefined,
+      rotation: pres.rotation ?? 0,
+      flipH: Boolean(pres.flipHorizontal),
+      flipV: Boolean(pres.flipVertical),
+      inverted: Boolean(props.invert),
+      labels: viewLabels(up, n, axes.row, axes.column, axes),
+      basis: { kind: 'pixelSpacing', rowMm: plane.rowSpacing, columnMm: plane.columnSpacing },
+      mmPerCssPx: mm,
+      reformat: { location: sliceLocation(planePoint(plane, 0, 0), towards), spacing: stack.spacing, warnings: vol.warnings },
+    });
+    if (this.lastPointer) this.probeAt(this.lastPointer.x, this.lastPointer.y);
+    this.drawGuides();
+  }
+
   // ------------------------------------------------------------------------------------------
   // Probe (value under cursor, modality units)
   // ------------------------------------------------------------------------------------------
@@ -655,6 +924,10 @@ export class ViewportController {
 
   /** Image (column,row) of a canvas point using the DICOM-correct inverse mapping (not csUtils.worldToImageCoords). */
   canvasToPixel(x: number, y: number): [number, number] | undefined {
+    if (this.kind !== 'stack') {
+      const plane = this.currentPlane();
+      return plane ? planePixel(plane, this.viewport.canvasToWorld([x, y]) as unknown as Vec3) : undefined;
+    }
     const id = this.currentImageId();
     if (!id) return undefined;
     const plane = metaData.get('imagePlaneModule', id) as
@@ -678,6 +951,12 @@ export class ViewportController {
 
   /** Canvas point of an image pixel centre (inverse of canvasToPixel). */
   pixelToCanvas(column: number, row: number): [number, number] | undefined {
+    if (this.kind !== 'stack') {
+      const plane = this.currentPlane();
+      if (!plane) return undefined;
+      const c = this.viewport.worldToCanvas(planePoint(plane, column, row) as unknown as Types.Point3);
+      return [c[0], c[1]];
+    }
     const id = this.currentImageId();
     if (!id) return undefined;
     const plane = metaData.get('imagePlaneModule', id) as
@@ -698,8 +977,35 @@ export class ViewportController {
     return [c[0], c[1]];
   }
 
+  /** Value of the voxel nearest to the point under the cursor in a reformat (no interpolation). */
+  private probeVolume(x: number, y: number): void {
+    const plane = this.currentPlane();
+    const vol = this.vol;
+    const volume = vol ? cache.getVolume(vol.volumeId) : undefined;
+    if (!plane || !vol || !volume || !this.ds) return;
+    const world = this.viewport.canvasToWorld([x, y]) as unknown as Vec3;
+    const [c, r] = planePixel(plane, world);
+    const column = Math.round(c);
+    const row = Math.round(r);
+    const inst = this.ds.firstInstance;
+    const unit = probeUnit(inst);
+    const ijk = nearestVoxel(vol.geometry, world);
+    if (!ijk) {
+      this.emit({ probe: { column, row, unit } });
+      return;
+    }
+    const v = Number(volume.voxelManager?.getAtIJK(ijk[0], ijk[1], ijk[2]));
+    const pad = inst.pixelPaddingValue;
+    const padding = pad !== undefined && v === pad * (inst.geometry.rescaleSlope ?? 1) + (inst.geometry.rescaleIntercept ?? 0);
+    this.emit({ probe: { column, row, unit, value: v, ...(padding ? { padding } : {}) } });
+  }
+
   private probeAt(x: number, y: number): void {
     if (this.state.status !== 'ready' || !this.ds) return;
+    if (this.kind !== 'stack') {
+      if (this.kind !== '3d') this.probeVolume(x, y);
+      return;
+    }
     const id = this.currentImageId();
     const image = id ? cache.getImage(id) : undefined;
     const px = this.canvasToPixel(x, y);
@@ -813,10 +1119,20 @@ export class ViewportController {
     } catch {
       // prefetch may not have been enabled
     }
-    getToolGroup().removeViewports(RENDERING_ENGINE_ID, this.viewportId);
+    getToolGroup(toolGroupKind(this.kind)).removeViewports(RENDERING_ENGINE_ID, this.viewportId);
     getEngine().disableElement(this.viewportId);
     this.listeners.clear();
   }
+}
+
+function viewportType(kind: ViewKind): Enums.ViewportType {
+  if (kind === 'stack') return Enums.ViewportType.STACK;
+  return kind === '3d' ? Enums.ViewportType.VOLUME_3D : Enums.ViewportType.ORTHOGRAPHIC;
+}
+
+function toolGroupKind(kind: ViewKind): ToolGroupKind {
+  if (kind === 'stack') return 'stack';
+  return kind === '3d' ? '3d' : 'mpr';
 }
 
 /** Lines (pairs of image pixel points) and an optional cursor marker drawn over the image. */

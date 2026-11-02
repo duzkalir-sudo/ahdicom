@@ -58,11 +58,12 @@ import {
   formatShortcut,
   openKind,
   selectTool,
+  showView,
   toggleCine,
   toggleFullscreen,
   tooltip,
 } from '../app/commands';
-import { displaySetAt, useStore, type LayoutSpec } from '../state/store';
+import { displaySetAt, useStore, type LayoutSpec, type ViewKind } from '../state/store';
 import { controllerAt } from '../viewer/registry';
 import { IconButton, MenuItem, Popover } from './ui';
 import { changeLanguage } from '../app/settings';
@@ -157,6 +158,36 @@ function MeasureMenu(props: { anchor: HTMLElement | null; onClose: () => void })
           })}
         </div>
       ))}
+    </Popover>
+  );
+}
+
+function ViewMenu(props: { anchor: HTMLElement | null; onClose: () => void }): ReactNode {
+  const { t } = useTranslation();
+  const current = useStore((s) => s.views[s.activeIndex]);
+  const item = (view: ViewKind | 'mpr', label: string, command?: string): ReactNode => (
+    <MenuItem
+      key={view}
+      checked={view === 'mpr' ? undefined : current === view}
+      onClick={() => {
+        showView(view);
+        props.onClose();
+      }}
+      kbd={command ? formatShortcut(commandById(command)?.shortcut) : undefined}
+      testId={`view-${view}`}
+    >
+      {label}
+    </MenuItem>
+  );
+  return (
+    <Popover anchor={props.anchor} onClose={props.onClose} testId="view-menu">
+      {item('mpr', t('view.mpr'), 'viewMpr')}
+      <div className="menu-sep" />
+      {item('stack', t('view.stack'), 'viewStack')}
+      {item('axial', t('view.axial'))}
+      {item('coronal', t('view.coronal'))}
+      {item('sagittal', t('view.sagittal'))}
+      {item('3d', t('view.3d'), 'view3d')}
     </Popover>
   );
 }
@@ -322,13 +353,14 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
 export function Toolbar(): ReactNode {
   const { t } = useTranslation();
   const s = useStore();
-  const [menu, setMenu] = useState<null | 'layout' | 'presets' | 'measure' | 'sync'>(null);
+  const [menu, setMenu] = useState<null | 'layout' | 'presets' | 'measure' | 'sync' | 'view'>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const toggleMenu = (m: 'layout' | 'presets' | 'measure' | 'sync', el: HTMLElement): void => {
+  const toggleMenu = (m: 'layout' | 'presets' | 'measure' | 'sync' | 'view', el: HTMLElement): void => {
     setAnchor(el);
     setMenu(menu === m ? null : m);
   };
   const hasImages = Object.keys(s.displaySets).length > 0;
+  const activeView = s.views[s.activeIndex] ?? 'stack';
   const active = () => controllerAt(useStore.getState().activeIndex);
 
   return (
@@ -520,9 +552,19 @@ export function Toolbar(): ReactNode {
         >
           <Crosshair size={18} />
         </IconButton>
-        <IconButton tip={t('toolbar.mprSoon')} disabled>
+        <button
+          type="button"
+          className="icon-btn"
+          data-tip={t('toolbar.view')}
+          aria-label={t('toolbar.view')}
+          aria-pressed={activeView !== 'stack'}
+          aria-disabled={!hasImages}
+          onClick={(e) => hasImages && toggleMenu('view', e.currentTarget)}
+          data-testid="tb-view"
+        >
           <Box size={18} />
-        </IconButton>
+          <ChevronDown size={12} className="caret" />
+        </button>
         <IconButton tip={t('toolbar.exportSoon')} disabled>
           <Share size={18} />
         </IconButton>
@@ -596,6 +638,7 @@ export function Toolbar(): ReactNode {
       {menu === 'presets' ? <PresetMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
       {menu === 'measure' ? <MeasureMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
       {menu === 'sync' ? <SyncMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
+      {menu === 'view' ? <ViewMenu anchor={anchor} onClose={() => setMenu(null)} /> : null}
     </header>
   );
 }

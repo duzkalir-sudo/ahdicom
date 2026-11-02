@@ -40,23 +40,9 @@ export function planesOf(ds: DisplaySet): (ImagePlane | undefined)[] {
   return planes;
 }
 
-/** Planes with their image indices (images without geometry left out). */
-function indexedPlanes(ds: DisplaySet): { planes: ImagePlane[]; indices: number[] } {
-  const planes: ImagePlane[] = [];
-  const indices: number[] = [];
-  planesOf(ds).forEach((p, k) => {
-    if (p) {
-      planes.push(p);
-      indices.push(k);
-    }
-  });
-  return { planes, indices };
-}
-
+/** Plane shown in a viewport: an original image or a reformatted slice (undefined in 3D). */
 function currentPlane(c: ViewportController): ImagePlane | undefined {
-  const ds = c.displaySet;
-  const vs = c.getState();
-  return ds && vs.status === 'ready' ? planesOf(ds)[vs.index] : undefined;
+  return c.currentPlane();
 }
 
 function ready(c: ViewportController): boolean {
@@ -116,7 +102,7 @@ function matchingSlice(source: ViewportController, target: ViewportController): 
   const sp = currentPlane(source);
   const tds = target.displaySet;
   if (!sp || !tds) return undefined;
-  const { planes, indices } = indexedPlanes(tds);
+  const { planes, indices } = target.slicePlanes();
   const tp = currentPlane(target) ?? planes[0];
   if (!tp) return undefined;
   if (opts.slice && canAutoSync(sp, tp)) {
@@ -240,7 +226,7 @@ export function computeGuides(): Map<number, Guides> {
       if (line) g.lines.push(line);
     }
     if (tp && cursor && cursor.frameOfReferenceUid && cursor.frameOfReferenceUid === tp.frameOfReferenceUid) {
-      const { planes, indices } = indexedPlanes(c.displaySet!);
+      const { planes, indices } = c.slicePlanes();
       const m = nearestSlice(planes, cursor.point);
       // Only on the slice that contains the point (the nearest one, within half a slice spacing).
       if (m?.inside && indices[m.index] === c.getState().index) g.marker = planePixel(tp, cursor.point);
@@ -266,7 +252,7 @@ export function setCursorAt(c: ViewportController, x: number, y: number): void {
     if (t === c || !ready(t)) continue;
     const tp = currentPlane(t);
     if (!tp || !plane.frameOfReferenceUid || tp.frameOfReferenceUid !== plane.frameOfReferenceUid) continue;
-    const { planes, indices } = indexedPlanes(t.displaySet!);
+    const { planes, indices } = t.slicePlanes();
     const m = cursorTarget(planes, point);
     if (m?.inside) moveTo(t, indices[m.index]);
   }

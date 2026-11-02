@@ -6,16 +6,19 @@ import {
   Enums,
   RenderingEngine,
   cache,
+  cornerstoneStreamingImageVolumeLoader,
   getShouldUseCPURendering,
   imageLoader,
   init as csInit,
   metaData,
+  volumeLoader,
   type Types,
 } from '@cornerstonejs/core';
 import {
   PanTool,
   StackScrollTool,
   ToolGroupManager,
+  TrackballRotateTool,
   WindowLevelTool,
   ZoomTool,
   addTool,
@@ -35,11 +38,19 @@ import { initSync } from './sync';
 
 export const RENDERING_ENGINE_ID = 'cdv-engine';
 export const TOOL_GROUP_ID = 'cdv-stack-tools';
+const MPR_TOOL_GROUP_ID = 'cdv-mpr-tools';
+const VR_TOOL_GROUP_ID = 'cdv-3d-tools';
+
+/** Tool groups by the kind of Cornerstone viewport: 2D stacks, reformats (MPR) and 3D volume rendering. */
+export type ToolGroupKind = 'stack' | 'mpr' | '3d';
 const SCHEME = 'cdv';
 const NATURALIZED = MetadataEnums.MetadataModules.NATURALIZED;
 
 let engine: RenderingEngine | undefined;
 let toolGroup: ToolTypes.IToolGroup | undefined;
+let mprToolGroup: ToolTypes.IToolGroup | undefined;
+let vrToolGroup: ToolTypes.IToolGroup | undefined;
+let currentLeftTool: LeftTool = 'windowLevel';
 
 /*
  * Cornerstone holds a viewport click (press and release within 3 px) to detect a double-click, then replays it to the
@@ -283,6 +294,82 @@ async function loadCdvImage(imageId: string, options?: Record<string, unknown>):
   }
 }
 
+const VOLUME_SCHEME = 'cdvVolume';
+
+/** Volume id of a display set (MPR and 3D views share one volume per display set). */
+export function volumeIdFor(ds: DisplaySet): string {
+  return `${VOLUME_SCHEME}:${ds.id}`;
+}
+
+/** Why a volume could not be built: not enough cache memory, or images that failed to decode. */
+export class VolumeLoadError extends Error {
+  constructor(readonly reason: 'tooLarge' | 'decodeFailed') {
+    super(`volume ${reason}`);
+    this.name = 'VolumeLoadError';
+  }
+}
+
+interface VolumeProgress {
+  framesLoaded: number;
+  framesProcessed: number;
+  totalNumFrames: number;
+}
+
+/**
+ * Creates (or returns) the volume of a display set and loads all its images through the app's own loader, reporting
+ * progress (0..1). The metadata of every image is read first: Cornerstone derives the volume geometry from all of
+ * them. Throws VolumeLoadError when the cache cannot hold the volume or an image cannot be decoded.
+ */
+export async function loadVolume(
+  ds: DisplaySet,
+  onProgress?: (fraction: number) => void,
+  cancelled?: () => boolean,
+): Promise<Types.IImageVolume> {
+  const volumeId = volumeIdFor(ds);
+  let volume = cache.getVolume(volumeId);
+  if (!volume) {
+    const ids = imageIdsFor(ds);
+    // Rough size check before reading anything: 2 bytes per voxel (Int16/Uint16 storage) at least.
+    const first = ds.firstInstance;
+    const bytes = (first.rows ?? 0) * (first.columns ?? 0) * ids.length * Math.max(1, Math.ceil((first.bitsAllocated ?? 16) / 8));
+    if (bytes > cache.getMaxCacheSize() - cache.getCacheSize()) throw new VolumeLoadError('tooLarge');
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      while (next < ids.length && !cancelled?.()) await ensureNaturalized(baseImageId(ids[next++]!));
+    };
+    await Promise.all(Array.from({ length: Math.min(8, ids.length) }, worker));
+    if (cancelled?.()) throw new Error('cancelled');
+    try {
+      volume = (await volumeLoader.createAndCacheVolume(volumeId, { imageIds: ids })) as Types.IImageVolume;
+    } catch (e) {
+      if (/cache/i.test(String(e))) throw new VolumeLoadError('tooLarge');
+      throw e;
+    }
+    (volume as unknown as { load(): void }).load();
+  }
+  const v = volume as unknown as VolumeProgress & { loadStatus: { loaded: boolean } };
+  await new Promise<void>((resolve, reject) => {
+    const check = (): void => {
+      if (cancelled?.()) return reject(new Error('cancelled'));
+      onProgress?.(v.totalNumFrames > 0 ? v.framesProcessed / v.totalNumFrames : 0);
+      if (v.loadStatus.loaded) return resolve();
+      setTimeout(check, 50);
+    };
+    check();
+  });
+  if (v.framesLoaded < v.totalNumFrames) {
+    purgeVolume(ds);
+    throw new VolumeLoadError('decodeFailed');
+  }
+  return volume;
+}
+
+/** Releases the volume of a display set (its slices stay in the image cache until purged themselves). */
+export function purgeVolume(ds: DisplaySet): void {
+  const id = volumeIdFor(ds);
+  if (cache.getVolume(id)) cache.removeVolumeLoadObject(id);
+}
+
 /** Loads an image's metadata (not its pixels) so its geometry is known, e.g. to restore saved measurements. */
 export async function loadImageMetadata(imageId: string): Promise<void> {
   await ensureNaturalized(baseImageId(imageId));
@@ -343,9 +430,10 @@ export function initCornerstone(cacheSizeMB: number): void {
   });
   toolsInit();
   imageLoader.registerImageLoader(SCHEME, cdvLoader as unknown as Types.ImageLoaderFn);
+  volumeLoader.registerVolumeLoader(VOLUME_SCHEME, cornerstoneStreamingImageVolumeLoader as unknown as Types.VolumeLoaderFn);
   cache.setMaxCacheSize(cacheSizeMB * 1024 * 1024);
 
-  for (const T of [WindowLevelTool, PanTool, ZoomTool, StackScrollTool]) addTool(T);
+  for (const T of [WindowLevelTool, PanTool, ZoomTool, StackScrollTool, TrackballRotateTool]) addTool(T);
   toolGroup = ToolGroupManager.createToolGroup(TOOL_GROUP_ID);
   if (!toolGroup) throw new Error('tool group');
   toolGroup.addTool(WindowLevelTool.toolName);
@@ -362,6 +450,21 @@ export function initCornerstone(cacheSizeMB: number): void {
       delete actions.redo;
     }
   }
+  mprToolGroup = ToolGroupManager.createToolGroup(MPR_TOOL_GROUP_ID);
+  vrToolGroup = ToolGroupManager.createToolGroup(VR_TOOL_GROUP_ID);
+  if (!mprToolGroup || !vrToolGroup) throw new Error('tool group');
+  for (const name of [WindowLevelTool.toolName, PanTool.toolName, ZoomTool.toolName]) mprToolGroup.addTool(name);
+  mprToolGroup.addTool(StackScrollTool.toolName, { loop: false });
+  // 3D: left rotates, middle pans, right and wheel zoom.
+  vrToolGroup.addTool(TrackballRotateTool.toolName);
+  vrToolGroup.addTool(PanTool.toolName);
+  vrToolGroup.addTool(ZoomTool.toolName);
+  const { MouseBindings } = ToolEnums;
+  vrToolGroup.setToolActive(TrackballRotateTool.toolName, { bindings: [{ mouseButton: MouseBindings.Primary }] });
+  vrToolGroup.setToolActive(PanTool.toolName, { bindings: [{ mouseButton: MouseBindings.Auxiliary }] });
+  vrToolGroup.setToolActive(ZoomTool.toolName, {
+    bindings: [{ mouseButton: MouseBindings.Secondary }, { mouseButton: MouseBindings.Wheel }],
+  });
   applyLeftTool('windowLevel');
   initAnnotationEvents();
   initSync();
@@ -411,6 +514,8 @@ export function setLeftTool(tool: LeftTool): void {
 
 function applyLeftTool(tool: LeftTool): void {
   if (!toolGroup) return;
+  currentLeftTool = tool;
+  applyMprLeftTool(tool);
   const { MouseBindings } = ToolEnums;
   const bindings: Record<string, ToolTypes.IToolBinding[]> = {
     [WindowLevelTool.toolName]: [],
@@ -419,10 +524,30 @@ function applyLeftTool(tool: LeftTool): void {
     [StackScrollTool.toolName]: [{ mouseButton: MouseBindings.Wheel }],
   };
   for (const m of MEASURE_TOOLS) bindings[toolNameOf(m)] = [];
-  if (tool !== 'cursor3d') bindings[isMeasureTool(tool) ? toolNameOf(tool) : NAV_TOOL_NAMES[tool]]!.push({ mouseButton: MouseBindings.Primary });
+  if (tool !== 'cursor3d')
+    bindings[isMeasureTool(tool) ? toolNameOf(tool) : NAV_TOOL_NAMES[tool]]!.push({ mouseButton: MouseBindings.Primary });
   // setToolActive with an empty list does not remove an existing binding: clear all bindings first.
   for (const name of Object.keys(bindings)) toolGroup.setToolPassive(name, { removeAllBindings: true });
   for (const [name, b] of Object.entries(bindings)) if (b.length > 0) toolGroup.setToolActive(name, { bindings: b });
+}
+
+/** Reformats get the navigation tools; with a measurement tool or the 3D cursor their left button stays unbound. */
+function applyMprLeftTool(tool: LeftTool): void {
+  if (!mprToolGroup) return;
+  const { MouseBindings } = ToolEnums;
+  for (const name of Object.values(NAV_TOOL_NAMES)) mprToolGroup.setToolPassive(name, { removeAllBindings: true });
+  const bindings: Record<string, ToolTypes.IToolBinding[]> = {
+    [WindowLevelTool.toolName]: [],
+    [PanTool.toolName]: [{ mouseButton: MouseBindings.Auxiliary }],
+    [ZoomTool.toolName]: [{ mouseButton: MouseBindings.Secondary }],
+    [StackScrollTool.toolName]: [{ mouseButton: MouseBindings.Wheel }],
+  };
+  if (tool in NAV_TOOL_NAMES) bindings[NAV_TOOL_NAMES[tool as NavigationTool]]!.push({ mouseButton: MouseBindings.Primary });
+  for (const [name, b] of Object.entries(bindings)) if (b.length > 0) mprToolGroup.setToolActive(name, { bindings: b });
+}
+
+export function leftTool(): LeftTool {
+  return currentLeftTool;
 }
 
 export function getEngine(): RenderingEngine {
@@ -430,9 +555,10 @@ export function getEngine(): RenderingEngine {
   return engine;
 }
 
-export function getToolGroup(): ToolTypes.IToolGroup {
-  if (!toolGroup) throw new Error('Cornerstone not initialized');
-  return toolGroup;
+export function getToolGroup(kind: ToolGroupKind = 'stack'): ToolTypes.IToolGroup {
+  const g = kind === 'stack' ? toolGroup : kind === 'mpr' ? mprToolGroup : vrToolGroup;
+  if (!g) throw new Error('Cornerstone not initialized');
+  return g;
 }
 
 export function usesCpuRendering(): boolean {

@@ -11,6 +11,15 @@ export type DialogKind = 'about' | 'shortcuts' | 'settings' | 'windowLevel' | nu
 
 export const MAX_VIEWPORTS = 25;
 
+/** How a viewport shows its display set: the original images, a reformat through the volume, or 3D (D-059). */
+export type ViewKind = 'stack' | 'axial' | 'coronal' | 'sagittal' | '3d';
+
+export const MPR_VIEWS: readonly ViewKind[] = ['axial', 'coronal', 'sagittal'];
+
+export function isVolumeView(v: ViewKind | undefined): boolean {
+  return v !== undefined && v !== 'stack';
+}
+
 export function viewportCount(l: LayoutSpec): number {
   return l.kind === 'grid' ? l.rows * l.cols : 3;
 }
@@ -57,6 +66,8 @@ interface State {
   lastSummary?: ScanSummary;
   layout: LayoutSpec;
   slots: (string | undefined)[];
+  /** View of each viewport slot (parallel to slots). */
+  views: ViewKind[];
   activeIndex: number;
   maximizedIndex: number | null;
   tool: LeftTool;
@@ -93,7 +104,11 @@ interface Actions {
   setScan(p: ScanProgress): void;
   finishScan(s: ScanSummary): void;
   setLayout(l: LayoutSpec): void;
-  assign(index: number, displaySetId: string | undefined): void;
+  /** Shows a display set in a viewport; the view returns to the original images unless one is given. */
+  assign(index: number, displaySetId: string | undefined, view?: ViewKind): void;
+  setView(index: number, view: ViewKind): void;
+  /** Shows a display set as axial, coronal and sagittal reformats (one large and two small viewports). */
+  openMpr(displaySetId: string): void;
   setActive(index: number): void;
   toggleMaximize(index: number): void;
   setTool(t: LeftTool): void;
@@ -148,6 +163,7 @@ export const useStore = create<State & Actions>()((set, get) => {
     scans: {},
     layout: { kind: 'grid', rows: 1, cols: 1 },
     slots: Array.from({ length: MAX_VIEWPORTS }, () => undefined),
+    views: Array.from({ length: MAX_VIEWPORTS }, (): ViewKind => 'stack'),
     activeIndex: 0,
     maximizedIndex: null,
     tool: 'windowLevel',
@@ -180,6 +196,7 @@ export const useStore = create<State & Actions>()((set, get) => {
         studies: [],
         displaySets: {},
         slots: Array.from({ length: MAX_VIEWPORTS }, () => undefined),
+        views: Array.from({ length: MAX_VIEWPORTS }, (): ViewKind => 'stack'),
         activeIndex: 0,
         maximizedIndex: null,
         lastSummary: undefined,
@@ -209,10 +226,26 @@ export const useStore = create<State & Actions>()((set, get) => {
       for (let i = 0; i < n; i++) if (!next[i] || !displaySets[next[i]!]) next[i] = queue.shift()?.id;
       set({ layout, slots: next, maximizedIndex: null, activeIndex: Math.min(activeIndex, n - 1) });
     },
-    assign: (index, id) => {
+    assign: (index, id, view) => {
       const slots = [...get().slots];
+      const views = [...get().views];
       slots[index] = id;
-      set({ slots, activeIndex: index });
+      views[index] = view ?? 'stack';
+      set({ slots, views, activeIndex: index });
+    },
+    setView: (index, view) => {
+      const views = [...get().views];
+      views[index] = view;
+      set({ views, activeIndex: index });
+    },
+    openMpr: (id) => {
+      const slots = [...get().slots];
+      const views = [...get().views];
+      MPR_VIEWS.forEach((v, i) => {
+        slots[i] = id;
+        views[i] = v;
+      });
+      set({ layout: { kind: '1+2' }, slots, views, maximizedIndex: null, activeIndex: 0 });
     },
     setActive: (activeIndex) => set({ activeIndex }),
     toggleMaximize: (index) => set({ maximizedIndex: get().maximizedIndex === index ? null : index, activeIndex: index }),

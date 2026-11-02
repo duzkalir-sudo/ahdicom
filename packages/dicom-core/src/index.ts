@@ -13,3 +13,4 @@ export * from './display.js';
 export * from './measure.js';
 export * from './suv.js';
 export * from './compare.js';
+export * from './volume.js';

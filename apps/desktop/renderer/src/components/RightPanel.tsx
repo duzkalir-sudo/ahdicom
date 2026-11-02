@@ -1,16 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  AlertTriangle,
-  ChevronDown,
-  ChevronRight,
-  Copy,
-  FolderSearch,
-  PanelRightClose,
-  PanelRightOpen,
-  Pin,
-  Search,
-} from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Copy, FolderSearch, PanelRightClose, PanelRightOpen, Pin, Search } from 'lucide-react';
 import {
   type DisplaySet,
   type TagNode,

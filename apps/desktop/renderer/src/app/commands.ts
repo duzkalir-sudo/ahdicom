@@ -2,9 +2,9 @@
  * Command table: every user action with its default keyboard shortcut.
  * Used by the keyboard handler, toolbar tooltips, the context menu and the cheat sheet.
  */
-import { CT_PRESETS } from '@ahdicom/dicom-core';
+import { CT_PRESETS, mprCheck } from '@ahdicom/dicom-core';
 import { i18next } from '../i18n';
-import { displaySetAt, useStore } from '../state/store';
+import { displaySetAt, useStore, type ViewKind } from '../state/store';
 import { purgeAll, setLeftTool, type LeftTool } from '../viewer/cornerstone';
 import { allControllers, controllerAt } from '../viewer/registry';
 import { deleteSelected, isDrawing } from '../viewer/annotations';
@@ -102,6 +102,25 @@ export interface Command {
   run(): void;
 }
 
+/**
+ * Shows the active viewport's display set in another view (original images, a reformat or 3D); 'mpr' opens the
+ * three standard reformats side by side. A display set that cannot form a volume is refused with the reason.
+ */
+export function showView(view: ViewKind | 'mpr'): void {
+  const s = useStore.getState();
+  const ds = displaySetAt(s.activeIndex);
+  if (!ds) return;
+  if (view !== 'stack') {
+    const check = mprCheck(ds);
+    if (!check.ok) {
+      s.notify('warning', `${i18next.t('view.cannot')}: ${i18next.t(`view.refusal.${check.refusal}`)}`);
+      return;
+    }
+  }
+  if (view === 'mpr') s.openMpr(ds.id);
+  else s.setView(s.activeIndex, view);
+}
+
 export const COMMANDS: Command[] = [
   {
     id: 'next',
@@ -152,6 +171,9 @@ export const COMMANDS: Command[] = [
   { id: 'toolZoom', labelKey: 'toolbar.zoom', group: 'tools', shortcut: { key: 'z' }, run: () => selectTool('zoom') },
   { id: 'toolScroll', labelKey: 'toolbar.scroll', group: 'tools', shortcut: { key: 's' }, run: () => selectTool('scroll') },
   { id: 'toolCursor3d', labelKey: 'tools.cursor3d', group: 'tools', shortcut: { key: 'x' }, run: () => selectTool('cursor3d') },
+  { id: 'viewMpr', labelKey: 'view.mpr', group: 'tools', shortcut: { key: 'm', shift: true }, run: () => showView('mpr') },
+  { id: 'view3d', labelKey: 'view.3d', group: 'tools', shortcut: { key: 'd', shift: true }, run: () => showView('3d') },
+  { id: 'viewStack', labelKey: 'view.stack', group: 'tools', shortcut: { key: 'o', alt: true }, run: () => showView('stack') },
   { id: 'toolLength', labelKey: 'measure.tool.length', group: 'tools', shortcut: { key: 'm' }, run: () => selectTool('length') },
   { id: 'toolEllipse', labelKey: 'measure.tool.ellipse', group: 'tools', shortcut: { key: 'e' }, run: () => selectTool('ellipse') },
   { id: 'toolAngle', labelKey: 'measure.tool.angle', group: 'tools', shortcut: { key: 'n' }, run: () => selectTool('angle') },

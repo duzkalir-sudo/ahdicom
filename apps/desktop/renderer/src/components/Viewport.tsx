@@ -12,10 +12,10 @@ import {
   niceScaleLength,
   sliceLocation,
 } from '@ahdicom/dicom-core';
-import { applyPreset, commandById, formatShortcut, MOD } from '../app/commands';
-import { MAX_VIEWPORTS, useStore, viewportCount } from '../state/store';
+import { applyPreset, commandById, formatShortcut, MOD, showView } from '../app/commands';
+import { MAX_VIEWPORTS, isVolumeView, useStore, viewportCount, type ViewKind } from '../state/store';
 import { ViewportController, type ViewState } from '../viewer/controller';
-import { getEngine, imageIdsFor, isMeasureTool, purgeImages } from '../viewer/cornerstone';
+import { getEngine, imageIdsFor, isMeasureTool, purgeImages, purgeVolume } from '../viewer/cornerstone';
 import { allControllers, controllerAt, registerController, unregisterController } from '../viewer/registry';
 import { MenuItem, PointMenu } from './ui';
 
@@ -36,9 +36,14 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
   const img = props.ds.images[props.vs.index];
   const vs = props.vs;
   const hidden = t('viewport.hidden');
-  const location = sliceLocation(img?.geometry.imagePositionPatient, props.ds.geometry.normal);
-  const thickness = img?.geometry.sliceThickness ?? inst.geometry.sliceThickness;
+  const reformat = vs.view !== 'stack';
+  const location = reformat ? vs.reformat?.location : sliceLocation(img?.geometry.imagePositionPatient, props.ds.geometry.normal);
+  const thickness = reformat ? undefined : (img?.geometry.sliceThickness ?? inst.geometry.sliceThickness);
+  const spacing = reformat ? vs.reformat?.spacing : props.ds.geometry.sliceSpacing;
   const isFrame = props.ds.kind === 'multiframe';
+  let indexText = t(isFrame ? 'viewport.frame' : 'viewport.image', { index: vs.index + 1, total: vs.total });
+  if (vs.view === '3d') indexText = t('view.short3d');
+  else if (reformat) indexText = t('view.slice', { view: t(`view.${vs.view}`), index: vs.index + 1, total: vs.total });
   const firstWarning = props.ds.warnings.find((w) => w.code !== 'charsetUncertain' && w.code !== 'nonImage');
   const probe = vs.probe;
   let probeText: string | undefined;
@@ -85,20 +90,23 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
               ⚠ {t(`warnings.${firstWarning.code}`, { value: firstWarning.value })}
             </div>
           ) : null}
+          {reformat && vs.reformat?.warnings.length ? (
+            <div className="warn" data-testid="reformat-warning">
+              ⚠ {t('view.approximate')}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {o.image ? (
         <div className="corner bl" data-testid="corner-bl">
           <div className="strong" data-testid="image-index">
-            {t(isFrame ? 'viewport.frame' : 'viewport.image', { index: vs.index + 1, total: vs.total })}
+            {indexText}
           </div>
           {location ? (
             <div>{t('viewport.location', { value: `${formatNumber(location.mm, 2, locale)} (${location.towards})` })}</div>
           ) : null}
           {thickness !== undefined ? <div>{t('viewport.thickness', { value: formatNumber(thickness, 2, locale) })}</div> : null}
-          {props.ds.geometry.sliceSpacing !== undefined ? (
-            <div>{t('viewport.spacing', { value: formatNumber(props.ds.geometry.sliceSpacing, 2, locale) })}</div>
-          ) : null}
+          {spacing !== undefined ? <div>{t('viewport.spacing', { value: formatNumber(spacing, 2, locale) })}</div> : null}
           {o.probe && probeText ? <div data-testid="probe">{probeText}</div> : null}
         </div>
       ) : null}
@@ -240,6 +248,7 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
   const { t } = useTranslation();
   const ready = useStore((s) => s.ready);
   const dsId = useStore((s) => s.slots[props.index]);
+  const view: ViewKind = useStore((s) => s.views[props.index]) ?? 'stack';
   const ds = useStore((s) => (dsId ? s.displaySets[dsId] : undefined));
   const activeIndex = useStore((s) => s.activeIndex);
   const showInfo = useStore((s) => s.showInfoOverlay);
@@ -273,8 +282,8 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
   }, [ready, props.index]);
 
   useEffect(() => {
-    void ctrl?.setDisplaySet(ds);
-  }, [ctrl, ds]);
+    void ctrl?.setDisplaySet(ds, view);
+  }, [ctrl, ds, view]);
 
   useEffect(() => {
     ctrl?.setShowOverlays(showDicomOverlays);
@@ -377,8 +386,9 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
         </div>
       ) : null}
       {status === 'loading' ? (
-        <div className="vp-loading">
-          <Loader2 size={16} className="spin" /> {t('viewport.loading')}
+        <div className="vp-loading" data-testid="viewport-loading">
+          <Loader2 size={16} className="spin" />{' '}
+          {vs?.progress !== undefined ? t('view.loading', { percent: Math.round(vs.progress * 100) }) : t('viewport.loading')}
         </div>
       ) : null}
       {status === 'empty' ? (
@@ -389,11 +399,21 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
         </div>
       ) : null}
       {status === 'error' ? (
-        <div className="vp-message error" data-testid="viewport-error">
+        <div className="vp-message error" data-testid="viewport-error" data-refusal={vs?.refusal}>
           <div>
             <ImageOff size={28} className="icon" />
-            <div className="title">{t('viewport.failed')}</div>
-            <div className="detail">{t('viewport.failedDetail')}</div>
+            <div className="title">{vs?.refusal ? t('view.cannot') : t('viewport.failed')}</div>
+            <div className="detail">{vs?.refusal ? t(`view.refusal.${vs.refusal}`) : t('viewport.failedDetail')}</div>
+            {vs?.refusal ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => useStore.getState().setView(props.index, 'stack')}
+                data-testid="viewport-back"
+              >
+                {t('view.stack')}
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -408,6 +428,15 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
       ) : null}
       {menu ? (
         <PointMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
+          {(['stack', 'axial', 'coronal', 'sagittal', '3d'] as const).map((v) => (
+            <MenuItem key={v} checked={view === v} onClick={() => run(() => showView(v))} testId={`ctx-view-${v}`}>
+              {t(`view.${v}`)}
+            </MenuItem>
+          ))}
+          <MenuItem onClick={() => run(() => showView('mpr'))} kbd={formatShortcut(commandById('viewMpr')?.shortcut)}>
+            {t('view.mpr')}
+          </MenuItem>
+          <div className="menu-sep" />
           <MenuItem onClick={() => run(() => ctrl?.defaultWindow())} kbd={formatShortcut(commandById('defaultWindow')?.shortcut)}>
             {t('presets.default')}
           </MenuItem>
@@ -455,6 +484,7 @@ export function ViewportGrid(): ReactNode {
   const layout = useStore((s) => s.layout);
   const maximized = useStore((s) => s.maximizedIndex);
   const slots = useStore((s) => s.slots);
+  const views = useStore((s) => s.views);
   const tool = useStore((s) => s.tool);
   const showLegend = useStore((s) => s.settings.showMouseLegend);
   const ref = useRef<HTMLDivElement>(null);
@@ -506,6 +536,30 @@ export function ViewportGrid(): ReactNode {
       for (const c of allControllers()) c.fit();
     });
   }, [layout]);
+
+  const volumeTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    // Volumes of display sets no longer shown in a reformat or 3D view are released after the same delay.
+    const inVolume = new Set(slots.slice(0, n).filter((s, i): s is string => Boolean(s) && isVolumeView(views[i])));
+    const timers = volumeTimers.current;
+    for (const id of inVolume) {
+      clearTimeout(timers.get(id));
+      timers.delete(id);
+    }
+    for (const ds of Object.values(useStore.getState().displaySets)) {
+      if (inVolume.has(ds.id) || timers.has(ds.id)) continue;
+      timers.set(
+        ds.id,
+        setTimeout(() => {
+          timers.delete(ds.id);
+          const st = useStore.getState();
+          const nn = viewportCount(st.layout);
+          if (st.slots.slice(0, nn).some((s, i) => s === ds.id && isVolumeView(st.views[i]))) return;
+          purgeVolume(ds);
+        }, PURGE_DELAY_MS),
+      );
+    }
+  }, [slots, views, n]);
 
   useEffect(() => {
     const shown = new Set(slots.slice(0, n).filter((s): s is string => Boolean(s)));

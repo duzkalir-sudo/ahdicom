@@ -184,7 +184,54 @@ Phase D: verification
 - [x] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; verifier subagent (pass 1 FAIL → fixed, pass 2 PASS); docs; report (`docs/reports/M3-REPORT.md`)
 - [x] Push to GitHub once at the end of M3 (with approval) and check the Windows + macOS CI (run 41329587847: macOS test race fixed in 6b6cc1e; run 41331379030 green)
 
-### M4–M8
+### M4 — Advanced visualization — **in progress** (started 2026-11-02)
+Scope (user decisions 2026-11-02): fusion and time-intensity curves are deferred (D-057); DSA is for viewing only,
+kept simple, but subtraction is required (D-058). Two user test rounds: Part 1 (MPR, 3D, STL), then Part 2 (DSA,
+SUV window). One push at the end of M4.
+Design (D-059): every viewport cell shows its display set in one *view*: 2D stack (default), axial / coronal / sagittal
+/ oblique reformat (MPR) or 3D. Reformats and 3D use Cornerstone volume viewports fed by our own image loader. The
+volume geometry checks, reformat planes, slab projection and iso-surface are computed or verified in `dicom-core`
+and unit-tested against analytic phantoms; the M3 sync engine works on any view through its current plane.
+
+Part 1 — Phase A: volume geometry in `dicom-core`
+- [ ] Volume check for a display set: single orientation, equal image size, uniform spacing, gaps (missing slices),
+      gantry tilt, minimum slice count → MPR allowed / allowed with warnings / refused (reason)
+- [ ] Reformat planes: axial/coronal/sagittal in patient axes, oblique rotation about the crosshair point, slice
+      count and spacing along any normal
+- [ ] Slab projection reference (MIP / MinIP / average along the normal) on an analytic phantom
+- [ ] Iso-surface reference: marching-cubes area/volume of a sphere phantom against the analytic answer
+
+Part 1 — Phase B: MPR in the viewer
+- [ ] Volume loading through the app's image loader (progress, cancel on close, memory limit with a readable refusal)
+- [ ] View per viewport (stack / axial / coronal / sagittal / 3D); toolbar "MPR" opens the active series as
+      axial + coronal + sagittal; the warnings of Phase A are shown in the viewports
+- [ ] Oblique MPR: crosshairs (move, rotate), slab thickness with MIP / MinIP / AvgIP, reset
+- [ ] MPR overlay: orientation labels, slice position, slab thickness, W/L; W/L, zoom, pan, scroll as in 2D
+- [ ] Measurements in MPR views (length, angle, ellipse/rectangle ROI, probe), values from `dicom-core`
+- [ ] MPR crosshair point ↔ 2D viewers (3D cursor) and reference lines between MPR and 2D viewports
+
+Part 1 — Phase C: 3D
+- [ ] Volume rendering with presets (CT bone / soft tissue / vessels / lung, MR, MIP), rotate / zoom / pan, reset
+- [ ] Opacity and color transfer editing (shift/width of the curve by dragging; preset curves editable in a panel)
+- [ ] Clipping box; scalpel (cut away the inside/outside of a drawn outline) with undo
+- [ ] STL export of an iso-surface (threshold), computed off the UI thread, saved through a validated main-process
+      save dialog, size limit
+
+Part 1 — Phase D: verification
+- [ ] Unit tests (Phase A); fixtures reused (ct-phantom, gantry-tilt, nonuniform, oblique, orient-*)
+- [ ] E2E: MPR of the orientation phantom (labels and marker positions in each plane), warnings and refusals,
+      oblique rotation, slab MIP value, measurement in MPR, crosshair ↔ 2D sync, 3D render + preset, clip, scalpel
+      undo, STL file written and parsed
+- [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; user test round 1
+
+Part 2
+- [ ] DSA for XA multi-frame: subtraction with a selectable mask frame, manual pixel shift (arrow keys), automatic
+      pixel shift; unit tests on synthetic frames with a known shift; XA fixture with a moving mask
+- [ ] SUV window values (PET window/level shown and set in SUVbw)
+- [ ] E2E, screenshots, verifier subagent, docs, report (`docs/reports/M4-REPORT.md`); user test round 2
+- [ ] Push to GitHub once at the end of M4 (with approval) and check the Windows + macOS CI
+
+### M5–M8
 See `docs/PRODUCT_SPEC.md` §3 and milestone acceptance criteria in the brief; detailed task lists are added when each
 milestone starts. M8 (RT module) only after explicit user approval.
 
