@@ -1,6 +1,7 @@
 /**
  * Measurement and annotation tools. Cornerstone tools draw and edit the handles; every number shown comes from
- * @ahdicom/dicom-core, computed on image-pixel coordinates with the spacing basis (D-043).
+ * @ahdicom/dicom-core, computed on image-pixel coordinates with the spacing basis (D-043). Measurements drawn on a
+ * reformat (MPR) are computed on the reformatted plane from the volume's voxels (D-060).
  */
 import { cache, metaData, type Types } from '@cornerstonejs/core';
 import {
@@ -20,7 +21,10 @@ import {
 import {
   type DisplayImage,
   type DisplaySet,
+  type ImagePlane,
   type InstanceRecord,
+  type SlabMode,
+  type VolumeGeometry,
   type MeasureScale,
   type Point2,
   type RoiStats,
@@ -36,7 +40,10 @@ import {
   insidePolygon,
   lengthDecimals,
   lengthRatio,
+  nearestVoxel,
   parseImageOrientation,
+  planePixel,
+  planePoint,
   patientToPixel,
   pointLineDistance,
   polygonArea,
@@ -46,6 +53,8 @@ import {
   roiStats,
   scaleFromBasis,
   segmentLength,
+  slabOffsets,
+  slabProject,
   spacingBasis,
   suvBwFactor,
   ultrasoundScale,
@@ -462,7 +471,7 @@ function valueReader(ref: ImageRef, image: Types.IImage): ((c: number, r: number
   };
 }
 
-function statsUnit(ref: ImageRef): { unit: StatsUnit; factor: number; refusal?: string } {
+function statsUnit(ref: Pick<ImageRef, 'inst' | 'earliestAcquisition'>): { unit: StatsUnit; factor: number; refusal?: string } {
   const inst = ref.inst;
   if (inst.modality === 'CT' || inst.rescaleType === 'HU') return { unit: 'hu', factor: 1 };
   if (inst.modality === 'PT') {
@@ -477,9 +486,13 @@ function statsUnit(ref: ImageRef): { unit: StatsUnit; factor: number; refusal?: 
   return { unit: 'raw', factor: 1 };
 }
 
-function statsLines(ref: ImageRef, s: RoiStats | undefined): string[] {
+function statsLines(ref: Pick<ImageRef, 'inst' | 'earliestAcquisition'>, s: RoiStats | undefined): string[] {
   if (!s) return [];
   const { unit, factor, refusal } = statsUnit(ref);
+  return formatStats(unit, factor, refusal, s);
+}
+
+function formatStats(unit: StatsUnit, factor: number, refusal: string | undefined, s: RoiStats): string[] {
   const u = i18next.t(`measure.unit.${unit}`);
   const d = unit === 'suv' ? 2 : unit === 'hu' || unit === 'bqml' ? 1 : 1;
   const f = (v: number): string => nf(v * factor, d);
@@ -526,16 +539,120 @@ function imageIdFromTarget(data: Data, targetId: string | string[] | undefined):
   return t?.startsWith('imageId:') ? t.slice('imageId:'.length) : undefined;
 }
 
-/** Value of one annotation; undefined when its image is unknown (e.g. the study was closed). */
-export function measurementValue(tool: MeasureTool, data: Data, imageId: string): MeasurementValue | undefined {
+/** What a value computation needs from the image a measurement was drawn on (original image or reformat). */
+interface MeasureContext {
+  toPixels(points: readonly Types.Point3[]): Point2[] | undefined;
+  scaleFor(px: readonly Point2[]): { scale?: MeasureScale; note?: ScaleNote };
+  stats(bbox: Parameters<typeof roiStats>[2], inside: (c: number, r: number) => boolean): RoiStats | undefined;
+  statsLines(s: RoiStats | undefined): string[];
+}
+
+function imageContext(imageId: string): MeasureContext | undefined {
   const ref = imageRef(imageId);
   if (!ref) return undefined;
+  return {
+    toPixels: (points) => worldToPixels(imageId, points),
+    scaleFor: (px) => scaleFor(ref, px),
+    stats: (bbox, inside) => areaStats(ref, imageId, bbox, inside),
+    statsLines: (s) => statsLines(ref, s),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Reformats (MPR)
+// ---------------------------------------------------------------------------------------------
+
+/** The reformat a measurement was drawn on (D-060): its plane, the volume and the slab at drawing time. */
+export interface ReformatRef {
+  ds: DisplaySet;
+  plane: ImagePlane;
+  geometry: VolumeGeometry;
+  volumeId: string;
+  /** Spacing between reformatted slices along the plane normal (slab sampling step). */
+  spacing: number;
+  slab?: { mode: SlabMode; thickness: number };
+  /** Missing slices, irregular spacing or gantry tilt: reformatted distances are not reliable. */
+  approximate: boolean;
+}
+
+const reformatOf = new WeakMap<object, ReformatRef>();
+
+/** Marks an annotation as drawn on a reformat (called when it is created). */
+export function rememberReformat(a: AnyAnnotation, r: ReformatRef): void {
+  reformatOf.set(a.data, r);
+}
+
+/** Measurements on reformats are kept for the session only: not saved, not in the undo history or the list. */
+export function isReformatMeasurement(a: AnyAnnotation): boolean {
+  return reformatOf.has(a.data);
+}
+
+/** Units of reformat ROI statistics: SUV only when every slice gives the same SUVbw factor. */
+function reformatUnits(ds: DisplaySet): { unit: StatsUnit; factor: number; refusal?: string } {
+  const refs = ds.images.map((img) => imageRef(img.frame ? `cdv:${img.fileId}?frame=${img.frame}` : `cdv:${img.fileId}`));
+  const first = refs[0];
+  if (!first) return { unit: 'raw', factor: 1 };
+  const u = statsUnit(first);
+  if (u.unit !== 'suv') return u;
+  const same = refs.every((r) => r && Math.abs(statsUnit(r).factor - u.factor) <= 1e-9 * Math.abs(u.factor));
+  return same ? u : { unit: 'bqml', factor: 1, refusal: i18next.t('measure.suvRefused.reformatMixed') };
+}
+
+function reformatContext(r: ReformatRef): MeasureContext {
+  const inst = r.ds.firstInstance;
+  const pad = inst.pixelPaddingValue;
+  const padValue = pad === undefined ? undefined : pad * (inst.geometry.rescaleSlope ?? 1) + (inst.geometry.rescaleIntercept ?? 0);
+  return {
+    toPixels: (points) => points.map((p) => planePixel(r.plane, p as unknown as Vec3)),
+    scaleFor: () => ({ scale: { basis: 'pixelSpacing', rowMm: r.plane.rowSpacing, columnMm: r.plane.columnSpacing } }),
+    stats: (bbox, inside) => {
+      const vm = cache.getVolume(r.volumeId)?.voxelManager;
+      if (!vm) return undefined;
+      const at = (p: Vec3): number | undefined => {
+        const v = nearestVoxel(r.geometry, p);
+        if (!v) return undefined;
+        const value = Number(vm.getAtIJK(v[0], v[1], v[2]));
+        return padValue !== undefined && value === padValue ? undefined : value;
+      };
+      const slab = r.slab;
+      const offsets = slab ? slabOffsets(slab.thickness, r.spacing) : [0];
+      const read = (c: number, row: number): number | undefined => {
+        const p = planePoint(r.plane, c, row);
+        if (!slab) return at(p);
+        return slabProject(
+          offsets.map((d) => at([p[0] + r.plane.normal[0] * d, p[1] + r.plane.normal[1] * d, p[2] + r.plane.normal[2] * d])),
+          slab.mode,
+        );
+      };
+      return roiStats(r.plane.columns, r.plane.rows, bbox, inside, read);
+    },
+    statsLines: (s) => {
+      if (!s) return [];
+      const u = reformatUnits(r.ds);
+      return formatStats(u.unit, u.factor, u.refusal, s);
+    },
+  };
+}
+
+/** Value of one annotation; undefined when its image is unknown (e.g. the study was closed). */
+export function measurementValue(tool: MeasureTool, data: Data, imageId: string): MeasurementValue | undefined {
+  const ctx = imageContext(imageId);
+  return ctx ? valueIn(tool, data, ctx) : undefined;
+}
+
+/** Value of a measurement drawn on a reformat. */
+function reformatValue(tool: MeasureTool, data: Data, r: ReformatRef): MeasurementValue | undefined {
+  if (r.approximate && tool !== 'arrow' && tool !== 'text') return { tool, lines: [`⚠ ${i18next.t('measure.reformatApproximate')}`] };
+  return valueIn(tool, data, reformatContext(r));
+}
+
+function valueIn(tool: MeasureTool, data: Data, ctx: MeasureContext): MeasurementValue | undefined {
   if (tool === 'arrow' || tool === 'text') return { tool, lines: data.label ? [data.label] : [] };
   // Freehand contours are their polyline; everything else (incl. linear-spline polygons) is defined by its handles.
   const world = tool === 'freehand' ? (data.contour?.polyline ?? []) : (data.handles?.points ?? []);
-  const px = worldToPixels(imageId, world);
+  const px = ctx.toPixels(world);
   if (!px) return undefined;
-  const { scale, note } = scaleFor(ref, px);
+  const { scale, note } = ctx.scaleFor(px);
   const notes = noteLine(note);
   switch (tool) {
     case 'length':
@@ -571,13 +688,13 @@ export function measurementValue(tool: MeasureTool, data: Data, imageId: string)
       if (px.length < 4) return undefined;
       const [bottom, top, left, right] = px as [Point2, Point2, Point2, Point2];
       const e = ellipseFromHandles(top, bottom, left, right);
-      const s = areaStats(ref, imageId, ellipseBBox(e), (c, r) => insideEllipse(e, c, r));
+      const s = ctx.stats(ellipseBBox(e), (c, r) => insideEllipse(e, c, r));
       return {
         tool,
         lines: [
           `${i18next.t('measure.area')} ${formatArea(ellipseArea(e, scale).value, scale)}`,
           `${i18next.t('measure.perimeter')} ${formatLength(ellipsePerimeter(e, scale).value, scale)}`,
-          ...statsLines(ref, s),
+          ...ctx.statsLines(s),
           ...notes,
         ],
         note,
@@ -586,13 +703,13 @@ export function measurementValue(tool: MeasureTool, data: Data, imageId: string)
     case 'rectangle': {
       if (px.length < 4) return undefined;
       const ring = ringOrder(px);
-      const s = areaStats(ref, imageId, polygonBBox(ring), (c, r) => insidePolygon(ring, c, r));
+      const s = ctx.stats(polygonBBox(ring), (c, r) => insidePolygon(ring, c, r));
       return {
         tool,
         lines: [
           `${i18next.t('measure.area')} ${formatArea(polygonArea(ring, scale).value, scale)}`,
           `${i18next.t('measure.perimeter')} ${formatLength(polygonPerimeter(ring, scale).value, scale)}`,
-          ...statsLines(ref, s),
+          ...ctx.statsLines(s),
           ...notes,
         ],
         note,
@@ -605,13 +722,13 @@ export function measurementValue(tool: MeasureTool, data: Data, imageId: string)
       const closed = tool === 'polygon' || (tool === 'freehand' && data.contour?.closed !== false);
       if (!closed || px.length < 3)
         return { tool, lines: [`${i18next.t('measure.length')} ${formatLength(polylineLength(px, scale).value, scale)}`, ...notes], note };
-      const s = areaStats(ref, imageId, polygonBBox(px), (c, r) => insidePolygon(px, c, r));
+      const s = ctx.stats(polygonBBox(px), (c, r) => insidePolygon(px, c, r));
       return {
         tool,
         lines: [
           `${i18next.t('measure.area')} ${formatArea(polygonArea(px, scale).value, scale)}`,
           `${i18next.t('measure.perimeter')} ${formatLength(polygonPerimeter(px, scale).value, scale)}`,
-          ...statsLines(ref, s),
+          ...ctx.statsLines(s),
           ...notes,
         ],
         note,
@@ -621,10 +738,11 @@ export function measurementValue(tool: MeasureTool, data: Data, imageId: string)
 }
 
 function textLinesFor(tool: MeasureTool, data: Data, targetId: string | string[]): string[] {
-  const imageId = imageIdFromTarget(data, targetId);
-  if (!imageId) return [];
+  const reformat = reformatOf.get(data);
+  const imageId = reformat ? undefined : imageIdFromTarget(data, targetId);
+  if (!reformat && !imageId) return [];
   try {
-    const lines = measurementValue(tool, data, imageId)?.lines ?? [];
+    const lines = (reformat ? reformatValue(tool, data, reformat) : measurementValue(tool, data, imageId!))?.lines ?? [];
     return data.cdvName && lines.length > 0 ? [data.cdvName, ...lines] : lines;
   } catch {
     return [];

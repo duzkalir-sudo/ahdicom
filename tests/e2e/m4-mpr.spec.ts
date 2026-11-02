@@ -160,3 +160,91 @@ test('MPR crosshair: a dragged line moves its plane, a dragged handle turns it (
     await s.close();
   }
 });
+
+async function drag(page: Page, a: { x: number; y: number }, b: { x: number; y: number }): Promise<void> {
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  await page.mouse.move((a.x + b.x) / 2, (a.y + b.y) / 2, { steps: 4 });
+  await page.mouse.move(b.x, b.y, { steps: 4 });
+  await page.mouse.up();
+}
+
+test('measurements on a reformat: lengths and ROI values from the volume; none on approximate geometry; refusals', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('ct-phantom')]);
+    await waitReady(s.page);
+    await openMpr(s);
+    await scrollTo(s, 2, 156); // sagittal through x = −50, the centre of the 1000 HU sphere (radius 10 mm)
+    const svgText = s.page.getByTestId('viewport-2').locator('svg text');
+    // Ellipse ROI (centre → corner) of radius 8 px = 4 mm at the sphere centre: every voxel is 1000 HU. It starts on
+    // the axial crosshair line: with a measurement tool selected, lines are not grabbed.
+    await s.page.keyboard.press('e');
+    await drag(s.page, await pixelToClient(s.page, 2, 176, 155), await pixelToClient(s.page, 2, 184, 163));
+    // The text box is one SVG text whose lines are joined in its text content.
+    await expect
+      .poll(async () => (await svgText.allTextContents()).filter((x) => /Mean 1,000\.0 HU\s+SD 0\.0Min 1,000\.0\s+Max 1,000\.0/.test(x)))
+      .toHaveLength(1);
+    // Axial reformat (z = 0): horizontal diameter of the same sphere, columns 136…176 at row 176 (x = −60 … −40) =
+    // 20 mm. Mouse events carry whole CSS pixels (0.75 mm at this zoom), so each end point can be half a pixel off.
+    const axialText = s.page.getByTestId('viewport-0').locator('svg text');
+    await s.page.keyboard.press('m');
+    await drag(s.page, await pixelToClient(s.page, 0, 136, 176), await pixelToClient(s.page, 0, 176, 176));
+    await expect.poll(async () => (await axialText.allTextContents()).filter((x) => x.endsWith(' mm'))).toHaveLength(1);
+    const mmPerCssPx = (await vpState(s.page, 0)).mmPerCssPx!;
+    const text = (await axialText.allTextContents()).find((x) => x.endsWith(' mm'))!;
+    expect(Math.abs(Number(text.replace(' mm', '').replace(',', '')) - 20)).toBeLessThanOrEqual(mmPerCssPx + 0.05);
+    // Each drawing shows on its own plane only: the sagittal ROI not on the axial view, the axial length not on the
+    // sagittal view.
+    expect((await axialText.allTextContents()).some((x) => x.includes('Mean'))).toBe(false);
+    expect((await svgText.allTextContents()).some((x) => x.endsWith(' mm'))).toBe(false);
+    // Reformat measurements are session-only: not in the measurement list (saved measurements).
+    const listed = await s.page.evaluate(() => (window as unknown as { __cdv: { measurements(): unknown[] } }).__cdv.measurements());
+    expect(listed).toEqual([]);
+    await screenshot(s.page, 'M4', 'mpr-measure-1280x800-dark-en');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('MPR refusals and approximate geometry', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('gantry-tilt'), fixture('xa-cine')]);
+    await waitReady(s.page);
+    const st = await cdvState(s.page);
+    const series = st.studies.flatMap((x) => x.series);
+    const tilt = series.find((x) => x.displaySets[0]!.warnings.includes('gantryTilt'))!.displaySets[0]!;
+    const xa = series.find((x) => x.displaySets[0]!.id !== tilt.id)!.displaySets[0]!;
+    // XA run: one projection, no volume — refused with the reason, nothing changes.
+    await s.page.locator(`[data-ds-id="${xa.id}"]`).click();
+    await waitReady(s.page);
+    await s.page.keyboard.press('Shift+M');
+    await expect(s.page.getByText(/Cannot be shown as a volume: /)).toBeVisible();
+    expect((await cdvState(s.page)).layout).toEqual({ kind: 'grid', rows: 1, cols: 1 });
+    // Gantry tilt: reformats are shown with a warning and measurements on them give no values.
+    await s.page.locator(`[data-ds-id="${tilt.id}"]`).click();
+    await waitReady(s.page);
+    await s.page.keyboard.press('Shift+M');
+    for (const i of [0, 1, 2]) await expect.poll(async () => (await rs(s.page, i)).status, { timeout: 30000 }).toBe('ready');
+    expect((await rs(s.page, 1)).reformat?.warnings.map((w) => w.code)).toEqual(['gantryTilt']);
+    await expect(s.page.getByTestId('viewport-1').getByTestId('reformat-warning')).toBeVisible();
+    await s.page.keyboard.press('m');
+    const box = (await s.page.getByTestId('viewport-element-1').boundingBox())!;
+    await drag(
+      s.page,
+      { x: box.x + box.width * 0.4, y: box.y + box.height * 0.4 },
+      { x: box.x + box.width * 0.6, y: box.y + box.height * 0.45 },
+    );
+    await expect
+      .poll(async () =>
+        (await s.page.getByTestId('viewport-1').locator('svg text').allTextContents()).filter((x) => x.includes('No values')),
+      )
+      .toHaveLength(1);
+    await screenshot(s.page, 'M4', 'mpr-tilt-1280x800-dark-en');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});

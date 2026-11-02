@@ -15,14 +15,17 @@ import { useStore } from '../state/store';
 import {
   baseScale,
   imageRef,
+  isReformatMeasurement,
   measureToolOf,
   measurementValue,
   rememberImage,
+  rememberReformat,
   setTextPrompt,
   worldToPixels,
   type MeasureTool,
 } from './measurements';
 import { commit, definingPoints, isRestoring, linesWithFallback, measurementAnnotations, syncStudies } from './measureDoc';
+import { allControllers } from './registry';
 
 type Annotation = ToolTypes.Annotation;
 
@@ -89,8 +92,21 @@ export function initAnnotationEvents(): void {
   setTextPrompt((initial) => ask('text', initial));
   const { Events } = ToolEnums;
   eventTarget.addEventListener(Events.ANNOTATION_ADDED, (e: Event) => {
-    const a = (e as CustomEvent<{ annotation: Annotation }>).detail.annotation;
-    rememberImage(a);
+    const { annotation: a, viewportId } = (e as CustomEvent<{ annotation: Annotation; viewportId?: string }>).detail;
+    // A measurement drawn on a reformat keeps that reformat (plane, volume, slab) for its values (D-060).
+    const reformat = viewportId
+      ? allControllers()
+          .find((c) => c.viewportId === viewportId)
+          ?.reformatRef()
+      : undefined;
+    if (reformat) {
+      rememberReformat(a, reformat);
+      // Cornerstone's plane restriction shows a drawing in every view containing one of its in-plane directions
+      // (e.g. a sagittal ellipse in the axial view); a reformat measurement belongs to its own plane only.
+      const meta = a.metadata as { planeRestriction?: unknown; viewPlaneNormal?: Types.Point3 };
+      delete meta.planeRestriction;
+      meta.viewPlaneNormal = [...reformat.plane.normal] as Types.Point3;
+    } else rememberImage(a);
   });
   eventTarget.addEventListener(Events.ANNOTATION_COMPLETED, (e: Event) => {
     const a = (e as CustomEvent<{ annotation: Annotation }>).detail.annotation;
@@ -153,7 +169,7 @@ export function listMeasurements(): MeasurementEntry[] {
   for (const a of measurementAnnotations()) {
     const tool = measureToolOf(a.metadata?.toolName ?? '')!;
     const imageId = a.metadata?.referencedImageId;
-    if (!imageId) continue;
+    if (!imageId || isReformatMeasurement(a)) continue;
     const data = a.data as {
       label?: string;
       cdvName?: string;

@@ -456,6 +456,16 @@ export function initCornerstone(cacheSizeMB: number): void {
   if (!mprToolGroup || !vrToolGroup) throw new Error('tool group');
   for (const name of [WindowLevelTool.toolName, PanTool.toolName, ZoomTool.toolName]) mprToolGroup.addTool(name);
   mprToolGroup.addTool(StackScrollTool.toolName, { loop: false });
+  for (const m of measureToolConfigs()) {
+    if (m.name === toolNameOf('calibrate')) continue;
+    mprToolGroup.addTool(m.name, m.config);
+    const actions = (mprToolGroup.getToolInstance(m.name) as { configuration?: { actions?: Record<string, unknown> } }).configuration
+      ?.actions;
+    if (actions) {
+      delete actions.undo;
+      delete actions.redo;
+    }
+  }
   // 3D: left rotates, middle pans, right and wheel zoom.
   vrToolGroup.addTool(TrackballRotateTool.toolName);
   vrToolGroup.addTool(PanTool.toolName);
@@ -533,11 +543,15 @@ function applyLeftTool(tool: LeftTool): void {
   for (const [name, b] of Object.entries(bindings)) if (b.length > 0) toolGroup.setToolActive(name, { bindings: b });
 }
 
-/** Reformats get the navigation tools; with a measurement tool or the 3D cursor their left button stays unbound. */
+/**
+ * Reformats get the navigation and measurement tools (no calibration: a reformat has a known isotropic spacing);
+ * with calibration or the 3D cursor selected their left button stays unbound.
+ */
 function applyMprLeftTool(tool: LeftTool): void {
   if (!mprToolGroup) return;
   const { MouseBindings } = ToolEnums;
-  for (const name of Object.values(NAV_TOOL_NAMES)) mprToolGroup.setToolPassive(name, { removeAllBindings: true });
+  const measures = MEASURE_TOOLS.filter((m) => m !== 'calibrate').map(toolNameOf);
+  for (const name of [...Object.values(NAV_TOOL_NAMES), ...measures]) mprToolGroup.setToolPassive(name, { removeAllBindings: true });
   const bindings: Record<string, ToolTypes.IToolBinding[]> = {
     [WindowLevelTool.toolName]: [],
     [PanTool.toolName]: [{ mouseButton: MouseBindings.Auxiliary }],
@@ -545,6 +559,7 @@ function applyMprLeftTool(tool: LeftTool): void {
     [StackScrollTool.toolName]: [{ mouseButton: MouseBindings.Wheel }],
   };
   if (tool in NAV_TOOL_NAMES) bindings[NAV_TOOL_NAMES[tool as NavigationTool]]!.push({ mouseButton: MouseBindings.Primary });
+  else if (isMeasureTool(tool) && tool !== 'calibrate') bindings[toolNameOf(tool)] = [{ mouseButton: MouseBindings.Primary }];
   for (const [name, b] of Object.entries(bindings)) if (b.length > 0) mprToolGroup.setToolActive(name, { bindings: b });
 }
 

@@ -3,10 +3,13 @@
  * coloured lines (computed by the sync engine). Dragging a line moves that plane, dragging one of its handles turns
  * it about this view's normal through the crosshair centre (oblique MPR), and dragging the centre moves both other
  * planes. This works whatever the left-button tool is: the hit test runs on pointerdown, before Cornerstone sees the
- * (then suppressed) mouse events.
+ * (then suppressed) mouse events. With a measurement tool selected only the handles and the centre can be grabbed,
+ * so a measurement can start anywhere on a line.
  */
 import type { Vec3 } from '@ahdicom/dicom-core';
+import { useStore } from '../state/store';
 import type { ViewportController } from './controller';
+import { MEASURE_TOOLS } from './measurements';
 import { allControllers, controllerAt, onControllersChanged } from './registry';
 import { crosshairCenter, mprPartners } from './sync';
 
@@ -48,6 +51,8 @@ export function crosshairHit(c: ViewportController, x: number, y: number): Grab 
       }
     }
   }
+  const measuring = (MEASURE_TOOLS as readonly string[]).includes(useStore.getState().tool);
+  if (measuring) return undefined;
   for (const l of lines) if (distanceToSegment([x, y], l.a, l.b) <= LINE_PX) return { kind: 'move', target: l.source };
   return undefined;
 }

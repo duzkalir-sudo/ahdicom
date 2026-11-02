@@ -58,7 +58,7 @@ import {
 import { lutsFor, modalityLutApplied } from './lut';
 import { cancelDrawingOn, isDrawing } from './annotations';
 import { definingPoints } from './measureDoc';
-import { measureToolOf } from './measurements';
+import { measureToolOf, type ReformatRef } from './measurements';
 import { type ViewKind, useStore } from '../state/store';
 import { planesOf } from './sync';
 
@@ -434,6 +434,23 @@ export class ViewportController {
       viewPlaneNormal: rotateAbout(cam.viewPlaneNormal as unknown as Vec3, axis, angle) as unknown as Types.Point3,
     });
     vp.render();
+  }
+
+  /** The reformat shown now, for measurements drawn on it (undefined for original images and 3D). */
+  reformatRef(): ReformatRef | undefined {
+    const plane = this.currentPlane();
+    const vol = this.vol;
+    if (!this.isReformat() || !plane || !vol?.stack || !this.ds) return undefined;
+    const slab = this.state.slab;
+    return {
+      ds: this.ds,
+      plane,
+      geometry: vol.geometry,
+      volumeId: vol.volumeId,
+      spacing: vol.stack.spacing,
+      ...(slab ? { slab } : {}),
+      approximate: vol.warnings.length > 0,
+    };
   }
 
   /** Patient point under a canvas point (on the displayed slice). */

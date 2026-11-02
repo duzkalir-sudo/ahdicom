@@ -194,21 +194,21 @@ volume geometry checks, reformat planes, slab projection and iso-surface are com
 and unit-tested against analytic phantoms; the M3 sync engine works on any view through its current plane.
 
 Part 1 — Phase A: volume geometry in `dicom-core`
-- [ ] Volume check for a display set: single orientation, equal image size, uniform spacing, gaps (missing slices),
+- [x] Volume check for a display set: single orientation, equal image size, uniform spacing, gaps (missing slices),
       gantry tilt, minimum slice count → MPR allowed / allowed with warnings / refused (reason)
-- [ ] Reformat planes: axial/coronal/sagittal in patient axes, oblique rotation about the crosshair point, slice
+- [x] Reformat planes: axial/coronal/sagittal in patient axes, oblique rotation about the crosshair point, slice
       count and spacing along any normal
-- [ ] Slab projection reference (MIP / MinIP / average along the normal) on an analytic phantom
+- [x] Slab projection reference (MIP / MinIP / average along the normal) on an analytic phantom
 - [ ] Iso-surface reference: marching-cubes area/volume of a sphere phantom against the analytic answer
 
 Part 1 — Phase B: MPR in the viewer
-- [ ] Volume loading through the app's image loader (progress, cancel on close, memory limit with a readable refusal)
-- [ ] View per viewport (stack / axial / coronal / sagittal / 3D); toolbar "MPR" opens the active series as
+- [x] Volume loading through the app's image loader (progress, cancel on close, memory limit with a readable refusal)
+- [x] View per viewport (stack / axial / coronal / sagittal / 3D); toolbar "MPR" opens the active series as
       axial + coronal + sagittal; the warnings of Phase A are shown in the viewports
-- [ ] Oblique MPR: crosshairs (move, rotate), slab thickness with MIP / MinIP / AvgIP, reset
-- [ ] MPR overlay: orientation labels, slice position, slab thickness, W/L; W/L, zoom, pan, scroll as in 2D
-- [ ] Measurements in MPR views (length, angle, ellipse/rectangle ROI, probe), values from `dicom-core`
-- [ ] MPR crosshair point ↔ 2D viewers (3D cursor) and reference lines between MPR and 2D viewports
+- [x] Oblique MPR: crosshairs (move, rotate), slab thickness with MIP / MinIP / AvgIP, reset
+- [x] MPR overlay: orientation labels, slice position, slab thickness, W/L; W/L, zoom, pan, scroll as in 2D
+- [x] Measurements in MPR views (length, angle, ellipse/rectangle ROI, probe), values from `dicom-core`
+- [x] MPR crosshair point ↔ 2D viewers (3D cursor) and reference lines between MPR and 2D viewports
 
 Part 1 — Phase C: 3D
 - [ ] Volume rendering with presets (CT bone / soft tissue / vessels / lung, MR, MIP), rotate / zoom / pan, reset

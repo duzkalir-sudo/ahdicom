@@ -10,6 +10,7 @@ import { MEASUREMENTS_VERSION, type MeasurementFile, type MeasurementItem } from
 import {
   clearPlaneCache,
   imageRef,
+  isReformatMeasurement,
   measureToolOf,
   pixelsToWorld,
   planeOf,
@@ -88,6 +89,8 @@ export function definingPoints(tool: MeasureTool, data: AnnotationData): Types.P
 }
 
 function serialize(a: Annotation): SavedItem | undefined {
+  // Measurements on reformats are not saved (D-060).
+  if (isReformatMeasurement(a)) return undefined;
   const tool = measureToolOf(a.metadata?.toolName ?? '');
   const imageId = a.metadata?.referencedImageId;
   const ref = imageId ? imageRef(imageId) : undefined;
@@ -183,7 +186,8 @@ function restoreItem(item: MeasurementItem): boolean {
 }
 
 function removeAllMeasurements(): void {
-  for (const a of measurementAnnotations()) csAnnotation.state.removeAnnotation(a.annotationUID!);
+  // Reformat measurements are not part of the document, so undo/redo leaves them alone.
+  for (const a of measurementAnnotations()) if (!isReformatMeasurement(a)) csAnnotation.state.removeAnnotation(a.annotationUID!);
 }
 
 function apply(json: string): void {
