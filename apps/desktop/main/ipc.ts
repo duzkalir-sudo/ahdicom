@@ -197,8 +197,8 @@ export function registerIpc(deps: IpcDeps): void {
     const options = { defaultPath: name, filters: [{ name: 'STL', extensions: ['stl'] }] };
     const res = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
     if (res.canceled || !res.filePath) return false;
-    const target = /\.stl$/i.test(res.filePath) ? res.filePath : `${res.filePath}.stl`;
-    await writeFile(target, data);
+    // Exactly the file the user confirmed in the dialog (its STL filter adds the extension).
+    await writeFile(res.filePath, data);
     return true;
   });
 }

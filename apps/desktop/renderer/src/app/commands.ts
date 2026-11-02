@@ -134,8 +134,7 @@ export async function toggleDsa(): Promise<void> {
     s.notify('warning', i18next.t('dsa.unavailable'));
     return;
   }
-  await c.setDsa({ mask: 0, shift: [0, 0] });
-  s.setRightTab('dsa');
+  if (await c.setDsa({ mask: 0, shift: [0, 0] })) s.setRightTab('dsa');
 }
 
 export const COMMANDS: Command[] = [

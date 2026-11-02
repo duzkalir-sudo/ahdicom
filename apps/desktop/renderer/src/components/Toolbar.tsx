@@ -50,7 +50,7 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { CT_PRESETS, PET_PERCENT_PRESETS, PET_SUV_PRESETS, percentRange, type SlabMode } from '@ahdicom/dicom-core';
+import { CT_PRESETS, PET_PERCENT_PRESETS, PET_SUV_PRESETS, percentRange, rangeFromSuvRange, type SlabMode } from '@ahdicom/dicom-core';
 import {
   applyPreset,
   closeAll,
@@ -362,7 +362,7 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
               key={p.id}
               testId={`preset-${p.id}`}
               disabled={!suv}
-              onClick={() => run(() => suv && c?.setRange({ lower: p.lower / suv, upper: p.upper / suv }))}
+              onClick={() => run(() => suv && c?.setRange(rangeFromSuvRange(p.lower, p.upper, suv)))}
             >
               {t(p.labelKey, { value: p.upper })}
             </MenuItem>

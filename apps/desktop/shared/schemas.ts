@@ -164,6 +164,12 @@ export const RecentFileSchema = z.object({ version: z.literal(1), entries: z.arr
 /** Largest STL accepted from the renderer (10 million triangles). */
 export const MAX_STL_BYTES = 84 + 50 * 10_000_000;
 
+/** Binary STL layout within the size limit: 80-byte header, triangle count, 50 bytes per triangle. */
+function isBinaryStl(d: Uint8Array): boolean {
+  if (d.byteLength < 84 || d.byteLength > MAX_STL_BYTES) return false;
+  return d.byteLength === 84 + 50 * new DataView(d.buffer, d.byteOffset, d.byteLength).getUint32(80, true);
+}
+
 /** A binary STL to save: suggested file name (no path) and the file bytes, checked for the binary STL layout. */
 export const StlSaveSchema = z.object({
   name: z
@@ -171,8 +177,5 @@ export const StlSaveSchema = z.object({
     .min(1)
     .max(100)
     .regex(/^[\w .-]+\.stl$/i),
-  data: z
-    .instanceof(Uint8Array)
-    .refine((d) => d.byteLength >= 84 && d.byteLength <= MAX_STL_BYTES, 'size')
-    .refine((d) => d.byteLength === 84 + 50 * new DataView(d.buffer, d.byteOffset, d.byteLength).getUint32(80, true), 'layout'),
+  data: z.instanceof(Uint8Array).refine(isBinaryStl, 'binary STL layout'),
 });

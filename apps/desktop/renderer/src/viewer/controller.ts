@@ -68,6 +68,7 @@ import { definingPoints } from './measureDoc';
 import { measureToolOf, suvFactorFor, type ReformatRef } from './measurements';
 import { VolumeRendering, type CutMode, type StlResult, type VrPreset, type VrState } from './volume3d';
 import { type ViewKind, useStore } from '../state/store';
+import { i18next } from '../i18n';
 import { planesOf } from './sync';
 
 export type ViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'nonImage';
@@ -361,9 +362,9 @@ export class ViewportController {
    * original frames. Turning DSA on or off resets the window (the value ranges differ); changing the mask or the
    * shift keeps it.
    */
-  async setDsa(p: { mask: number; shift: [number, number] } | undefined): Promise<void> {
+  async setDsa(p: { mask: number; shift: [number, number] } | undefined): Promise<boolean> {
     const ds = this.ds;
-    if (!ds || !this.hasImage() || (p && !this.dsaAvailable())) return;
+    if (!ds || !this.hasImage() || (p && !this.dsaAvailable())) return false;
     const live = imageIdsFor(ds);
     const old = this.dsa;
     const token = ++this.dsaToken;
@@ -376,12 +377,16 @@ export class ViewportController {
       let ids: string[] | undefined;
       try {
         ids = await createDsaImages(live, { maskImageId: live[mask]!, shift, mode }, stale);
-      } catch {
-        ids = undefined;
+      } catch (e) {
+        if (!stale()) {
+          const reason = e instanceof VolumeLoadError && e.reason === 'tooLarge' ? 'dsa.tooLarge' : 'dsa.failed';
+          useStore.getState().notify('error', i18next.t(reason));
+        }
+        return false;
       }
       if (!ids || stale()) {
         if (ids) forgetDsa(ids);
-        return;
+        return false;
       }
       this.dsa = { mask, shift, mode, ids };
     } else this.dsa = undefined;
@@ -401,6 +406,7 @@ export class ViewportController {
     if (old) forgetDsa(old.ids);
     this.emit({ dsa: this.dsa ? { mask: this.dsa.mask, shift: this.dsa.shift, mode: this.dsa.mode } : undefined });
     this.update();
+    return true;
   }
 
   /** Moves the DSA mask by (dx, dy) pixels. */
@@ -415,9 +421,13 @@ export class ViewportController {
     if (!ds || !dsa) return;
     const live = imageIdsFor(ds);
     const index = this.viewport.getCurrentImageIdIndex();
-    const [frame, mask] = await Promise.all([modalityValues(live[index]!), modalityValues(live[dsa.mask]!)]);
-    if (this.dsa !== dsa) return;
-    await this.setDsa({ mask: dsa.mask, shift: autoShift(frame.values, mask.values, frame.image.columns, frame.image.rows) });
+    try {
+      const [frame, mask] = await Promise.all([modalityValues(live[index]!), modalityValues(live[dsa.mask]!)]);
+      if (this.dsa !== dsa) return;
+      await this.setDsa({ mask: dsa.mask, shift: autoShift(frame.values, mask.values, frame.image.columns, frame.image.rows) });
+    } catch {
+      useStore.getState().notify('error', i18next.t('dsa.failed'));
+    }
   }
 
   /** Drops the DSA images (a new display set or view starts without subtraction). */

@@ -123,8 +123,17 @@ test('M4 part 2 screenshot matrix: DSA panel and PET W/L dialog in SUV (sizes ×
           .poll(async () => (await s.page.getByTestId('wl-text').textContent())?.startsWith(lang === 'tr' ? 'P: 10,00' : 'W: 10.00'))
           .toBe(true);
         await s.page.keyboard.press('l');
+        await s.page.getByTestId('wl-dialog').getByRole('button', { name: 'SUVbw' }).click();
         await expect(s.page.getByTestId('wl-suv-hint')).toBeVisible();
-        await screenshot(s.page, 'M4', `pet-wl-suv-1280x800-${theme}-${lang}`);
+        for (const [w, h] of [
+          [1280, 800],
+          [1920, 1080],
+        ] as const) {
+          await setSize(s.app, w, h);
+          await s.page.waitForTimeout(400);
+          await screenshot(s.page, 'M4', `pet-wl-suv-${w}x${h}-${theme}-${lang}`);
+        }
+        await setSize(s.app, 1280, 800);
         await s.page.keyboard.press('Escape');
         expectNoErrors(s);
       } finally {

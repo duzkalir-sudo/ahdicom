@@ -116,3 +116,22 @@ export function percentRange(min: number, max: number, upperPercent: number): Vo
 export function fullRange(min: number, max: number): VoiRange {
   return max > min ? { lower: min, upper: max } : { lower: min - 0.5, upper: min + 0.5 };
 }
+
+/**
+ * PET window in SUVbw (D-065): the displayed range scaled by the SUVbw factor (SUV per stored unit). Width and centre
+ * are those of the range itself (upper − lower, midpoint), without the DICOM linear +1 convention, as PET readers
+ * expect ("SUV 0–10" = width 10, centre 5).
+ */
+export function suvWindowFromRange(range: VoiRange, factor: number): { width: number; center: number } {
+  return { width: (range.upper - range.lower) * factor, center: ((range.upper + range.lower) / 2) * factor };
+}
+
+/** Displayed range (stored units) for a PET window given in SUVbw (inverse of suvWindowFromRange). */
+export function rangeFromSuvWindow(window: { width: number; center: number }, factor: number): VoiRange {
+  return { lower: (window.center - window.width / 2) / factor, upper: (window.center + window.width / 2) / factor };
+}
+
+/** Displayed range (stored units) for an SUVbw range (e.g. the SUV 0–10 preset). */
+export function rangeFromSuvRange(lower: number, upper: number, factor: number): VoiRange {
+  return { lower: lower / factor, upper: upper / factor };
+}

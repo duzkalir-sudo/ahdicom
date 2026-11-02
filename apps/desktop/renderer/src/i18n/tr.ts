@@ -143,7 +143,7 @@ export const tr = {
     sagittal: 'Sagittal',
     '3d': '3B hacim görüntüleme',
     short3d: '3B',
-    slice: '{{view}} {{index}} / {{total}}',
+    slice: 'MPR {{view}} {{index}} / {{total}}',
     loading: 'Hacim oluşturuluyor… %{{percent}}',
     approximate: 'Yeniden yapılandırma geometrisi yaklaşık',
     slabMenu: 'Kalın kesit (yeniden yapılandırma)',
@@ -190,6 +190,7 @@ export const tr = {
     scalpelHint:
       '3B görünümde sol tuşla bir çizgi çizin. Kesme tüm hacim boyunca uygulanır; yeniden yapılandırmalar ve orijinal görüntüler değişmez.',
     stl: {
+      writeFailed: 'Dosya yazılamadı (klasörü ve izinlerini kontrol edin).',
       title: 'STL dışa aktarma (3B baskı)',
       threshold: 'Yüzey eşiği',
       export: 'STL olarak kaydet…',
@@ -204,6 +205,9 @@ export const tr = {
     hint: 'Sol sürükleme döndürür, orta sürükleme kaydırır, sağ sürükleme veya tekerlek yakınlaştırır.',
   },
   dsa: {
+    failed: 'Bu çekim için DSA hesaplanamadı.',
+    tooLarge:
+      'Çıkarılmış kareler için görüntü belleği yetmiyor. Diğer serileri kapatın veya Ayarlar penceresinden görüntü önbelleğini artırın.',
     toggle: 'DSA (çıkarma)',
     unavailable: 'DSA için en az iki kareli bir anjiyografi çekimi (XA veya RF) gerekir.',
     inactive: "Maske ve piksel kaydırmayı ayarlamak için bir anjiyografi çekiminde DSA'yı açın (MPR ve 3B menüsü, Shift+A).",
@@ -307,7 +311,7 @@ export const tr = {
       timing: 'SUV hesaplanamıyor: enjeksiyon zamanı tutarsız',
       reformatMixed: 'SUV hesaplanamıyor: bu yeniden yapılandırmanın kesitlerinde SUV katsayısı farklı',
     },
-    reformatApproximate: 'Değer yok: yeniden yapılandırma geometrisi yaklaşık (düzensiz kesitler veya gantri eğimi)',
+    reformatApproximate: 'Değer yok (yaklaşık geometri)',
     textTitle: 'Not metni',
     textLabel: 'Metin',
     calibrateTitle: 'Kalibrasyon',
@@ -452,7 +456,9 @@ export const tr = {
     files: '{{count}} dosya DICOM olarak okunamadı (bozuk, kesik veya desteklenmeyen boyut).',
   },
   dialogs: {
-    suvUnits: 'Değerler SUVbw (vücut ağırlığı) cinsinden. Kayıtlı ön ayarlar ham değer kullandığından burada kaydetme kapalı.',
+    unitsRaw: 'Ham değerler',
+    unitsSuv: 'SUVbw',
+    suvUnits: 'Değerler SUVbw (vücut ağırlığı) cinsinden. Ön ayarlar ham değerlerle kaydedilir: kaydetmek için ham değerlere geçin.',
     close: 'Kapat',
     cancel: 'İptal',
     ok: 'Tamam',

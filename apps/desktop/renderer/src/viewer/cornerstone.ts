@@ -357,6 +357,25 @@ export async function createDsaImages(liveIds: readonly string[], p: DsaParams, 
   const set = ++dsaKey;
   const mask = await modalityValues(p.maskImageId);
   const ids: string[] = [];
+  try {
+    return await buildDsaImages(liveIds, p, set, mask, ids, cancelled);
+  } catch (e) {
+    forgetDsa(ids);
+    throw e;
+  }
+}
+
+async function buildDsaImages(
+  liveIds: readonly string[],
+  p: DsaParams,
+  set: number,
+  mask: { values: Float32Array; image: Types.IImage },
+  ids: string[],
+  cancelled: () => boolean,
+): Promise<string[] | undefined> {
+  // Each subtracted frame is kept as 32-bit floats: check the image cache has room for all of them.
+  const bytes = liveIds.length * mask.image.rows * mask.image.columns * 4;
+  if (bytes > cache.getMaxCacheSize() - cache.getCacheSize()) throw new VolumeLoadError('tooLarge');
   for (const liveId of liveIds) {
     if (cancelled()) {
       forgetDsa(ids);

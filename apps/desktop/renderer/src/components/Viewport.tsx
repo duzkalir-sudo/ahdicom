@@ -11,6 +11,7 @@ import {
   formatPersonName,
   niceScaleLength,
   sliceLocation,
+  suvWindowFromRange,
 } from '@ahdicom/dicom-core';
 import { applyPreset, commandById, formatShortcut, MOD, showView } from '../app/commands';
 import { MAX_VIEWPORTS, isVolumeView, useStore, viewportCount, type ViewKind } from '../state/store';
@@ -142,10 +143,10 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
         {vs.view === '3d' && vs.vr ? <div data-testid="vr-text">{t(`vr.presets.${vs.vr.preset}`)}</div> : null}
         {o.windowLevel && vs.voiLutName === undefined && vs.voi && vs.suv && vs.view !== '3d' ? (
           <div data-testid="wl-text">
-            {t('viewport.wlSuv', {
-              width: formatNumber((vs.voi.upper - vs.voi.lower) * vs.suv, 2, locale),
-              center: formatNumber(((vs.voi.upper + vs.voi.lower) / 2) * vs.suv, 2, locale),
-            })}
+            {(() => {
+              const w = suvWindowFromRange(vs.voi, vs.suv);
+              return t('viewport.wlSuv', { width: formatNumber(w.width, 2, locale), center: formatNumber(w.center, 2, locale) });
+            })()}
           </div>
         ) : null}
         {o.windowLevel && vs.voiLutName === undefined && vs.wl && vs.view !== '3d' && !vs.suv ? (

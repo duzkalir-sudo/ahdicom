@@ -165,18 +165,20 @@ test('3D scalpel cuts only the 3D view and can be undone', async () => {
   }
 });
 
-/** Enclosed volume of the triangles of a binary STL (mm³). */
-function stlVolume(bytes: Buffer): { triangles: number; volume: number } {
+/** Enclosed volume (mm³) and vertex centroid (patient LPS, mm) of the triangles of a binary STL. */
+function stlVolume(bytes: Buffer): { triangles: number; volume: number; centroid: [number, number, number] } {
   const n = bytes.readUInt32LE(80);
   expect(bytes.length).toBe(84 + 50 * n);
   let v = 0;
+  const sum = [0, 0, 0];
   for (let t = 0; t < n; t++) {
     const o = 84 + 50 * t + 12;
     const p = Array.from({ length: 9 }, (_, k) => bytes.readFloatLE(o + 4 * k));
     const [ax, ay, az, bx, by, bz, cx, cy, cz] = p as [number, number, number, number, number, number, number, number, number];
     v += ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
+    for (let k = 0; k < 3; k++) sum[k] = sum[k]! + (p[k]! + p[k + 3]! + p[k + 6]!) / 3;
   }
-  return { triangles: n, volume: v / 6 };
+  return { triangles: n, volume: v / 6, centroid: sum.map((x) => x / Math.max(1, n)) as [number, number, number] };
 }
 
 test('STL export of the iso-surface: the 1000 HU sphere at 500 HU encloses 4/3·π·r³', async () => {
@@ -192,7 +194,9 @@ test('STL export of the iso-surface: the 1000 HU sphere at 500 HU encloses 4/3·
     await s.page.getByTestId('vr-stl-threshold').fill('500');
     await s.page.getByTestId('vr-stl-export').click();
     await expect(s.page.getByTestId('vr-stl-status')).toHaveText(/^Saved: \d+ triangles\.$/, { timeout: 30000 });
-    const { triangles, volume } = stlVolume(readFileSync(out));
+    const { triangles, volume, centroid } = stlVolume(readFileSync(out));
+    // In patient coordinates (LPS, mm): the surface sits around the sphere centre (−50, −40, 0), not mirrored.
+    expect(Math.hypot(centroid[0] + 50, centroid[1] + 40, centroid[2])).toBeLessThan(1);
     expect(triangles).toBeGreaterThan(500);
     // Outward-facing triangles (positive volume); r = 10 mm → 4188.8 mm³. 0.5 × 0.5 × 2.5 mm voxels: within 10 %.
     expect(volume).toBeGreaterThan(0);

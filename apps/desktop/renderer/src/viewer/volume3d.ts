@@ -27,7 +27,8 @@ const MAX_CUTS = 10;
 /** Largest STL export (triangles); MAX_STL_BYTES in the IPC schema matches. */
 export const MAX_STL_TRIANGLES = 10_000_000;
 
-export type StlResult = { ok: true; triangles: number; saved: boolean } | { ok: false; reason: 'empty' | 'tooLarge' | 'failed' };
+export type StlResult =
+  { ok: true; triangles: number; saved: boolean } | { ok: false; reason: 'empty' | 'tooLarge' | 'failed' | 'writeFailed' };
 
 /** Rendering presets offered per modality; the transfer functions are Cornerstone's built-in presets. */
 export type VrPreset = 'bone' | 'softTissue' | 'vessels' | 'lung' | 'mip' | 'mrDefault' | 'mrAngio' | 'mrMip';
@@ -103,7 +104,8 @@ export class VolumeRendering {
   private base?: { color: number[][]; opacity: number[][] };
   /** The cut copy shown instead of the source volume once the scalpel was used; `fill` is the value of cut voxels. */
   private copy?: { volumeId: string; fill: number };
-  private undoStack: { indices: Uint32Array; values: Float64Array }[] = [];
+  /** One bit per voxel for each cut: the voxels it removed (their values are restored from the source volume). */
+  private undoStack: Uint8Array[] = [];
 
   constructor(
     private readonly viewport: () => Types.IVolumeViewport,
@@ -246,8 +248,8 @@ export class VolumeRendering {
     const mask = rasterizePolygon(outline, width, height);
     const data = vm.getCompleteScalarDataArray?.() as Scalars;
     const cutInside = mode === 'inside';
-    const indices: number[] = [];
-    const values: number[] = [];
+    const removed = new Uint8Array((data.length + 7) >> 3);
+    let count = 0;
     let v = 0;
     for (let k = 0; k < n2; k++) {
       for (let j = 0; j < n1; j++) {
@@ -258,16 +260,16 @@ export class VolumeRendering {
           const py = Math.floor(y);
           const inside = px >= 0 && py >= 0 && px < width && py < height && mask[py * width + px] === 1;
           if (inside !== cutInside || data[v] === fill) continue;
-          indices.push(v);
-          values.push(data[v]!);
+          removed[v >> 3]! |= 1 << (v & 7);
+          count++;
           data[v] = fill;
         }
       }
     }
-    if (indices.length > 0) {
+    if (count > 0) {
       vm.setCompleteScalarDataArray?.(data);
       copy!.modified();
-      this.undoStack.push({ indices: Uint32Array.from(indices), values: Float64Array.from(values) });
+      this.undoStack.push(removed);
       if (this.undoStack.length > MAX_CUTS) this.undoStack.shift();
       vp.render();
     }
@@ -280,9 +282,14 @@ export class VolumeRendering {
     const last = this.undoStack.pop();
     const copy = this.copy ? cache.getVolume(this.copy.volumeId) : undefined;
     const vm = copy?.voxelManager;
-    if (!last || !vm) return;
+    const source = cache.getVolume(this.sourceVolumeId)?.voxelManager?.getCompleteScalarDataArray?.() as Scalars | undefined;
+    if (!last || !vm || !source) return;
     const data = vm.getCompleteScalarDataArray?.() as Scalars;
-    for (let n = 0; n < last.indices.length; n++) data[last.indices[n]!] = last.values[n]!;
+    for (let b = 0; b < last.length; b++) {
+      const bits = last[b]!;
+      if (bits === 0) continue;
+      for (let k = 0; k < 8; k++) if (bits & (1 << k)) data[(b << 3) + k] = source[(b << 3) + k]!;
+    }
     vm.setCompleteScalarDataArray?.(data);
     copy!.modified();
     this.viewport().render();
@@ -312,8 +319,12 @@ export class VolumeRendering {
         worker.postMessage(req, [scalars.buffer]);
       });
       if (!res.ok) return res;
-      const saved = await window.api.saveStl(name, res.bytes);
-      return { ok: true, triangles: res.triangles, saved };
+      try {
+        const saved = await window.api.saveStl(name, res.bytes);
+        return { ok: true, triangles: res.triangles, saved };
+      } catch {
+        return { ok: false, reason: 'writeFailed' };
+      }
     } finally {
       worker.terminate();
     }

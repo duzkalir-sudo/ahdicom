@@ -37,7 +37,10 @@ test('PET window, presets, probe and W/L dialog in SUVbw', async () => {
     await expect(s.page.getByTestId('probe')).toContainText('SUVbw 5.19');
     await screenshot(s.page, 'M4', 'pet-suv-1280x800-dark-en');
     // W/L dialog in SUVbw: width 6, centre 3 → range 0…6 SUV.
+    // The dialog opens in stored values (Bq/ml, as saved presets); switch it to SUVbw.
     await s.page.keyboard.press('l');
+    await expect(s.page.getByTestId('wl-suv-hint')).toHaveCount(0);
+    await s.page.getByTestId('wl-dialog').getByRole('button', { name: 'SUVbw' }).click();
     await expect(s.page.getByTestId('wl-suv-hint')).toBeVisible();
     await expect(s.page.getByTestId('wl-a')).toHaveValue('10');
     await expect(s.page.getByTestId('wl-b')).toHaveValue('5');

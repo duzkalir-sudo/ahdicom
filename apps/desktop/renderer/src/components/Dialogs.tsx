@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { rangeToWindow, windowToRange } from '@ahdicom/dicom-core';
+import { rangeFromSuvRange, rangeFromSuvWindow, rangeToWindow, suvWindowFromRange, windowToRange } from '@ahdicom/dicom-core';
 import { COMMANDS, formatShortcut } from '../app/commands';
 import { changeLanguage, patchSettings } from '../app/settings';
 import { useStore } from '../state/store';
@@ -243,15 +243,17 @@ function WindowLevelDialog(): ReactNode {
   const c = controllerAt(activeIndex);
   const vs = c?.getState();
   const fn = vs?.voiFn === 'LINEAR_EXACT' ? 'LINEAR_EXACT' : 'LINEAR';
-  // PET with SUV: values are entered in SUVbw (window = range width and centre, no DICOM +1 convention).
-  const suv = vs?.suv;
-  const valuesFor = (m: 'window' | 'range'): [string, string] => {
+  // PET with SUV: the values can be entered in stored units (default, as saved presets) or in SUVbw (D-065).
+  const factor = vs?.suv;
+  const [units, setUnitsState] = useState<'raw' | 'suv'>('raw');
+  const suv = units === 'suv' ? factor : undefined;
+  const valuesFor = (m: 'window' | 'range', inSuv = suv): [string, string] => {
     if (!vs?.voi) return ['', ''];
     const r2 = (v: number): string => String(Math.round(v * 100) / 100);
-    if (suv) {
-      const lo = vs.voi.lower * suv;
-      const hi = vs.voi.upper * suv;
-      return m === 'range' ? [r2(lo), r2(hi)] : [r2(hi - lo), r2((hi + lo) / 2)];
+    if (inSuv) {
+      if (m === 'range') return [r2(vs.voi.lower * inSuv), r2(vs.voi.upper * inSuv)];
+      const w = suvWindowFromRange(vs.voi, inSuv);
+      return [r2(w.width), r2(w.center)];
     }
     if (m === 'range') return [r2(vs.voi.lower), r2(vs.voi.upper)];
     const wl = rangeToWindow(vs.voi, fn);
@@ -267,16 +269,20 @@ function WindowLevelDialog(): ReactNode {
     setA(na0);
     setB(nb0);
   };
+  const setUnits = (u: 'raw' | 'suv'): void => {
+    setUnitsState(u);
+    const [na0, nb0] = valuesFor(mode, u === 'suv' ? factor : undefined);
+    setA(na0);
+    setB(nb0);
+  };
   const close = (): void => useStore.getState().setDialog(null);
   const na = Number(a.replace(',', '.'));
   const nb = Number(b.replace(',', '.'));
   const valid = Number.isFinite(na) && Number.isFinite(nb) && (mode === 'window' ? na >= (suv ? 0.01 : 1) : nb > na);
   const apply = (): void => {
     if (!valid || !c) return;
-    if (suv) {
-      const [lo, hi] = mode === 'window' ? [nb - na / 2, nb + na / 2] : [na, nb];
-      c.setRange({ lower: lo / suv, upper: hi / suv });
-    } else if (mode === 'window') c.setWindow({ width: na, center: nb });
+    if (suv) c.setRange(mode === 'window' ? rangeFromSuvWindow({ width: na, center: nb }, suv) : rangeFromSuvRange(na, nb, suv));
+    else if (mode === 'window') c.setWindow({ width: na, center: nb });
     else c.setRange({ lower: na, upper: nb });
     close();
   };
@@ -347,8 +353,20 @@ function WindowLevelDialog(): ReactNode {
             />
           </div>
         </div>
+        {factor ? (
+          <div className="field">
+            <Segmented
+              value={units}
+              options={[
+                { value: 'raw', label: t('dialogs.unitsRaw') },
+                { value: 'suv', label: t('dialogs.unitsSuv') },
+              ]}
+              onChange={setUnits}
+            />
+          </div>
+        ) : null}
         {suv ? (
-          <div className="muted" data-testid="wl-suv-hint">
+          <div className="muted field" data-testid="wl-suv-hint">
             {t('dialogs.suvUnits')}
           </div>
         ) : null}

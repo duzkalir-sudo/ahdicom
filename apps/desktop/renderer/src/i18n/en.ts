@@ -150,7 +150,7 @@ export const en: Shape<Resources> = {
     sagittal: 'Sagittal',
     '3d': '3D volume rendering',
     short3d: '3D',
-    slice: '{{view}} {{index}} / {{total}}',
+    slice: 'MPR {{view}} {{index}} / {{total}}',
     loading: 'Building volume… {{percent}}%',
     approximate: 'Reformat geometry approximate',
     slabMenu: 'Slab (reformats)',
@@ -197,6 +197,7 @@ export const en: Shape<Resources> = {
     scalpelHint:
       'Draw an outline on the 3D view with the left button. The cut goes through the whole volume; reformats and original images are not changed.',
     stl: {
+      writeFailed: 'The file could not be written (check the folder and its permissions).',
       title: 'STL export (3D printing)',
       threshold: 'Surface threshold',
       export: 'Export STL…',
@@ -211,6 +212,8 @@ export const en: Shape<Resources> = {
     hint: 'Left drag rotates, middle drag pans, right drag or the wheel zooms.',
   },
   dsa: {
+    failed: 'DSA could not be computed for this run.',
+    tooLarge: 'Not enough image memory for the subtracted frames. Close other series or raise the image cache in Settings.',
     toggle: 'DSA (subtraction)',
     unavailable: 'DSA needs an X-ray angiography run (XA or RF) of at least two frames.',
     inactive: 'Turn on DSA (MPR and 3D menu, Shift+A) for an angiography run to set the mask and the pixel shift.',
@@ -314,7 +317,7 @@ export const en: Shape<Resources> = {
       timing: 'SUV not available: implausible injection time',
       reformatMixed: 'SUV not available: SUV factors differ between the slices of this reformat',
     },
-    reformatApproximate: 'No values: reformat geometry approximate (irregular slices or gantry tilt)',
+    reformatApproximate: 'No values (approximate geometry)',
     textTitle: 'Annotation text',
     textLabel: 'Text',
     calibrateTitle: 'Calibrate',
@@ -462,7 +465,9 @@ export const en: Shape<Resources> = {
     files_other: '{{count}} files could not be read as DICOM (corrupt, truncated or unsupported size).',
   },
   dialogs: {
-    suvUnits: 'Values in SUVbw (body weight). Saved presets use raw values, so saving is off here.',
+    unitsRaw: 'Stored values',
+    unitsSuv: 'SUVbw',
+    suvUnits: 'Values in SUVbw (body weight). Presets are saved in stored values: switch to them to save one.',
     close: 'Close',
     cancel: 'Cancel',
     ok: 'OK',

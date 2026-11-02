@@ -6,7 +6,10 @@ import {
   dicomDateTimeSeconds,
   parseDicomDateTimeSeconds,
   parseDicomTimeSeconds,
+  rangeFromSuvRange,
+  rangeFromSuvWindow,
   suvBwFactor,
+  suvWindowFromRange,
   type InstanceRecord,
 } from '@ahdicom/dicom-core';
 import { filesIn, manifest, parseFile } from '../helpers/fixtures.js';
@@ -151,5 +154,26 @@ describe('PET fixtures', () => {
     const r = parseFile(filesIn('pet-missing')[0]!);
     if (!r.ok) throw new Error(r.error);
     expect(suvBwFactor(r.instance)).toEqual({ ok: false, reason: 'missing', missing: byId('pet-missing').missing });
+  });
+});
+
+describe('PET window in SUVbw (D-065)', () => {
+  // Fixture factor: SUV 5.1885 at 20 000 Bq/ml.
+  const k = 5.1885 / 20000;
+  it('converts a displayed range to an SUV window without the DICOM +1 convention', () => {
+    const w = suvWindowFromRange({ lower: 0, upper: 20000 }, k);
+    expect(w.width).toBeCloseTo(5.1885, 10);
+    expect(w.center).toBeCloseTo(2.59425, 10);
+  });
+  it('round-trips windows and ranges', () => {
+    const r = rangeFromSuvWindow({ width: 6, center: 3 }, k);
+    expect(r.lower).toBeCloseTo(0, 10);
+    expect(r.upper * k).toBeCloseTo(6, 10);
+    const back = suvWindowFromRange(r, k);
+    expect(back.width).toBeCloseTo(6, 10);
+    expect(back.center).toBeCloseTo(3, 10);
+    const p = rangeFromSuvRange(0, 10, k);
+    expect(p.upper).toBeCloseTo(10 / k, 6);
+    expect(suvWindowFromRange(p, k)).toEqual({ width: expect.closeTo(10, 10), center: expect.closeTo(5, 10) });
   });
 });
