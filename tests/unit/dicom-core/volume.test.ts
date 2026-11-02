@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import {
   STANDARD_VIEWS,
   buildDisplaySets,
+  clipPlanes,
+  insidePlanes,
   mprCheck,
   nearestVoxel,
   patientToVoxel,
@@ -244,5 +246,31 @@ describe('oblique MPR and slabs', () => {
     expect(slabProject(ray, 'minip')).toBe(-1000);
     expect(slabProject(ray, 'avg')).toBe(0);
     expect(slabProject([undefined], 'mip')).toBeUndefined();
+  });
+});
+
+describe('3D clipping box', () => {
+  const v = volumeGeometry(axialStack([0, 2, 4, 6]))!; // x −5…4, y −5…4.5, z 0…6
+
+  it('keeps exactly the voxels inside the box fractions', () => {
+    // Keep the patient-left half (x ≥ −0.5) and the lower half of the slices (z ≤ 3).
+    const planes = clipPlanes(v, { min: [0.5, 0, 0], max: [1, 1, 0.5] });
+    expect(planes).toHaveLength(6);
+    expect(insidePlanes(planes, [0, 0, 2])).toBe(true);
+    expect(insidePlanes(planes, [-0.5, 0, 3])).toBe(true); // on two planes
+    expect(insidePlanes(planes, [-1, 0, 2])).toBe(false); // right of the cut
+    expect(insidePlanes(planes, [0, 0, 4])).toBe(false); // above the cut
+    // The full box keeps every voxel centre, including the corners.
+    const all = clipPlanes(v, { min: [0, 0, 0], max: [1, 1, 1] });
+    for (const c of volumeCorners(v)) expect(insidePlanes(all, c)).toBe(true);
+    expect(insidePlanes(all, [4.5, 0, 0])).toBe(false);
+  });
+
+  it('follows the grid axes of an oblique or sagittal volume', () => {
+    const sag = volumeGeometry(displaySet([0, 3, 6].map((x) => inst([x, -5, 5], { iop: SAGITTAL }))))!;
+    // Slice axis k runs along −x (normal towards patient right): keep the first slice only (x = 6).
+    const planes = clipPlanes(sag, { min: [0, 0, 0], max: [1, 1, 0] });
+    expect(insidePlanes(planes, [6, 0, 0])).toBe(true);
+    expect(insidePlanes(planes, [3, 0, 0])).toBe(false);
   });
 });

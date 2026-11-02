@@ -122,7 +122,8 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
         {o.windowLevel && vs.voiLutName !== undefined ? (
           <div data-testid="wl-text">{t('viewport.voiLut', { name: vs.voiLutName })}</div>
         ) : null}
-        {o.windowLevel && vs.voiLutName === undefined && vs.wl ? (
+        {vs.view === '3d' && vs.vr ? <div data-testid="vr-text">{t(`vr.presets.${vs.vr.preset}`)}</div> : null}
+        {o.windowLevel && vs.voiLutName === undefined && vs.wl && vs.view !== '3d' ? (
           <div data-testid="wl-text">
             {t('viewport.wl', { width: fmtValue(round(vs.wl.width), locale), center: fmtValue(round(vs.wl.center), locale) })}
           </div>
@@ -493,6 +494,7 @@ export function ViewportGrid(): ReactNode {
   const slots = useStore((s) => s.slots);
   const views = useStore((s) => s.views);
   const tool = useStore((s) => s.tool);
+  const active3d = useStore((s) => s.views[s.activeIndex] === '3d');
   const showLegend = useStore((s) => s.settings.showMouseLegend);
   const ref = useRef<HTMLDivElement>(null);
   const purgeTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -616,7 +618,9 @@ export function ViewportGrid(): ReactNode {
       </div>
       {showLegend ? (
         <div className="mouse-legend" data-testid="mouse-legend">
-          {t('mouse.legend', { left: isMeasureTool(tool) ? t(`measure.tool.${tool}`) : t(`tools.${tool}`), mod: MOD })}
+          {active3d
+            ? t('mouse.legend3d')
+            : t('mouse.legend', { left: isMeasureTool(tool) ? t(`measure.tool.${tool}`) : t(`tools.${tool}`), mod: MOD })}
         </div>
       ) : null}
     </>

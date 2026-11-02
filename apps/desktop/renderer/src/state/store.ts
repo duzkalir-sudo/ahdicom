@@ -6,7 +6,7 @@ import type { RecentEntryPublic, Settings } from '../../../shared/schemas';
 import type { LeftTool } from '../viewer/cornerstone';
 
 export type LayoutSpec = { kind: 'grid'; rows: number; cols: number } | { kind: '1+2' } | { kind: '2+1' };
-export type RightTab = 'measurements' | 'tags' | 'info';
+export type RightTab = 'measurements' | 'tags' | 'info' | '3d';
 export type DialogKind = 'about' | 'shortcuts' | 'settings' | 'windowLevel' | null;
 
 export const MAX_VIEWPORTS = 25;
@@ -236,7 +236,8 @@ export const useStore = create<State & Actions>()((set, get) => {
     setView: (index, view) => {
       const views = [...get().views];
       views[index] = view;
-      set({ views, activeIndex: index });
+      // The 3D controls are in the right panel.
+      set({ views, activeIndex: index, ...(view === '3d' ? { rightTab: '3d' as const, rightOpen: true } : {}) });
     },
     openMpr: (id) => {
       const slots = [...get().slots];

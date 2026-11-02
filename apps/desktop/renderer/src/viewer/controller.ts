@@ -6,6 +6,7 @@
 import { Enums, cache, eventTarget, imageLoader, metaData, utilities as csUtils, type Types } from '@cornerstonejs/core';
 import { utilities as toolUtils } from '@cornerstonejs/tools';
 import {
+  type ClipBox,
   type DisplaySet,
   type EdgeLabels,
   type ImagePlane,
@@ -59,6 +60,7 @@ import { lutsFor, modalityLutApplied } from './lut';
 import { cancelDrawingOn, isDrawing } from './annotations';
 import { definingPoints } from './measureDoc';
 import { measureToolOf, type ReformatRef } from './measurements';
+import { VolumeRendering, type VrPreset, type VrState } from './volume3d';
 import { type ViewKind, useStore } from '../state/store';
 import { planesOf } from './sync';
 
@@ -87,6 +89,8 @@ export interface ViewState {
   reformat?: { location?: { mm: number; towards: string }; spacing: number; warnings: StackWarning[] };
   /** Thick-slab projection of a reformat. */
   slab?: { mode: SlabMode; thickness: number };
+  /** 3D view: preset, transfer-function shift/opacity and clipping box. */
+  vr?: VrState;
   displaySetId?: string;
   index: number;
   total: number;
@@ -119,6 +123,7 @@ const EMPTY: ViewState = {
   refusal: undefined,
   reformat: undefined,
   slab: undefined,
+  vr: undefined,
   displaySetId: undefined,
   imageId: undefined,
   voi: undefined,
@@ -169,6 +174,7 @@ export class ViewportController {
   private kind: ViewKind = 'stack';
   /** Volume views: the volume grid and the stack of reformatted planes for the current camera. */
   private vol?: { volumeId: string; geometry: VolumeGeometry; warnings: StackWarning[]; stack?: ReformatStack };
+  private vr?: VolumeRendering;
 
   constructor(
     readonly index: number,
@@ -276,6 +282,7 @@ export class ViewportController {
     this.ds = ds;
     this.imageIds = view === 'stack' ? ids : [];
     this.vol = undefined;
+    this.vr = undefined;
     this.overlayCache.clear();
     if (!ds) {
       this.emit({ ...EMPTY });
@@ -364,10 +371,34 @@ export class ViewportController {
 
   private apply3dDefaults(): void {
     const vp = this.volumeViewport;
-    vp.setProperties({ preset: this.ds?.modality === 'CT' ? 'CT-Bone' : 'MR-Default' });
+    if (!this.vol) return;
+    this.vr ??= new VolumeRendering(() => this.volumeViewport, this.vol.geometry, this.ds?.modality);
+    this.vr.reset();
     // Seen from the front, head up.
     vp.setCamera({ viewPlaneNormal: [0, -1, 0], viewUp: [0, 0, 1] });
     vp.resetCamera();
+    this.emit({ vr: this.vr.state });
+  }
+
+  /** 3D view: rendering preset. */
+  setVolumePreset(preset: VrPreset): void {
+    if (this.kind !== '3d' || !this.vr) return;
+    this.vr.setPreset(preset);
+    this.emit({ vr: this.vr.state });
+  }
+
+  /** 3D view: shift the transfer functions along the value axis and scale their opacity. */
+  setVolumeCurves(patch: { shift?: number; opacity?: number }): void {
+    if (this.kind !== '3d' || !this.vr) return;
+    this.vr.set(patch);
+    this.emit({ vr: this.vr.state });
+  }
+
+  /** 3D view: clipping box (fractions of the volume grid), undefined removes it. */
+  setClipBox(box: ClipBox | undefined): void {
+    if (this.kind !== '3d' || !this.vr) return;
+    this.vr.setClip(box);
+    this.emit({ vr: this.vr.state });
   }
 
   /** Moves the reformat camera along its normal onto plane k (keeping zoom and pan). */

@@ -16,6 +16,7 @@ import {
 } from '@cornerstonejs/core';
 import {
   PanTool,
+  OrientationMarkerTool,
   StackScrollTool,
   ToolGroupManager,
   TrackballRotateTool,
@@ -434,7 +435,7 @@ export function initCornerstone(cacheSizeMB: number): void {
   volumeLoader.registerVolumeLoader(VOLUME_SCHEME, cornerstoneStreamingImageVolumeLoader as unknown as Types.VolumeLoaderFn);
   cache.setMaxCacheSize(cacheSizeMB * 1024 * 1024);
 
-  for (const T of [WindowLevelTool, PanTool, ZoomTool, StackScrollTool, TrackballRotateTool]) addTool(T);
+  for (const T of [WindowLevelTool, PanTool, ZoomTool, StackScrollTool, TrackballRotateTool, OrientationMarkerTool]) addTool(T);
   toolGroup = ToolGroupManager.createToolGroup(TOOL_GROUP_ID);
   if (!toolGroup) throw new Error('tool group');
   toolGroup.addTool(WindowLevelTool.toolName);
@@ -476,6 +477,23 @@ export function initCornerstone(cacheSizeMB: number): void {
   vrToolGroup.setToolActive(ZoomTool.toolName, {
     bindings: [{ mouseButton: MouseBindings.Secondary }, { mouseButton: MouseBindings.Wheel }],
   });
+  // Orientation cube in the corner of 3D views, labelled with the app's patient directions (H/F for head/feet).
+  vrToolGroup.addTool(OrientationMarkerTool.toolName, {
+    overlayMarkerType: OrientationMarkerTool.OVERLAY_MARKER_TYPES.ANNOTATED_CUBE,
+    overlayConfiguration: {
+      [OrientationMarkerTool.OVERLAY_MARKER_TYPES.ANNOTATED_CUBE]: {
+        faceProperties: {
+          xPlus: { text: 'L', faceColor: '#ffff00', faceRotation: 90 },
+          xMinus: { text: 'R', faceColor: '#ffff00', faceRotation: 270 },
+          yPlus: { text: 'P', faceColor: '#00ffff', fontColor: 'white', faceRotation: 180 },
+          yMinus: { text: 'A', faceColor: '#00ffff', fontColor: 'white' },
+          zPlus: { text: 'H' },
+          zMinus: { text: 'F' },
+        },
+      },
+    },
+  });
+  vrToolGroup.setToolEnabled(OrientationMarkerTool.toolName);
   applyLeftTool('windowLevel');
   initAnnotationEvents();
   initSync();

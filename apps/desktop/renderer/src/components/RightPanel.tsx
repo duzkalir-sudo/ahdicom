@@ -14,6 +14,7 @@ import { useStore } from '../state/store';
 import { controllerAt } from '../viewer/registry';
 import { fileIdOf } from '../viewer/cornerstone';
 import { IconButton } from './ui';
+import { VolumePanel } from './VolumePanel';
 import { MeasurementsPanel } from './MeasurementsPanel';
 
 const TS_NAMES: Record<string, string> = {
@@ -406,6 +407,8 @@ export function RightPanel(): ReactNode {
   const { t } = useTranslation();
   const open = useStore((s) => s.rightOpen);
   const tab = useStore((s) => s.rightTab);
+  const active3d = useStore((s) => s.views[s.activeIndex] === '3d');
+  const tabs = active3d ? (['measurements', 'tags', 'info', '3d'] as const) : (['measurements', 'tags', 'info'] as const);
   if (!open) {
     return (
       <aside className="side right collapsed" data-testid="right-panel">
@@ -420,7 +423,7 @@ export function RightPanel(): ReactNode {
   return (
     <aside className="side right right-panel" data-testid="right-panel">
       <div className="tabs" role="tablist">
-        {(['measurements', 'tags', 'info'] as const).map((k) => (
+        {tabs.map((k) => (
           <button
             key={k}
             type="button"
@@ -441,6 +444,7 @@ export function RightPanel(): ReactNode {
         {tab === 'info' ? <InfoPanel /> : null}
         {tab === 'tags' ? <TagBrowser /> : null}
         {tab === 'measurements' ? <MeasurementsPanel /> : null}
+        {tab === '3d' ? <VolumePanel /> : null}
       </div>
     </aside>
   );

@@ -30,5 +30,8 @@
     "react-i18next": "17.1.9",
     "zod": "4.6.7",
     "zustand": "5.0.16"
+  },
+  "dependencies": {
+    "@kitware/vtk.js": "36.4.1"
   }
 }

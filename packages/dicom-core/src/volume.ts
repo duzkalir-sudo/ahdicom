@@ -265,3 +265,33 @@ export function slabProject(values: readonly (number | undefined)[], mode: SlabM
   if (mode === 'minip') return Math.min(...v);
   return v.reduce((s, x) => s + x, 0) / v.length;
 }
+
+/** A clipping box as fractions (0…1) of the volume grid along its column (i), row (j) and slice (k) axes. */
+export interface ClipBox {
+  min: Vec3;
+  max: Vec3;
+}
+
+/**
+ * The six planes of a clipping box, each with the normal pointing into the box: a point is inside when
+ * (p − point) · normal ≥ 0 for every plane (the side a renderer clipping plane keeps).
+ */
+export function clipPlanes(v: VolumeGeometry, box: ClipBox): PlaneEquation[] {
+  const axes: Vec3[] = [v.row, v.column, v.normal];
+  const out: PlaneEquation[] = [];
+  for (let a = 0; a < 3; a++) {
+    const at = (f: number): Vec3 => {
+      const ijk: [number, number, number] = [0, 0, 0];
+      ijk[a] = Math.min(1, Math.max(0, f)) * (v.dimensions[a]! - 1);
+      return voxelToPatient(v, ijk);
+    };
+    out.push({ normal: axes[a]!, point: at(box.min[a]!) });
+    out.push({ normal: vec3.negate(axes[a]!), point: at(box.max[a]!) });
+  }
+  return out;
+}
+
+/** True when a patient point lies inside all planes (on a plane counts as inside). */
+export function insidePlanes(planes: readonly PlaneEquation[], p: Vec3): boolean {
+  return planes.every((q) => vec3.dot(vec3.sub(p, q.point), q.normal) >= -1e-9);
+}
