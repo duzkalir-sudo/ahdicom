@@ -60,7 +60,7 @@ import { lutsFor, modalityLutApplied } from './lut';
 import { cancelDrawingOn, isDrawing } from './annotations';
 import { definingPoints } from './measureDoc';
 import { measureToolOf, type ReformatRef } from './measurements';
-import { VolumeRendering, type VrPreset, type VrState } from './volume3d';
+import { VolumeRendering, type CutMode, type VrPreset, type VrState } from './volume3d';
 import { type ViewKind, useStore } from '../state/store';
 import { planesOf } from './sync';
 
@@ -192,6 +192,9 @@ export class ViewportController {
     element.addEventListener(Enums.Events.IMAGE_LOAD_ERROR, this.onLoadFailed);
     element.addEventListener('pointermove', this.onPointerMove);
     element.addEventListener('pointerleave', this.onPointerLeave);
+    element.addEventListener('pointerdown', this.onScalpelDown, true);
+    element.addEventListener('pointermove', this.onScalpelMove, true);
+    element.addEventListener('pointerup', this.onScalpelUp, true);
   }
 
   /** The Cornerstone viewport. Typed as a stack viewport; stack-only methods are used only in the stack view. */
@@ -282,7 +285,9 @@ export class ViewportController {
     this.ds = ds;
     this.imageIds = view === 'stack' ? ids : [];
     this.vol = undefined;
+    this.vr?.release();
     this.vr = undefined;
+    this.lasso = undefined;
     this.overlayCache.clear();
     if (!ds) {
       this.emit({ ...EMPTY });
@@ -372,12 +377,88 @@ export class ViewportController {
   private apply3dDefaults(): void {
     const vp = this.volumeViewport;
     if (!this.vol) return;
-    this.vr ??= new VolumeRendering(() => this.volumeViewport, this.vol.geometry, this.ds?.modality);
-    this.vr.reset();
-    // Seen from the front, head up.
-    vp.setCamera({ viewPlaneNormal: [0, -1, 0], viewUp: [0, 0, 1] });
+    this.vr ??= new VolumeRendering(() => this.volumeViewport, this.vol.volumeId, this.vol.geometry, this.ds?.modality);
+    const vr = this.vr;
+    // Seen from the front, head up, with a parallel projection (the scalpel projects voxels along straight rays).
+    vp.setCamera({ viewPlaneNormal: [0, -1, 0], viewUp: [0, 0, 1], parallelProjection: true });
     vp.resetCamera();
+    void vr.reset().then(() => {
+      if (this.vr === vr) this.emit({ vr: vr.state });
+    });
+    this.emit({ vr: vr.state });
+  }
+
+  /** 3D view: arms the scalpel; the next outline drawn on the view cuts (undefined disarms). */
+  armScalpel(mode: CutMode | undefined): void {
+    if (this.kind !== '3d' || !this.vr) return;
+    this.vr.armScalpel(mode);
     this.emit({ vr: this.vr.state });
+  }
+
+  /** 3D view: undoes the last scalpel cut. */
+  undoCut(): void {
+    if (this.kind !== '3d' || !this.vr) return;
+    this.vr.undoCut();
+    this.emit({ vr: this.vr.state });
+  }
+
+  /** Outline being drawn with the scalpel (canvas CSS pixels). */
+  private lasso?: [number, number][];
+
+  private readonly onScalpelDown = (e: PointerEvent): void => {
+    if (this.kind !== '3d' || !this.vr?.state.scalpel || e.button !== 0) return;
+    // The outline replaces rotation for this press.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    this.element.setPointerCapture(e.pointerId);
+    const r = this.element.getBoundingClientRect();
+    this.lasso = [[e.clientX - r.left, e.clientY - r.top]];
+  };
+
+  private readonly onScalpelMove = (e: PointerEvent): void => {
+    if (!this.lasso) return;
+    e.stopImmediatePropagation();
+    const r = this.element.getBoundingClientRect();
+    this.lasso.push([e.clientX - r.left, e.clientY - r.top]);
+    this.drawLasso();
+  };
+
+  private readonly onScalpelUp = (e: PointerEvent): void => {
+    const outline = this.lasso;
+    const vr = this.vr;
+    if (!outline || !vr) return;
+    e.stopImmediatePropagation();
+    this.lasso = undefined;
+    if (this.element.hasPointerCapture(e.pointerId)) this.element.releasePointerCapture(e.pointerId);
+    this.drawGuides();
+    const mode = vr.state.scalpel;
+    if (!mode || outline.length < 3) return;
+    void vr.cut(outline, mode, this.element.clientWidth, this.element.clientHeight).then((ok) => {
+      if (this.vr !== vr) return;
+      if (!ok) vr.armScalpel(undefined);
+      this.emit({ vr: vr.state });
+    });
+  };
+
+  private drawLasso(): void {
+    const canvas = this.guideCanvas;
+    const ctx = canvas?.getContext('2d');
+    const pts = this.lasso;
+    if (!canvas || !ctx || !pts || pts.length < 2) return;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.strokeStyle = SCALPEL_COLOR;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(pts[0]![0], pts[0]![1]);
+    for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
   /** 3D view: rendering preset. */
@@ -1288,6 +1369,10 @@ export class ViewportController {
     this.element.removeEventListener(Enums.Events.IMAGE_LOAD_ERROR, this.onLoadFailed);
     this.element.removeEventListener('pointermove', this.onPointerMove);
     this.element.removeEventListener('pointerleave', this.onPointerLeave);
+    this.element.removeEventListener('pointerdown', this.onScalpelDown, true);
+    this.element.removeEventListener('pointermove', this.onScalpelMove, true);
+    this.element.removeEventListener('pointerup', this.onScalpelUp, true);
+    this.vr?.release();
     try {
       toolUtils.stackPrefetch.disable(this.element);
     } catch {
@@ -1320,6 +1405,7 @@ export interface Guides {
 
 const GUIDE_LINE_COLOR = 'rgba(56, 189, 248, 0.9)';
 const GUIDE_CENTER_COLOR = 'rgba(255, 255, 255, 0.9)';
+const SCALPEL_COLOR = 'rgba(250, 204, 21, 0.95)';
 /** Distance of the crosshair rotation handles from the crosshair centre (CSS pixels). */
 export const HANDLE_DISTANCE_PX = 70;
 const GUIDE_CURSOR_COLOR = 'rgba(74, 222, 128, 0.95)';

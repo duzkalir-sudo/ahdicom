@@ -2,13 +2,22 @@
  * M4 3D volume rendering in the real app on the CT phantom (spheres of known HU in a water cylinder).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { expectNoErrors, fixture, launch, openPaths, screenshot, vpState, waitReady, type Session } from './harness';
+import { cdvState, expectNoErrors, fixture, launch, openPaths, screenshot, vpState, waitReady, type Session } from './harness';
 import { grab, type Gray } from './pixels';
 
 interface View3d {
   view: string;
   status: string;
-  vr?: { preset: string; shift: number; opacity: number; clip?: { min: number[]; max: number[] }; axes: [string, string][] };
+  vr?: {
+    preset: string;
+    shift: number;
+    opacity: number;
+    clip?: { min: number[]; max: number[] };
+    axes: [string, string][];
+    scalpel?: string;
+    cuts: number;
+  };
+  probe?: { value?: number };
 }
 
 /** Mean brightness of a rectangle given as fractions of the viewport. */
@@ -85,6 +94,69 @@ test('3D volume rendering of the CT phantom', async () => {
     await screenshot(s.page, 'M4', '3d-mip-1280x800-dark-en');
     await s.page.getByTestId('vr-reset').click();
     await expect.poll(async () => (await v(s.page, 0)).vr).toMatchObject({ preset: 'bone', shift: 0, opacity: 1 });
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('3D scalpel cuts only the 3D view and can be undone', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('ct-phantom')]);
+    await waitReady(s.page);
+    await open3d(s);
+    const el = s.page.getByTestId('viewport-element-0');
+    const sphere = (g: Gray): number => mean(g, 0.26, 0.34, 0.45, 0.55);
+    await expect.poll(async () => sphere(await grab(el)), { timeout: 10000 }).toBeGreaterThan(20);
+    const before = sphere(await grab(el));
+    // Outline around the 1000 HU sphere (screen left), drawn with the scalpel armed.
+    const box = (await el.boundingBox())!;
+    const at = (fx: number, fy: number): [number, number] => [box.x + box.width * fx, box.y + box.height * fy];
+    const cutAroundSphere = async (): Promise<void> => {
+      await s.page.getByTestId('vr-cut-inside').click();
+      await expect.poll(async () => (await v(s.page, 0)).vr?.scalpel).toBe('inside');
+      await s.page.mouse.move(...at(0.2, 0.35));
+      await s.page.mouse.down();
+      for (const [fx, fy] of [
+        [0.4, 0.35],
+        [0.4, 0.65],
+        [0.2, 0.65],
+        [0.2, 0.36],
+      ] as const)
+        await s.page.mouse.move(...at(fx, fy), { steps: 4 });
+      await s.page.mouse.up();
+    };
+    await cutAroundSphere();
+    await expect.poll(async () => (await v(s.page, 0)).vr).toMatchObject({ cuts: 1 });
+    expect((await v(s.page, 0)).vr?.scalpel).toBeUndefined();
+    await expect.poll(async () => sphere(await grab(el))).toBeLessThan(before * 0.2);
+    await screenshot(s.page, 'M4', '3d-scalpel-1280x800-dark-en');
+    // Undo restores the sphere.
+    await s.page.getByTestId('vr-undo-cut').click();
+    await expect.poll(async () => (await v(s.page, 0)).vr?.cuts).toBe(0);
+    await expect.poll(async () => sphere(await grab(el))).toBeGreaterThan(before * 0.8);
+    // Cut again: the original images are not changed — the 2D view of the same series still reads 1000 HU.
+    await cutAroundSphere();
+    await expect.poll(async () => (await v(s.page, 0)).vr?.cuts).toBe(1);
+    await s.page.getByTestId('tb-layout').click();
+    await s.page.getByTestId('layout-1x2').click();
+    const ds = (await cdvState(s.page)).studies[0]!.series[0]!.displaySets[0]!;
+    await s.page.getByTestId('viewport-1').click({ position: { x: 5, y: 5 } });
+    await s.page.locator(`[data-ds-id="${ds.id}"]`).click();
+    await waitReady(s.page, 1);
+    await s.page.keyboard.press('Home');
+    for (let k = 0; k < 32; k++) await s.page.keyboard.press('ArrowDown');
+    await expect.poll(async () => (await vpState(s.page, 1)).index).toBe(32);
+    const p = await s.page.evaluate(() =>
+      (window as unknown as { __cdv: { pixelToClient(i: number, c: number, r: number): { x: number; y: number } } }).__cdv.pixelToClient(
+        1,
+        156,
+        176,
+      ),
+    );
+    await s.page.mouse.move(p.x, p.y);
+    await expect.poll(async () => (await v(s.page, 1)).probe?.value).toBe(1000);
     expectNoErrors(s);
   } finally {
     await s.close();

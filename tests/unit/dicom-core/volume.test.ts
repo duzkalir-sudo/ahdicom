@@ -13,6 +13,7 @@ import {
   planePixel,
   planePoint,
   planesIntersection,
+  rasterizePolygon,
   reformatIndex,
   reformatStack,
   rotateAbout,
@@ -272,5 +273,68 @@ describe('3D clipping box', () => {
     const planes = clipPlanes(sag, { min: [0, 0, 0], max: [1, 1, 0] });
     expect(insidePlanes(planes, [6, 0, 0])).toBe(true);
     expect(insidePlanes(planes, [3, 0, 0])).toBe(false);
+  });
+});
+
+describe('3D scalpel outline', () => {
+  it('fills pixel centres inside a polygon (even–odd)', () => {
+    // Square from (2, 1) to (6, 4): pixel centres x 2.5…5.5, y 1.5…3.5 → 4 × 3 pixels.
+    const m = rasterizePolygon(
+      [
+        [2, 1],
+        [6, 1],
+        [6, 4],
+        [2, 4],
+      ],
+      8,
+      6,
+    );
+    expect(m.reduce((s, v) => s + v, 0)).toBe(12);
+    expect(m[1 * 8 + 2]).toBe(1);
+    expect(m[3 * 8 + 5]).toBe(1);
+    expect(m[1 * 8 + 6]).toBe(0);
+    expect(m[4 * 8 + 2]).toBe(0);
+  });
+
+  it('handles a concave outline and outlines leaving the canvas', () => {
+    // "U" shape: the notch between x 3…5 (above y 3) stays empty.
+    const u = rasterizePolygon(
+      [
+        [1, 1],
+        [3, 1],
+        [3, 3],
+        [5, 3],
+        [5, 1],
+        [7, 1],
+        [7, 5],
+        [1, 5],
+      ],
+      8,
+      6,
+    );
+    expect(u[2 * 8 + 4]).toBe(0);
+    expect(u[2 * 8 + 1]).toBe(1);
+    expect(u[4 * 8 + 4]).toBe(1);
+    const big = rasterizePolygon(
+      [
+        [-10, -10],
+        [20, -10],
+        [20, 20],
+        [-10, 20],
+      ],
+      4,
+      3,
+    );
+    expect(big.every((v) => v === 1)).toBe(true);
+    expect(
+      rasterizePolygon(
+        [
+          [0, 0],
+          [1, 1],
+        ],
+        4,
+        3,
+      ).every((v) => v === 0),
+    ).toBe(true);
   });
 });

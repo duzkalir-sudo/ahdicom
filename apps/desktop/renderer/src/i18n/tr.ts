@@ -182,6 +182,11 @@ export const tr = {
     axis: '{{from}} → {{to}}',
     from: '{{side}} tarafından',
     to: '{{side}} tarafına',
+    scalpel: 'Neşter',
+    cut: { inside: 'Çizginin içini kes', outside: 'Çizginin dışını kes' },
+    undoCut: 'Kesmeyi geri al ({{count}})',
+    scalpelHint:
+      '3B görünümde sol tuşla bir çizgi çizin. Kesme tüm hacim boyunca uygulanır; yeniden yapılandırmalar ve orijinal görüntüler değişmez.',
     reset: '3B görünümü sıfırla',
     hint: 'Sol sürükleme döndürür, orta sürükleme kaydırır, sağ sürükleme veya tekerlek yakınlaştırır.',
   },

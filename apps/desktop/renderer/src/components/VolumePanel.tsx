@@ -124,6 +124,25 @@ export function VolumePanel(): ReactNode {
             </div>
           ))
         : null}
+      <div className="vr-section">{t('vr.scalpel')}</div>
+      <div className="vr-actions">
+        {(['inside', 'outside'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={`btn${vr.scalpel === m ? ' primary' : ''}`}
+            aria-pressed={vr.scalpel === m}
+            onClick={() => c.armScalpel(vr.scalpel === m ? undefined : m)}
+            data-testid={`vr-cut-${m}`}
+          >
+            {t(`vr.cut.${m}`)}
+          </button>
+        ))}
+        <button type="button" className="btn" disabled={vr.cuts === 0} onClick={() => c.undoCut()} data-testid="vr-undo-cut">
+          {t('vr.undoCut', { count: vr.cuts })}
+        </button>
+      </div>
+      {vr.scalpel ? <div className="menu-hint">{t('vr.scalpelHint')}</div> : null}
       <div className="vr-actions">
         <button type="button" className="btn" onClick={() => c.reset()} data-testid="vr-reset">
           {t('vr.reset')}

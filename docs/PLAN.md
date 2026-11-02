@@ -212,8 +212,8 @@ Part 1 — Phase B: MPR in the viewer
 
 Part 1 — Phase C: 3D
 - [x] Volume rendering with presets (CT bone / soft tissue / vessels / lung, MR, MIP), rotate / zoom / pan, reset
-- [ ] Opacity and color transfer editing (shift/width of the curve by dragging; preset curves editable in a panel)
-- [ ] Clipping box; scalpel (cut away the inside/outside of a drawn outline) with undo
+- [x] Opacity and color transfer editing (shift/width of the curve by dragging; preset curves editable in a panel)
+- [x] Clipping box; scalpel (cut away the inside/outside of a drawn outline) with undo
 - [ ] STL export of an iso-surface (threshold), computed off the UI thread, saved through a validated main-process
       save dialog, size limit
 

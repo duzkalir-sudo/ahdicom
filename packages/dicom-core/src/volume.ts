@@ -295,3 +295,29 @@ export function clipPlanes(v: VolumeGeometry, box: ClipBox): PlaneEquation[] {
 export function insidePlanes(planes: readonly PlaneEquation[], p: Vec3): boolean {
   return planes.every((q) => vec3.dot(vec3.sub(p, q.point), q.normal) >= -1e-9);
 }
+
+/**
+ * Rasterizes a closed polygon (canvas pixels) into a width × height mask: 1 where the pixel centre (x + 0.5, y + 0.5)
+ * lies inside (even–odd rule), else 0. Used by the 3D scalpel to decide which voxels a drawn outline covers.
+ */
+export function rasterizePolygon(points: readonly (readonly [number, number])[], width: number, height: number): Uint8Array {
+  const mask = new Uint8Array(Math.max(0, width * height));
+  if (points.length < 3) return mask;
+  const xs: number[] = [];
+  for (let y = 0; y < height; y++) {
+    const cy = y + 0.5;
+    xs.length = 0;
+    for (let i = 0; i < points.length; i++) {
+      const [x0, y0] = points[i]!;
+      const [x1, y1] = points[(i + 1) % points.length]!;
+      if ((y0 <= cy && y1 > cy) || (y1 <= cy && y0 > cy)) xs.push(x0 + ((cy - y0) / (y1 - y0)) * (x1 - x0));
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const from = Math.max(0, Math.ceil(xs[k]! - 0.5));
+      const to = Math.min(width - 1, Math.floor(xs[k + 1]! - 0.5));
+      for (let x = from; x <= to; x++) mask[y * width + x] = 1;
+    }
+  }
+  return mask;
+}
