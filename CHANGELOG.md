@@ -4,6 +4,14 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 
 ## [Unreleased]
 
+### Added (M4 part 2 — DSA and PET SUV window)
+- DSA for angiography runs (Shift+A): subtraction with a selectable mask frame, mask shift with Ctrl/Cmd+arrow keys or
+  the DSA panel (1 px / 0.1 px), automatic pixel shift.
+- PET: window text, SUV 0–5/10/15 presets and the probe in SUVbw; the W/L dialog can enter values in SUVbw.
+
+### Changed (M4)
+- "Original images" shortcut is Shift+V (Alt shortcuts collide with the Windows menu bar).
+
 ### Added (M4 part 1 — MPR and 3D)
 - MPR: any series that forms a volume can be shown as axial, coronal or sagittal reformats (Shift+M opens all three);
   series that cannot (missing geometry, colour, single projections) are refused with the reason; irregular slices or

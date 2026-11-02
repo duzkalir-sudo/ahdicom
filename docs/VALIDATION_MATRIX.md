@@ -140,6 +140,17 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Overlay redraw after resize next to a 3D view | E2E crosshair centre within 3 px of the viewport centre after 1920 → 1280 | Pass |
 | Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M4` (12 matrix + feature shots) | Inspected; fixed: stale crosshair after resize next to 3D |
 
+## DSA and PET SUV window (M4 part 2)
+
+| Requirement | Test | Evidence |
+|---|---|---|
+| Subtraction (linear; logarithmic for LIN), bilinear mask shift, automatic shift to 0.1 px | unit `dsa.test.ts` (synthetic motion +3/−2, sub-pixel 1.5/0.5, vessel outlier) | Pass |
+| DSA in the viewer: mask frame, manual (keys/buttons) and automatic shift, off; refused for non-angiography | E2E `m4-dsa` (background 0, vessel −200, auto shift [3, −2]) | Pass |
+| SUV window ↔ displayed range | unit `suv.test.ts` (round trips, preset 0–10) | Pass |
+| PET window text, presets, probe, W/L dialog in SUVbw; stored-value presets unchanged | E2E `m4-suv`, `m1-coverage` (user W/L preset on PET) | Pass |
+| STL IPC schema (name, layout, size) | unit `stl-schema.test.ts` | Pass |
+| Screenshots DSA and PET W/L × sizes × themes × languages | `artifacts/screenshots/M4` (dsa-*, pet-wl-suv-*) | Inspected; fixed: empty DSA tab, window level 0 |
+
 ## Performance (Windows 11 laptop, local GPU; `artifacts/perf-m1.json`)
 
 | Metric | Target | Measured |

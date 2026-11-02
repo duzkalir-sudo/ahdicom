@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-10-30_
+_Last updated: 2026-11-02_
 
 ## Current milestone
 **M2 — Measurements and annotations: done.** Pushed 2026-11-01; CI green on Windows and macOS arm64 (run 41285810910, 38/38 E2E on each). **M3 — Comparing series: done.** Pushed 2026-11-01; CI green on Windows and macOS arm64 (run 41331379030). Report: `docs/reports/M3-REPORT.md`. Report: `docs/reports/M2-REPORT.md`.
@@ -12,7 +12,7 @@ _Last updated: 2026-10-30_
 | M1 viewer | Done except: concatenation merge, Presentation LUT INVERSE not E2E-asserted, pixel padding not excluded from auto ranges (see PLAN [~]). |
 | M2 | Done: all tools, list, undo/redo, persistence. CI green on Windows + macOS arm64. |
 | M3 | Done: sync, link, reference lines, 3D cursor, split volumes, compare with prior. CI green on Windows + macOS arm64. |
-| M4 | Part 1 done locally (Windows 11): MPR (reformats, crosshair/oblique, slabs, measurements), 3D (presets, curves, clipping box, scalpel, STL). Waiting for user test round 1; part 2 (DSA, SUV window) next. Not pushed. |
+| M4 | Done locally (Windows 11): MPR, 3D, STL (user test round 1 OK), DSA, PET SUV window. Verifier pass 1 FAIL → fixed. Waiting for user test round 2, then push + CI. Report: `docs/reports/M4-REPORT.md`. |
 | M5–M8 | Not started. M8 needs explicit approval. |
 
 ## How to resume
