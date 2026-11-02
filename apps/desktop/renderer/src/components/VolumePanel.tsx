@@ -5,7 +5,7 @@ import { type ClipBox, type Vec3 } from '@ahdicom/dicom-core';
 import { useStore } from '../state/store';
 import type { ViewState } from '../viewer/controller';
 import { controllerAt, onControllersChanged } from '../viewer/registry';
-import { presetsFor, type VrPreset } from '../viewer/volume3d';
+import { presetsFor, type StlResult, type VrPreset } from '../viewer/volume3d';
 
 const FULL_BOX: ClipBox = { min: [0, 0, 0], max: [1, 1, 1] };
 /** Smallest box extent along an axis (fraction of the volume). */
@@ -18,6 +18,54 @@ function useActiveState(index: number): ViewState | undefined {
   useEffect(() => onControllersChanged(() => setRev((r) => r + 1)), []);
   useEffect(() => controllerAt(index)?.subscribe((state) => setVs({ index, state })), [index, rev]);
   return vs?.index === index && controllerAt(index) ? vs.state : undefined;
+}
+
+/** STL export of the iso-surface at a threshold (what the 3D view shows: after cuts, inside the clipping box). */
+function StlExport(props: { index: number; modality?: string }): ReactNode {
+  const { t } = useTranslation();
+  const [threshold, setThreshold] = useState(props.modality === 'CT' ? 300 : 100);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<StlResult>();
+  const run = async (): Promise<void> => {
+    setBusy(true);
+    setResult(undefined);
+    try {
+      setResult(await controllerAt(props.index)?.exportStl(threshold));
+    } finally {
+      setBusy(false);
+    }
+  };
+  let message: string | undefined;
+  if (busy) message = t('vr.stl.busy');
+  else if (result?.ok) message = result.saved ? t('vr.stl.saved', { count: result.triangles }) : t('vr.stl.cancelled');
+  else if (result) message = t(`vr.stl.${result.reason}`);
+  return (
+    <>
+      <div className="vr-section">{t('vr.stl.title')}</div>
+      <div className="field">
+        <label htmlFor="vr-stl-threshold">{t('vr.stl.threshold')}</label>
+        <input
+          id="vr-stl-threshold"
+          className="input"
+          type="number"
+          step={10}
+          value={threshold}
+          onChange={(e) => Number.isFinite(e.target.valueAsNumber) && setThreshold(e.target.valueAsNumber)}
+          data-testid="vr-stl-threshold"
+        />
+      </div>
+      <div className="vr-actions">
+        <button type="button" className="btn" disabled={busy} onClick={() => void run()} data-testid="vr-stl-export">
+          {t('vr.stl.export')}
+        </button>
+      </div>
+      {message ? (
+        <div className="menu-hint" data-testid="vr-stl-status">
+          {message}
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 export function VolumePanel(): ReactNode {
@@ -143,6 +191,7 @@ export function VolumePanel(): ReactNode {
         </button>
       </div>
       {vr.scalpel ? <div className="menu-hint">{t('vr.scalpelHint')}</div> : null}
+      <StlExport index={index} modality={ds?.modality} />
       <div className="vr-actions">
         <button type="button" className="btn" onClick={() => c.reset()} data-testid="vr-reset">
           {t('vr.reset')}

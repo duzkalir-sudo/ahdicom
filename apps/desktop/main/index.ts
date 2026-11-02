@@ -63,7 +63,10 @@ function buildMenu(): void {
     { role: 'editMenu' },
     {
       role: 'viewMenu',
-      submenu: [{ role: 'togglefullscreen' }, ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' as const }, { role: 'reload' as const }])],
+      submenu: [
+        { role: 'togglefullscreen' },
+        ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' as const }, { role: 'reload' as const }]),
+      ],
     },
     { role: 'windowMenu' },
   ];

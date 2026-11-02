@@ -43,6 +43,7 @@ test('launches with hardened renderer and no console errors', async () => {
         'recentRemove',
         'revealFile',
         'saveMeasurements',
+        'saveStl',
         'setFullscreen',
         'setSettings',
       ].sort(),

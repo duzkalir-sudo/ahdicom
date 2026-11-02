@@ -81,7 +81,12 @@ export function hardenSession(): void {
   // No network traffic: only the app bundle (and the dev server in development) may be requested.
   ses.webRequest.onBeforeRequest((details, callback) => {
     const u = details.url;
-    const ok = isAllowedUrl(u) || u.startsWith('data:') || u.startsWith('blob:') || u.startsWith('devtools://') || u.startsWith('chrome-extension://');
+    const ok =
+      isAllowedUrl(u) ||
+      u.startsWith('data:') ||
+      u.startsWith('blob:') ||
+      u.startsWith('devtools://') ||
+      u.startsWith('chrome-extension://');
     callback({ cancel: !ok });
   });
   if (DEV_SERVER_URL) {

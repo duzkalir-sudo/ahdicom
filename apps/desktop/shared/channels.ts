@@ -20,6 +20,7 @@ export const IPC = {
   clipboardWrite: 'clipboard:write',
   measurementsLoad: 'measurements:load',
   measurementsSave: 'measurements:save',
+  stlSave: 'stl:save',
 } as const;
 
 export const EVENTS = {

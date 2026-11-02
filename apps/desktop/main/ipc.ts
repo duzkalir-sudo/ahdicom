@@ -3,7 +3,7 @@
  * (3) never accepts file-system paths from the renderer except paths the preload resolved from dropped files.
  */
 import { BrowserWindow, app, clipboard, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
-import { open, readFile, stat } from 'node:fs/promises';
+import { open, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { z } from 'zod';
@@ -24,6 +24,7 @@ import {
   ScanIdSchema,
   SettingsPatchSchema,
   ZipPasswordSchema,
+  StlSaveSchema,
 } from '../shared/schemas';
 import type { AppInfo, OpenResult } from '../shared/api';
 import type { FileRegistry } from './files';
@@ -54,11 +55,7 @@ async function readPrefix(p: string, max: number): Promise<Uint8Array> {
 
 class IpcError extends Error {}
 
-function handle<S extends z.ZodType>(
-  channel: string,
-  schema: S,
-  fn: (event: IpcMainInvokeEvent, payload: z.infer<S>) => unknown,
-): void {
+function handle<S extends z.ZodType>(channel: string, schema: S, fn: (event: IpcMainInvokeEvent, payload: z.infer<S>) => unknown): void {
   ipcMain.handle(channel, async (event, raw: unknown) => {
     if (!isTrustedSender(event.senderFrame)) throw new IpcError('forbidden');
     const parsed = schema.safeParse(raw);
@@ -189,6 +186,19 @@ export function registerIpc(deps: IpcDeps): void {
 
   handle(IPC.clipboardWrite, ClipboardWriteSchema, (_e, { text }) => clipboard.writeText(text));
 
-  handle(IPC.measurementsLoad, z.object({ studyInstanceUid: UidSchema }), (_e, { studyInstanceUid }) => deps.measurements.load(studyInstanceUid));
+  handle(IPC.measurementsLoad, z.object({ studyInstanceUid: UidSchema }), (_e, { studyInstanceUid }) =>
+    deps.measurements.load(studyInstanceUid),
+  );
   handle(IPC.measurementsSave, MeasurementFileSchema, (_e, file) => deps.measurements.save(file));
+
+  // STL export: the user picks the destination in a save dialog; the renderer never supplies a path.
+  handle(IPC.stlSave, StlSaveSchema, async (event, { name, data }) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const options = { defaultPath: name, filters: [{ name: 'STL', extensions: ['stl'] }] };
+    const res = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+    if (res.canceled || !res.filePath) return false;
+    const target = /\.stl$/i.test(res.filePath) ? res.filePath : `${res.filePath}.stl`;
+    await writeFile(target, data);
+    return true;
+  });
 }

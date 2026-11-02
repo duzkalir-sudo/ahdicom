@@ -86,6 +86,8 @@ export interface Api {
   loadMeasurements(studyInstanceUid: string): Promise<MeasurementFile | null>;
   /** Saves (or, when empty, deletes) the measurements of a study. */
   saveMeasurements(file: MeasurementFile): Promise<void>;
+  /** Asks where to save a binary STL (save dialog) and writes it; false when the user cancelled. */
+  saveStl(name: string, data: Uint8Array): Promise<boolean>;
   on(event: 'scan:progress', cb: (p: ScanProgress) => void): () => void;
   on(event: 'scan:batch', cb: (b: ScanBatch) => void): () => void;
   on(event: 'scan:done', cb: (s: ScanSummary) => void): () => void;

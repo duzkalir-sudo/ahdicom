@@ -6,6 +6,7 @@
  */
 import vtkPlane from '@kitware/vtk.js/Common/DataModel/Plane';
 import { cache, volumeLoader, type Types } from '@cornerstonejs/core';
+import type { StlRequest, StlResponse } from './stl.worker';
 import {
   type ClipBox,
   type Vec3,
@@ -22,6 +23,11 @@ export type CutMode = 'inside' | 'outside';
 
 /** Undo steps kept for the scalpel. */
 const MAX_CUTS = 10;
+
+/** Largest STL export (triangles); MAX_STL_BYTES in the IPC schema matches. */
+export const MAX_STL_TRIANGLES = 10_000_000;
+
+export type StlResult = { ok: true; triangles: number; saved: boolean } | { ok: false; reason: 'empty' | 'tooLarge' | 'failed' };
 
 /** Rendering presets offered per modality; the transfer functions are Cornerstone's built-in presets. */
 export type VrPreset = 'bone' | 'softTissue' | 'vessels' | 'lung' | 'mip' | 'mrDefault' | 'mrAngio' | 'mrMip';
@@ -281,6 +287,36 @@ export class VolumeRendering {
     copy!.modified();
     this.viewport().render();
     this.state = { ...this.state, cuts: this.undoStack.length };
+  }
+
+  /**
+   * Exports the iso-surface at `threshold` of what the view shows (after scalpel cuts, inside the clipping box) as a
+   * binary STL in patient coordinates (mm), computed in a worker, then saved where the user chooses.
+   */
+  async exportStl(threshold: number, name: string): Promise<StlResult> {
+    const volume = cache.getVolume(this.copy?.volumeId ?? this.sourceVolumeId);
+    const scalars = volume?.voxelManager?.getCompleteScalarDataArray?.() as Scalars | undefined;
+    if (!scalars) return { ok: false, reason: 'failed' };
+    const worker = new Worker(new URL('./stl.worker.ts', import.meta.url), { type: 'module' });
+    try {
+      const res = await new Promise<StlResponse>((resolve) => {
+        worker.onmessage = (e: MessageEvent<StlResponse>) => resolve(e.data);
+        worker.onerror = () => resolve({ ok: false, reason: 'failed' });
+        const req: StlRequest = {
+          scalars,
+          geometry: this.geometry,
+          threshold,
+          maxTriangles: MAX_STL_TRIANGLES,
+          ...(this.state.clip ? { clip: this.state.clip } : {}),
+        };
+        worker.postMessage(req, [scalars.buffer]);
+      });
+      if (!res.ok) return res;
+      const saved = await window.api.saveStl(name, res.bytes);
+      return { ok: true, triangles: res.triangles, saved };
+    } finally {
+      worker.terminate();
+    }
   }
 
   /** Back to the uncut source volume; the cut copy is released. */

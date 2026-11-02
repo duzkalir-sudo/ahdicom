@@ -60,7 +60,7 @@ import { lutsFor, modalityLutApplied } from './lut';
 import { cancelDrawingOn, isDrawing } from './annotations';
 import { definingPoints } from './measureDoc';
 import { measureToolOf, type ReformatRef } from './measurements';
-import { VolumeRendering, type CutMode, type VrPreset, type VrState } from './volume3d';
+import { VolumeRendering, type CutMode, type StlResult, type VrPreset, type VrState } from './volume3d';
 import { type ViewKind, useStore } from '../state/store';
 import { planesOf } from './sync';
 
@@ -393,6 +393,13 @@ export class ViewportController {
     if (this.kind !== '3d' || !this.vr) return;
     this.vr.armScalpel(mode);
     this.emit({ vr: this.vr.state });
+  }
+
+  /** 3D view: exports the iso-surface at a threshold as STL (save dialog). */
+  async exportStl(threshold: number): Promise<StlResult | undefined> {
+    if (this.kind !== '3d' || !this.vr) return undefined;
+    const name = `surface-${String(Math.round(threshold * 100) / 100)}.stl`;
+    return this.vr.exportStl(threshold, name);
   }
 
   /** 3D view: undoes the last scalpel cut. */

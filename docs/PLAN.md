@@ -199,7 +199,7 @@ Part 1 — Phase A: volume geometry in `dicom-core`
 - [x] Reformat planes: axial/coronal/sagittal in patient axes, oblique rotation about the crosshair point, slice
       count and spacing along any normal
 - [x] Slab projection reference (MIP / MinIP / average along the normal) on an analytic phantom
-- [ ] Iso-surface reference: marching-cubes area/volume of a sphere phantom against the analytic answer
+- [x] Iso-surface reference: marching-cubes area/volume of a sphere phantom against the analytic answer
 
 Part 1 — Phase B: MPR in the viewer
 - [x] Volume loading through the app's image loader (progress, cancel on close, memory limit with a readable refusal)
@@ -214,7 +214,7 @@ Part 1 — Phase C: 3D
 - [x] Volume rendering with presets (CT bone / soft tissue / vessels / lung, MR, MIP), rotate / zoom / pan, reset
 - [x] Opacity and color transfer editing (shift/width of the curve by dragging; preset curves editable in a panel)
 - [x] Clipping box; scalpel (cut away the inside/outside of a drawn outline) with undo
-- [ ] STL export of an iso-surface (threshold), computed off the UI thread, saved through a validated main-process
+- [x] STL export of an iso-surface (threshold), computed off the UI thread, saved through a validated main-process
       save dialog, size limit
 
 Part 1 — Phase D: verification

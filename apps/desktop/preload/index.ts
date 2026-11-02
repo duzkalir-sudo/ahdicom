@@ -42,6 +42,7 @@ const api: Api = {
   copyText: (text: string) => ipcRenderer.invoke(IPC.clipboardWrite, { text }),
   loadMeasurements: (studyInstanceUid: string) => ipcRenderer.invoke(IPC.measurementsLoad, { studyInstanceUid }),
   saveMeasurements: (file) => ipcRenderer.invoke(IPC.measurementsSave, file),
+  saveStl: (name, data) => ipcRenderer.invoke(IPC.stlSave, { name, data }),
   on: ((event: EventName, cb: (payload: unknown) => void) => {
     if (!ALLOWED_EVENTS.has(event)) throw new Error('event not allowed');
     const listener = (_e: IpcRendererEvent, payload: unknown): void => cb(payload);

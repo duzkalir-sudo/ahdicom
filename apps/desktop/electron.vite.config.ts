@@ -10,8 +10,12 @@ import { CSP_META } from './shared/csp';
 const cspMeta: Plugin = {
   name: 'cdv-csp-meta',
   apply: 'build',
-  transformIndexHtml: (html) => html.replace('<head>', `<head>
-    <meta http-equiv="Content-Security-Policy" content="${CSP_META}" />`),
+  transformIndexHtml: (html) =>
+    html.replace(
+      '<head>',
+      `<head>
+    <meta http-equiv="Content-Security-Policy" content="${CSP_META}" />`,
+    ),
 };
 
 const out = resolve(__dirname, 'out');

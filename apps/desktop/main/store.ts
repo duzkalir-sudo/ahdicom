@@ -102,7 +102,11 @@ export class RecentStore {
   }
 
   async add(entry: Omit<RecentEntry, 'id' | 'openedAt'>): Promise<void> {
-    const key = (e: Pick<RecentEntry, 'roots'>): string => e.roots.map((r) => path.resolve(r)).sort().join('|');
+    const key = (e: Pick<RecentEntry, 'roots'>): string =>
+      e.roots
+        .map((r) => path.resolve(r))
+        .sort()
+        .join('|');
     const k = key(entry);
     this.entries = this.entries.filter((e) => key(e) !== k);
     this.entries.unshift({ ...entry, id: randomBytes(8).toString('hex'), openedAt: new Date().toISOString() });

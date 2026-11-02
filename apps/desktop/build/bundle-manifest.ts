@@ -47,7 +47,14 @@ export function bundleManifest(target: string, outRoot: string): Plugin {
       }
       const all = new Map(existing.map((e) => [`${e.name}@${e.version}`, e]));
       for (const e of pkgs.values()) all.set(`${e.name}@${e.version}`, e);
-      writeFileSync(file, JSON.stringify([...all.values()].sort((a, b) => a.name.localeCompare(b.name)), null, 2));
+      writeFileSync(
+        file,
+        JSON.stringify(
+          [...all.values()].sort((a, b) => a.name.localeCompare(b.name)),
+          null,
+          2,
+        ),
+      );
     },
   };
 }

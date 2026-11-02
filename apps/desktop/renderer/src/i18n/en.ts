@@ -194,6 +194,17 @@ export const en: Shape<Resources> = {
     undoCut: 'Undo cut ({{count}})',
     scalpelHint:
       'Draw an outline on the 3D view with the left button. The cut goes through the whole volume; reformats and original images are not changed.',
+    stl: {
+      title: 'STL export (3D printing)',
+      threshold: 'Surface threshold',
+      export: 'Export STL…',
+      busy: 'Computing the surface…',
+      saved: 'Saved: {{count}} triangles.',
+      cancelled: 'Not saved.',
+      empty: 'No surface at this threshold.',
+      tooLarge: 'Too many triangles (over 10 million): raise the threshold or use the clipping box.',
+      failed: 'The surface could not be computed.',
+    },
     reset: 'Reset 3D view',
     hint: 'Left drag rotates, middle drag pans, right drag or the wheel zooms.',
   },

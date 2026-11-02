@@ -7,7 +7,7 @@ directories:
   buildResources: build-resources
 files:
   - out/**
-  - "!out/bundle-manifests/**"
+  - '!out/bundle-manifests/**'
   - package.json
 extraMetadata:
   main: out/main/index.js

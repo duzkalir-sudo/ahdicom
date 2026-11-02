@@ -116,7 +116,10 @@ export const MeasurementItemSchema = z.object({
   tool: z.enum(MEASUREMENT_TOOLS),
   sopInstanceUid: UidSchema,
   frame: z.number().int().min(1).max(100000).optional(),
-  points: z.array(z.tuple([Finite, Finite])).min(1).max(5000),
+  points: z
+    .array(z.tuple([Finite, Finite]))
+    .min(1)
+    .max(5000),
   closed: z.boolean().optional(),
   /** Arrow / text annotation text. */
   label: z.string().max(200).optional(),
@@ -157,3 +160,19 @@ export type RecentEntry = z.infer<typeof RecentEntrySchema>;
 /** What the renderer receives: no file-system paths. */
 export type RecentEntryPublic = Omit<RecentEntry, 'roots'>;
 export const RecentFileSchema = z.object({ version: z.literal(1), entries: z.array(RecentEntrySchema).max(50) });
+
+/** Largest STL accepted from the renderer (10 million triangles). */
+export const MAX_STL_BYTES = 84 + 50 * 10_000_000;
+
+/** A binary STL to save: suggested file name (no path) and the file bytes, checked for the binary STL layout. */
+export const StlSaveSchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[\w .-]+\.stl$/i),
+  data: z
+    .instanceof(Uint8Array)
+    .refine((d) => d.byteLength >= 84 && d.byteLength <= MAX_STL_BYTES, 'size')
+    .refine((d) => d.byteLength === 84 + 50 * new DataView(d.buffer, d.byteOffset, d.byteLength).getUint32(80, true), 'layout'),
+});

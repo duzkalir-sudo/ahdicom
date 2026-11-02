@@ -1,6 +1,8 @@
 /**
  * M4 3D volume rendering in the real app on the CT phantom (spheres of known HU in a water cylinder).
  */
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { cdvState, expectNoErrors, fixture, launch, openPaths, screenshot, vpState, waitReady, type Session } from './harness';
 import { grab, type Gray } from './pixels';
@@ -157,6 +159,49 @@ test('3D scalpel cuts only the 3D view and can be undone', async () => {
     );
     await s.page.mouse.move(p.x, p.y);
     await expect.poll(async () => (await v(s.page, 1)).probe?.value).toBe(1000);
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+/** Enclosed volume of the triangles of a binary STL (mm³). */
+function stlVolume(bytes: Buffer): { triangles: number; volume: number } {
+  const n = bytes.readUInt32LE(80);
+  expect(bytes.length).toBe(84 + 50 * n);
+  let v = 0;
+  for (let t = 0; t < n; t++) {
+    const o = 84 + 50 * t + 12;
+    const p = Array.from({ length: 9 }, (_, k) => bytes.readFloatLE(o + 4 * k));
+    const [ax, ay, az, bx, by, bz, cx, cy, cz] = p as [number, number, number, number, number, number, number, number, number];
+    v += ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
+  }
+  return { triangles: n, volume: v / 6 };
+}
+
+test('STL export of the iso-surface: the 1000 HU sphere at 500 HU encloses 4/3·π·r³', async () => {
+  const s = await launch({ lang: 'en' });
+  const out = path.join(s.userData, 'sphere.stl');
+  try {
+    await s.app.evaluate(({ dialog }, file) => {
+      dialog.showSaveDialog = (async () => ({ canceled: false, filePath: file })) as unknown as typeof dialog.showSaveDialog;
+    }, out);
+    await openPaths(s, [fixture('ct-phantom')]);
+    await waitReady(s.page);
+    await open3d(s);
+    await s.page.getByTestId('vr-stl-threshold').fill('500');
+    await s.page.getByTestId('vr-stl-export').click();
+    await expect(s.page.getByTestId('vr-stl-status')).toHaveText(/^Saved: \d+ triangles\.$/, { timeout: 30000 });
+    const { triangles, volume } = stlVolume(readFileSync(out));
+    expect(triangles).toBeGreaterThan(500);
+    // Outward-facing triangles (positive volume); r = 10 mm → 4188.8 mm³. 0.5 × 0.5 × 2.5 mm voxels: within 10 %.
+    expect(volume).toBeGreaterThan(0);
+    expect(Math.abs(volume / ((4 / 3) * Math.PI * 1000) - 1)).toBeLessThan(0.1);
+    // A threshold above every value gives no surface.
+    await s.page.getByTestId('vr-stl-threshold').fill('5000');
+    await s.page.getByTestId('vr-stl-export').click();
+    await expect(s.page.getByTestId('vr-stl-status')).toHaveText('No surface at this threshold.');
+    await screenshot(s.page, 'M4', '3d-stl-1280x800-dark-en');
     expectNoErrors(s);
   } finally {
     await s.close();

@@ -24,7 +24,14 @@ export interface ScanWorkerInput {
 }
 
 export type ScanWorkerMessage =
-  | { type: 'progress'; phase: 'listing' | 'extracting' | 'parsing'; filesFound: number; filesDone: number; instances: number; skipped: number }
+  | {
+      type: 'progress';
+      phase: 'listing' | 'extracting' | 'parsing';
+      filesFound: number;
+      filesDone: number;
+      instances: number;
+      skipped: number;
+    }
   | { type: 'batch'; items: { path: string; instance: InstanceRecord }[] }
   | { type: 'needPassword'; requestId: string; archiveName: string; retry: boolean }
   | { type: 'tempDir'; path: string }
@@ -70,7 +77,14 @@ function progress(force = false): void {
   const now = Date.now();
   if (!force && now - lastProgress < 100) return;
   lastProgress = now;
-  post({ type: 'progress', phase, filesFound: files.length, filesDone, instances: instancesCount, skipped: notDicom + Object.values(errors).reduce((a, b) => a + b, 0) });
+  post({
+    type: 'progress',
+    phase,
+    filesFound: files.length,
+    filesDone,
+    instances: instancesCount,
+    skipped: notDicom + Object.values(errors).reduce((a, b) => a + b, 0),
+  });
 }
 
 function addFile(p: string): void {
@@ -214,7 +228,8 @@ async function expandZip(zipPath: string): Promise<void> {
     const fileEntries = entries.filter((e): e is FileEntry => !e.directory);
     const total = fileEntries.reduce((s, e) => s + e.uncompressedSize, 0);
     const bomb = fileEntries.some(
-      (e) => e.uncompressedSize > SCAN_LIMITS.zipBombMinBytes && e.uncompressedSize / Math.max(1, e.compressedSize) > SCAN_LIMITS.zipMaxRatio,
+      (e) =>
+        e.uncompressedSize > SCAN_LIMITS.zipBombMinBytes && e.uncompressedSize / Math.max(1, e.compressedSize) > SCAN_LIMITS.zipMaxRatio,
     );
     if (bomb || total > SCAN_LIMITS.zipMaxTotalBytes) {
       archiveErrors.push('zipBomb');
@@ -389,6 +404,14 @@ async function main(): Promise<void> {
 main().catch(() => {
   post({
     type: 'done',
-    summary: { instances: instancesCount, notDicom, errors: { ...errors, readError: (errors.readError ?? 0) + 1 }, archiveErrors, cancelled: false, usedDicomdir, durationMs: 0 },
+    summary: {
+      instances: instancesCount,
+      notDicom,
+      errors: { ...errors, readError: (errors.readError ?? 0) + 1 },
+      archiveErrors,
+      cancelled: false,
+      usedDicomdir,
+      durationMs: 0,
+    },
   });
 });

@@ -187,6 +187,17 @@ export const tr = {
     undoCut: 'Kesmeyi geri al ({{count}})',
     scalpelHint:
       '3B görünümde sol tuşla bir çizgi çizin. Kesme tüm hacim boyunca uygulanır; yeniden yapılandırmalar ve orijinal görüntüler değişmez.',
+    stl: {
+      title: 'STL dışa aktarma (3B baskı)',
+      threshold: 'Yüzey eşiği',
+      export: 'STL olarak kaydet…',
+      busy: 'Yüzey hesaplanıyor…',
+      saved: 'Kaydedildi: {{count}} üçgen.',
+      cancelled: 'Kaydedilmedi.',
+      empty: 'Bu eşikte yüzey yok.',
+      tooLarge: 'Çok fazla üçgen (10 milyondan fazla): eşiği yükseltin veya kesme kutusunu kullanın.',
+      failed: 'Yüzey hesaplanamadı.',
+    },
     reset: '3B görünümü sıfırla',
     hint: 'Sol sürükleme döndürür, orta sürükleme kaydırır, sağ sürükleme veya tekerlek yakınlaştırır.',
   },
