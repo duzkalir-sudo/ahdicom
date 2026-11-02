@@ -227,7 +227,7 @@ Part 1 — Phase D: verification
 Part 2
 - [x] DSA for XA multi-frame: subtraction with a selectable mask frame, manual pixel shift (arrow keys), automatic
       pixel shift; unit tests on synthetic frames with a known shift; XA fixture with a moving mask
-- [ ] SUV window values (PET window/level shown and set in SUVbw)
+- [x] SUV window values (PET window/level shown and set in SUVbw)
 - [ ] E2E, screenshots, verifier subagent, docs, report (`docs/reports/M4-REPORT.md`); user test round 2
 - [ ] Push to GitHub once at the end of M4 (with approval) and check the Windows + macOS CI
 

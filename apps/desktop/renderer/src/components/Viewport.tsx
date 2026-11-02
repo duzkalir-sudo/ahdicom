@@ -54,7 +54,15 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
       const val = Array.isArray(probe.value)
         ? probe.value.join(' ')
         : `${fmtValue(probe.value, locale)}${probe.unit === 'raw' ? '' : ` ${t(`units.${probe.unit}`)}`}`;
-      probeText = t('viewport.probe', { x: probe.column, y: probe.row, value: probe.padding ? `${val} (${t('viewport.padding')})` : val });
+      const suvText =
+        vs.suv && typeof probe.value === 'number' && !probe.padding
+          ? ` · ${t('viewport.suv', { value: formatNumber(probe.value * vs.suv, 2, locale) })}`
+          : '';
+      probeText = t('viewport.probe', {
+        x: probe.column,
+        y: probe.row,
+        value: probe.padding ? `${val} (${t('viewport.padding')})` : `${val}${suvText}`,
+      });
     }
   }
   const sex = inst.patientSex ? ` · ${inst.patientSex}` : '';
@@ -132,7 +140,15 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
           <div data-testid="wl-text">{t('viewport.voiLut', { name: vs.voiLutName })}</div>
         ) : null}
         {vs.view === '3d' && vs.vr ? <div data-testid="vr-text">{t(`vr.presets.${vs.vr.preset}`)}</div> : null}
-        {o.windowLevel && vs.voiLutName === undefined && vs.wl && vs.view !== '3d' ? (
+        {o.windowLevel && vs.voiLutName === undefined && vs.voi && vs.suv && vs.view !== '3d' ? (
+          <div data-testid="wl-text">
+            {t('viewport.wlSuv', {
+              width: formatNumber((vs.voi.upper - vs.voi.lower) * vs.suv, 2, locale),
+              center: formatNumber(((vs.voi.upper + vs.voi.lower) / 2) * vs.suv, 2, locale),
+            })}
+          </div>
+        ) : null}
+        {o.windowLevel && vs.voiLutName === undefined && vs.wl && vs.view !== '3d' && !vs.suv ? (
           <div data-testid="wl-text">
             {t('viewport.wl', { width: fmtValue(round(vs.wl.width), locale), center: fmtValue(round(vs.wl.center), locale) })}
           </div>

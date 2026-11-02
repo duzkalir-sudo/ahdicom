@@ -243,9 +243,16 @@ function WindowLevelDialog(): ReactNode {
   const c = controllerAt(activeIndex);
   const vs = c?.getState();
   const fn = vs?.voiFn === 'LINEAR_EXACT' ? 'LINEAR_EXACT' : 'LINEAR';
+  // PET with SUV: values are entered in SUVbw (window = range width and centre, no DICOM +1 convention).
+  const suv = vs?.suv;
   const valuesFor = (m: 'window' | 'range'): [string, string] => {
     if (!vs?.voi) return ['', ''];
     const r2 = (v: number): string => String(Math.round(v * 100) / 100);
+    if (suv) {
+      const lo = vs.voi.lower * suv;
+      const hi = vs.voi.upper * suv;
+      return m === 'range' ? [r2(lo), r2(hi)] : [r2(hi - lo), r2((hi + lo) / 2)];
+    }
     if (m === 'range') return [r2(vs.voi.lower), r2(vs.voi.upper)];
     const wl = rangeToWindow(vs.voi, fn);
     return [r2(wl.width), r2(wl.center)];
@@ -263,10 +270,13 @@ function WindowLevelDialog(): ReactNode {
   const close = (): void => useStore.getState().setDialog(null);
   const na = Number(a.replace(',', '.'));
   const nb = Number(b.replace(',', '.'));
-  const valid = Number.isFinite(na) && Number.isFinite(nb) && (mode === 'window' ? na >= 1 : nb > na);
+  const valid = Number.isFinite(na) && Number.isFinite(nb) && (mode === 'window' ? na >= (suv ? 0.01 : 1) : nb > na);
   const apply = (): void => {
     if (!valid || !c) return;
-    if (mode === 'window') c.setWindow({ width: na, center: nb });
+    if (suv) {
+      const [lo, hi] = mode === 'window' ? [nb - na / 2, nb + na / 2] : [na, nb];
+      c.setRange({ lower: lo / suv, upper: hi / suv });
+    } else if (mode === 'window') c.setWindow({ width: na, center: nb });
     else c.setRange({ lower: na, upper: nb });
     close();
   };
@@ -337,7 +347,12 @@ function WindowLevelDialog(): ReactNode {
             />
           </div>
         </div>
-        {valid && mode === 'window' ? (
+        {suv ? (
+          <div className="muted" data-testid="wl-suv-hint">
+            {t('dialogs.suvUnits')}
+          </div>
+        ) : null}
+        {valid && mode === 'window' && !suv ? (
           <div className="muted num" style={{ marginBottom: 10 }}>
             {(() => {
               const r = windowToRange({ width: na, center: nb }, fn);
@@ -351,7 +366,7 @@ function WindowLevelDialog(): ReactNode {
             <input id="wl-name" className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={64} />
           </div>
           <div className="field" style={{ alignSelf: 'end' }}>
-            <button type="button" className="btn" onClick={save} disabled={!valid || !name.trim()}>
+            <button type="button" className="btn" onClick={save} disabled={!valid || !name.trim() || Boolean(suv)}>
               {t('dialogs.savePreset')}
             </button>
           </div>

@@ -65,7 +65,7 @@ import {
 import { lutsFor, modalityLutApplied } from './lut';
 import { cancelDrawingOn, isDrawing } from './annotations';
 import { definingPoints } from './measureDoc';
-import { measureToolOf, type ReformatRef } from './measurements';
+import { measureToolOf, suvFactorFor, type ReformatRef } from './measurements';
 import { VolumeRendering, type CutMode, type StlResult, type VrPreset, type VrState } from './volume3d';
 import { type ViewKind, useStore } from '../state/store';
 import { planesOf } from './sync';
@@ -97,6 +97,8 @@ export interface ViewState {
   slab?: { mode: SlabMode; thickness: number };
   /** 3D view: preset, transfer-function shift/opacity and clipping box. */
   vr?: VrState;
+  /** PET: SUVbw per Bq/ml of the image shown, when SUV is available (window and probe are also shown in SUV). */
+  suv?: number;
   /** DSA: mask frame (index), mask shift in pixels and linear/log subtraction. */
   dsa?: { mask: number; shift: [number, number]; mode: DsaMode };
   displaySetId?: string;
@@ -133,6 +135,7 @@ const EMPTY: ViewState = {
   slab: undefined,
   vr: undefined,
   dsa: undefined,
+  suv: undefined,
   displaySetId: undefined,
   imageId: undefined,
   voi: undefined,
@@ -1170,6 +1173,7 @@ export class ViewportController {
       labels,
       basis,
       mmPerCssPx: ratio && colMm ? ratio * colMm : undefined,
+      suv: imageId && this.ds.modality === 'PT' ? suvFactorFor(imageId) : undefined,
     });
     if (this.lastPointer) this.probeAt(this.lastPointer.x, this.lastPointer.y);
     void this.drawOverlays();

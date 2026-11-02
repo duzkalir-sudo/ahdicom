@@ -50,7 +50,7 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { CT_PRESETS, PET_PERCENT_PRESETS, percentRange, type SlabMode } from '@ahdicom/dicom-core';
+import { CT_PRESETS, PET_PERCENT_PRESETS, PET_SUV_PRESETS, percentRange, type SlabMode } from '@ahdicom/dicom-core';
 import {
   applyPreset,
   closeAll,
@@ -298,6 +298,7 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
   const s = useStore();
   const ds = displaySetAt(s.activeIndex);
   const c = controllerAt(s.activeIndex);
+  const suv = c?.getState().suv;
   const modality = ds?.firstInstance.modality;
   const run = (fn: () => void): void => {
     fn();
@@ -356,9 +357,16 @@ function PresetMenu(props: { anchor: HTMLElement | null; onClose: () => void }):
               {t(p.labelKey, { value: p.upperPercent })}
             </MenuItem>
           ))}
-          <MenuItem disabled onClick={() => undefined}>
-            {t('presets.suvRange', { value: 5 })}
-          </MenuItem>
+          {PET_SUV_PRESETS.map((p) => (
+            <MenuItem
+              key={p.id}
+              testId={`preset-${p.id}`}
+              disabled={!suv}
+              onClick={() => run(() => suv && c?.setRange({ lower: p.lower / suv, upper: p.upper / suv }))}
+            >
+              {t(p.labelKey, { value: p.upper })}
+            </MenuItem>
+          ))}
         </>
       ) : (
         CT_PRESETS.map((p) => (

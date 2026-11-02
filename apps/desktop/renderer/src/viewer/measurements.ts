@@ -488,6 +488,14 @@ function statsUnit(ref: Pick<ImageRef, 'inst' | 'earliestAcquisition'>): { unit:
   return { unit: 'raw', factor: 1 };
 }
 
+/** SUVbw factor (SUV per Bq/ml) of a PET image, or undefined when SUV is not available for it. */
+export function suvFactorFor(imageId: string): number | undefined {
+  const ref = imageRef(imageId);
+  if (ref?.inst.modality !== 'PT') return undefined;
+  const u = statsUnit(ref);
+  return u.unit === 'suv' ? u.factor : undefined;
+}
+
 function statsLines(ref: Pick<ImageRef, 'inst' | 'earliestAcquisition'>, s: RoiStats | undefined): string[] {
   if (!s) return [];
   const { unit, factor, refusal } = statsUnit(ref);
