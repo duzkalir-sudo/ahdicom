@@ -108,6 +108,15 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
             <div>{t('viewport.location', { value: `${formatNumber(location.mm, 2, locale)} (${location.towards})` })}</div>
           ) : null}
           {thickness !== undefined ? <div>{t('viewport.thickness', { value: formatNumber(thickness, 2, locale) })}</div> : null}
+          {vs.dsa ? (
+            <div data-testid="dsa-text">
+              {t('dsa.overlay', {
+                mask: vs.dsa.mask + 1,
+                x: formatNumber(vs.dsa.shift[0], 1, locale),
+                y: formatNumber(vs.dsa.shift[1], 1, locale),
+              })}
+            </div>
+          ) : null}
           {vs.slab ? (
             <div data-testid="slab-text">
               {t('view.slabText', { mode: t(`view.slabShort.${vs.slab.mode}`), value: formatNumber(vs.slab.thickness, 1, locale) })}

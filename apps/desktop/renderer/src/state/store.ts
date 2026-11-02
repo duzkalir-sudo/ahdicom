@@ -6,7 +6,7 @@ import type { RecentEntryPublic, Settings } from '../../../shared/schemas';
 import type { LeftTool } from '../viewer/cornerstone';
 
 export type LayoutSpec = { kind: 'grid'; rows: number; cols: number } | { kind: '1+2' } | { kind: '2+1' };
-export type RightTab = 'measurements' | 'tags' | 'info' | '3d';
+export type RightTab = 'measurements' | 'tags' | 'info' | '3d' | 'dsa';
 export type DialogKind = 'about' | 'shortcuts' | 'settings' | 'windowLevel' | null;
 
 export const MAX_VIEWPORTS = 25;

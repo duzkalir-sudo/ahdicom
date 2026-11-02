@@ -8,6 +8,7 @@ import { utilities as toolUtils } from '@cornerstonejs/tools';
 import {
   type ClipBox,
   type DisplaySet,
+  type DsaMode,
   type EdgeLabels,
   type ImagePlane,
   type MprRefusal,
@@ -27,6 +28,8 @@ import {
   patientImageAxes,
   patientToPixel,
   STANDARD_VIEWS,
+  autoShift,
+  dsaModeFor,
   mprCheck,
   nearestVoxel,
   planePixel,
@@ -48,12 +51,15 @@ import {
   RENDERING_ENGINE_ID,
   TOOL_GROUP_ID,
   VolumeLoadError,
+  createDsaImages,
+  forgetDsa,
   frameOf,
   fileIdOf,
   getEngine,
   getToolGroup,
   imageIdsFor,
   loadVolume,
+  modalityValues,
   type ToolGroupKind,
 } from './cornerstone';
 import { lutsFor, modalityLutApplied } from './lut';
@@ -91,6 +97,8 @@ export interface ViewState {
   slab?: { mode: SlabMode; thickness: number };
   /** 3D view: preset, transfer-function shift/opacity and clipping box. */
   vr?: VrState;
+  /** DSA: mask frame (index), mask shift in pixels and linear/log subtraction. */
+  dsa?: { mask: number; shift: [number, number]; mode: DsaMode };
   displaySetId?: string;
   index: number;
   total: number;
@@ -124,6 +132,7 @@ const EMPTY: ViewState = {
   reformat: undefined,
   slab: undefined,
   vr: undefined,
+  dsa: undefined,
   displaySetId: undefined,
   imageId: undefined,
   voi: undefined,
@@ -175,6 +184,9 @@ export class ViewportController {
   /** Volume views: the volume grid and the stack of reformatted planes for the current camera. */
   private vol?: { volumeId: string; geometry: VolumeGeometry; warnings: StackWarning[]; stack?: ReformatStack };
   private vr?: VolumeRendering;
+  /** DSA parameters in use: their registry key and the subtracted image ids shown. */
+  private dsaToken = 0;
+  private dsa?: { mask: number; shift: [number, number]; mode: DsaMode; ids: string[] };
 
   constructor(
     readonly index: number,
@@ -267,7 +279,8 @@ export class ViewportController {
       return;
     }
     if (ds && this.ds?.id === ds.id && view === this.kind) {
-      if (ids.join('|') === this.imageIds.join('|')) return;
+      if (ids.join('|') === (this.dsa ? imageIdsFor(this.ds) : this.imageIds).join('|')) return;
+      this.endDsa();
       // Same series, more images arrived (or re-sorted): keep the current image.
       const current = this.imageIds[this.viewport.getCurrentImageIdIndex()];
       this.ds = ds;
@@ -281,6 +294,7 @@ export class ViewportController {
     // A VOI LUT transfer function of the previous series must not carry over.
     if (this.state.voiLutName) this.clearVoiLut();
     const token = ++this.loadToken;
+    this.endDsa();
     this.switchKind(view);
     this.ds = ds;
     this.imageIds = view === 'stack' ? ids : [];
@@ -325,6 +339,89 @@ export class ViewportController {
     } catch {
       if (token === this.loadToken) this.emit({ status: 'error' });
     }
+  }
+
+  /** DSA is offered for X-ray angiography runs (XA, RF) of at least two grayscale frames of one size. */
+  dsaAvailable(): boolean {
+    const ds = this.ds;
+    if (this.kind !== 'stack' || !ds || ds.images.length < 2) return false;
+    const inst = ds.firstInstance;
+    return (
+      (inst.modality === 'XA' || inst.modality === 'RF') &&
+      (inst.samplesPerPixel ?? 1) === 1 &&
+      !ds.warnings.some((w) => w.code === 'mixedDimensions')
+    );
+  }
+
+  /**
+   * Shows the frames with a mask frame subtracted (DSA), the mask moved by `shift` pixels; undefined shows the
+   * original frames. Turning DSA on or off resets the window (the value ranges differ); changing the mask or the
+   * shift keeps it.
+   */
+  async setDsa(p: { mask: number; shift: [number, number] } | undefined): Promise<void> {
+    const ds = this.ds;
+    if (!ds || !this.hasImage() || (p && !this.dsaAvailable())) return;
+    const live = imageIdsFor(ds);
+    const old = this.dsa;
+    const token = ++this.dsaToken;
+    if (p) {
+      const mask = Math.min(live.length - 1, Math.max(0, Math.round(p.mask)));
+      const shift: [number, number] = [Math.round(p.shift[0] * 10) / 10 + 0, Math.round(p.shift[1] * 10) / 10 + 0];
+      const mode = dsaModeFor(ds.firstInstance.pixelIntensityRelationship);
+      // A newer request (or another series) makes this one obsolete.
+      const stale = (): boolean => token !== this.dsaToken || this.ds !== ds || this.disposed;
+      let ids: string[] | undefined;
+      try {
+        ids = await createDsaImages(live, { maskImageId: live[mask]!, shift, mode }, stale);
+      } catch {
+        ids = undefined;
+      }
+      if (!ids || stale()) {
+        if (ids) forgetDsa(ids);
+        return;
+      }
+      this.dsa = { mask, shift, mode, ids };
+    } else this.dsa = undefined;
+    const index = this.viewport.getCurrentImageIdIndex();
+    const voi = Boolean(old) === Boolean(p) ? this.viewport.getProperties().voiRange : undefined;
+    this.imageIds = this.dsa?.ids ?? live;
+    await this.viewport.setStack(this.imageIds, index).catch(() => undefined);
+    if (voi) this.viewport.setProperties({ voiRange: voi });
+    else if (this.dsa) {
+      // Subtracted frames: grey at zero difference (Cornerstone cannot derive a window centred on 0 by itself).
+      const img = cache.getImage(this.imageIds[index]!);
+      const half = img ? Math.max(1, Math.abs(img.minPixelValue), Math.abs(img.maxPixelValue)) : 1;
+      this.viewport.setProperties({ voiRange: { lower: -half, upper: half } });
+    }
+    this.viewport.render();
+    if (old) forgetDsa(old.ids);
+    this.emit({ dsa: this.dsa ? { mask: this.dsa.mask, shift: this.dsa.shift, mode: this.dsa.mode } : undefined });
+    this.update();
+  }
+
+  /** Moves the DSA mask by (dx, dy) pixels. */
+  shiftDsa(dx: number, dy: number): void {
+    if (this.dsa) void this.setDsa({ mask: this.dsa.mask, shift: [this.dsa.shift[0] + dx, this.dsa.shift[1] + dy] });
+  }
+
+  /** The mask shift that best matches the frame shown now (automatic pixel shift). */
+  async autoDsaShift(): Promise<void> {
+    const ds = this.ds;
+    const dsa = this.dsa;
+    if (!ds || !dsa) return;
+    const live = imageIdsFor(ds);
+    const index = this.viewport.getCurrentImageIdIndex();
+    const [frame, mask] = await Promise.all([modalityValues(live[index]!), modalityValues(live[dsa.mask]!)]);
+    if (this.dsa !== dsa) return;
+    await this.setDsa({ mask: dsa.mask, shift: autoShift(frame.values, mask.values, frame.image.columns, frame.image.rows) });
+  }
+
+  /** Drops the DSA images (a new display set or view starts without subtraction). */
+  private endDsa(): void {
+    this.dsaToken++;
+    if (!this.dsa) return;
+    forgetDsa(this.dsa.ids);
+    this.dsa = undefined;
   }
 
   /** Builds the volume of a display set and shows it as a reformat or in 3D. */

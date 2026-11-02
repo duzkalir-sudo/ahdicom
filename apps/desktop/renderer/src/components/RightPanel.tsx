@@ -14,7 +14,8 @@ import { useStore } from '../state/store';
 import { controllerAt } from '../viewer/registry';
 import { fileIdOf } from '../viewer/cornerstone';
 import { IconButton } from './ui';
-import { VolumePanel } from './VolumePanel';
+import { VolumePanel, useActiveState } from './VolumePanel';
+import { DsaPanel } from './DsaPanel';
 import { MeasurementsPanel } from './MeasurementsPanel';
 
 const TS_NAMES: Record<string, string> = {
@@ -407,8 +408,16 @@ export function RightPanel(): ReactNode {
   const { t } = useTranslation();
   const open = useStore((s) => s.rightOpen);
   const tab = useStore((s) => s.rightTab);
+  const activeIndex = useStore((s) => s.activeIndex);
   const active3d = useStore((s) => s.views[s.activeIndex] === '3d');
-  const tabs = active3d ? (['measurements', 'tags', 'info', '3d'] as const) : (['measurements', 'tags', 'info'] as const);
+  const activeDsa = Boolean(useActiveState(activeIndex)?.dsa);
+  const tabs: readonly ('measurements' | 'tags' | 'info' | '3d' | 'dsa')[] = [
+    'measurements',
+    'tags',
+    'info',
+    ...(active3d ? (['3d'] as const) : []),
+    ...(activeDsa ? (['dsa'] as const) : []),
+  ];
   if (!open) {
     return (
       <aside className="side right collapsed" data-testid="right-panel">
@@ -445,6 +454,7 @@ export function RightPanel(): ReactNode {
         {tab === 'tags' ? <TagBrowser /> : null}
         {tab === 'measurements' ? <MeasurementsPanel /> : null}
         {tab === '3d' ? <VolumePanel /> : null}
+        {tab === 'dsa' ? <DsaPanel /> : null}
       </div>
     </aside>
   );

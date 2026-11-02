@@ -841,6 +841,42 @@ async function overlaysAndCine(): Promise<void> {
     await save('xa-cine/XA.dcm', writePart10(ds, { transferSyntaxUid: TSUID.explicitLE }));
     add({ id: 'xa-cine', dir: 'xa-cine', kind: 'valid', files: 1, description: 'XA 30 frames, 15 fps, per-frame overlay (progress bar)', expect: { frames, fps: 15 } });
   }
+  {
+    // DSA run: smooth "anatomy"; contrast (−200) fills a vessel from frame 4; the patient moves 3 px right and 2 px
+    // up from frame 12. Pixel Intensity Relationship LOG → linear subtraction.
+    const rows = 256, cols = 256, frames = 20;
+    const anatomy = (x: number, y: number): number => 600 + 150 * Math.sin(x / 9) + 120 * Math.cos(y / 7) + 80 * Math.sin((x + y) / 13);
+    const values = new Uint16Array(rows * cols * frames);
+    for (let f = 0; f < frames; f++) {
+      const [mx, my] = f >= 12 ? [3, -2] : [0, 0];
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          const x = c - mx;
+          const y = r - my;
+          const vessel = f >= 4 && Math.abs(y - (128 + 40 * Math.sin(x / 25))) < 4;
+          values[f * rows * cols + r * cols + c] = Math.round(anatomy(x, y) - (vessel ? 200 : 0));
+        }
+    }
+    const s = series('dsa', 3, 'XA', 'DSA RUN MOTION');
+    const ds: Element[] = [
+      ...patientStudySeries(ps, s),
+      ...sopCommon(SOP.xa, uid('sop:xa-dsa'), 1),
+      el(0x0018, 0x1063, 'DS', '100'),
+      el(0x0028, 0x0009, 'AT', tag(0x0018, 0x1063)),
+      el(0x0028, 0x1040, 'CS', 'LOG'),
+      el(0x0020, 0x0020, 'CS', ['L', 'F']),
+      ...pixelModule({ ...MONO16, rows, columns: cols, numberOfFrames: frames }, u16le(values)),
+    ];
+    await save('xa-dsa/XA.dcm', writePart10(ds, { transferSyntaxUid: TSUID.explicitLE }));
+    add({
+      id: 'xa-dsa',
+      dir: 'xa-dsa',
+      kind: 'valid',
+      files: 1,
+      description: 'XA DSA run: contrast from frame 4, patient motion (+3, −2) px from frame 12',
+      expect: { frames, motion: [3, -2], contrastFrom: 4 },
+    });
+  }
 }
 
 export const TURKISH_NAMES = {

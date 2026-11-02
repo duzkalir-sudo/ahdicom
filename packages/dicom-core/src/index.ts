@@ -15,3 +15,4 @@ export * from './suv.js';
 export * from './compare.js';
 export * from './volume.js';
 export * from './mesh.js';
+export * from './dsa.js';

@@ -222,10 +222,10 @@ Part 1 — Phase D: verification
 - [x] E2E: MPR of the orientation phantom (labels and marker positions in each plane), warnings and refusals,
       oblique rotation, slab MIP value, measurement in MPR, crosshair ↔ 2D sync, 3D render + preset, clip, scalpel
       undo, STL file written and parsed
-- [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; user test round 1
+- [x] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; user test round 1 (2026-11-02: user found no problems)
 
 Part 2
-- [ ] DSA for XA multi-frame: subtraction with a selectable mask frame, manual pixel shift (arrow keys), automatic
+- [x] DSA for XA multi-frame: subtraction with a selectable mask frame, manual pixel shift (arrow keys), automatic
       pixel shift; unit tests on synthetic frames with a known shift; XA fixture with a moving mask
 - [ ] SUV window values (PET window/level shown and set in SUVbw)
 - [ ] E2E, screenshots, verifier subagent, docs, report (`docs/reports/M4-REPORT.md`); user test round 2

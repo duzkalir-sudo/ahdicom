@@ -398,6 +398,7 @@ export function parseInstance(bytes: Uint8Array, opts: ParseOptions): ParseResul
     convolutionKernel: asciiString(ds, 'x00181210'),
     gantryDetectorTilt: number(ds, 'x00181120'),
     frameTime: number(ds, 'x00181063'),
+    pixelIntensityRelationship: asciiString(ds, 'x00281040'),
     recommendedDisplayFrameRate: number(ds, 'x00082144'),
     cineRate: number(ds, 'x00180040'),
 

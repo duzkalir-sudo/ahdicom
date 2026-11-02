@@ -59,6 +59,7 @@ import {
   openKind,
   selectTool,
   showView,
+  toggleDsa,
   toggleCine,
   toggleFullscreen,
   tooltip,
@@ -199,6 +200,19 @@ function ViewMenu(props: { anchor: HTMLElement | null; onClose: () => void }): R
       {item('coronal', t('view.coronal'))}
       {item('sagittal', t('view.sagittal'))}
       {item('3d', t('view.3d'), 'view3d')}
+      <div className="menu-sep" />
+      <MenuItem
+        checked={Boolean(vs?.dsa)}
+        disabled={!ctrl?.dsaAvailable() && !vs?.dsa}
+        onClick={() => {
+          void toggleDsa();
+          props.onClose();
+        }}
+        kbd={formatShortcut(commandById('dsa')?.shortcut)}
+        testId="view-dsa"
+      >
+        {t('dsa.toggle')}
+      </MenuItem>
       <div className="menu-sep" />
       <div className="menu-hint">{t('view.slabMenu')}</div>
       {([undefined, 'mip', 'minip', 'avg'] as const).map((m) => (

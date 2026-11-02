@@ -30,9 +30,17 @@ import {
 } from '@cornerstonejs/tools';
 import { init as dicomLoaderInit, wadouri } from '@cornerstonejs/dicom-image-loader';
 import { Enums as MetadataEnums, metaData as metadataStore, utilities as metadataUtils } from '@cornerstonejs/metadata';
-import { normalizeVoiLutFunction, rleHeaderValid, splitDeflatedPart10, type DisplayImage, type DisplaySet } from '@ahdicom/dicom-core';
+import {
+  normalizeVoiLutFunction,
+  rleHeaderValid,
+  splitDeflatedPart10,
+  subtractFrames,
+  type DisplayImage,
+  type DisplaySet,
+  type DsaMode,
+} from '@ahdicom/dicom-core';
 import dcmjs from 'dcmjs';
-import { applyLutSequences, forgetLuts, registerLuts } from './lut';
+import { applyLutSequences, forgetLuts, modalityLutApplied, registerLuts } from './lut';
 import { MEASURE_TOOLS, measureToolConfigs, toolNameOf, type MeasureTool } from './measurements';
 import { initAnnotationEvents } from './annotations';
 import { initSync } from './sync';
@@ -140,7 +148,7 @@ export function imageIdsFor(ds: DisplaySet): string[] {
 }
 
 export function baseImageId(imageId: string): string {
-  return imageId.replace(/[?&]frame=\d+$/, '');
+  return liveImageId(imageId).replace(/[?&]frame=\d+$/, '');
 }
 
 export function fileIdOf(imageId: string): string {
@@ -148,7 +156,7 @@ export function fileIdOf(imageId: string): string {
 }
 
 export function frameOf(imageId: string): number {
-  const m = /[?&]frame=(\d+)$/.exec(imageId);
+  const m = /[?&]frame=(\d+)$/.exec(liveImageId(imageId));
   return m ? Number(m[1]) : 1;
 }
 
@@ -303,6 +311,110 @@ export function volumeIdFor(ds: DisplaySet): string {
   return `${VOLUME_SCHEME}:${ds.id}`;
 }
 
+// ---------------------------------------------------------------------------------------------
+// DSA: subtracted frames (D-058)
+// ---------------------------------------------------------------------------------------------
+
+const DSA_SCHEME = 'cdvdsa';
+
+/** Subtraction parameters: mask frame, mask shift (pixels) and linear/log subtraction. */
+export interface DsaParams {
+  maskImageId: string;
+  shift: [number, number];
+  mode: DsaMode;
+}
+
+let dsaKey = 0;
+
+/** `cdvdsa:<set>/<original image id>`: the original frame minus the mask of DSA image set `set`. */
+export function dsaImageId(set: number, liveId: string): string {
+  return `${DSA_SCHEME}:${set}/${liveId}`;
+}
+
+/** The original (`cdv:`) image id behind a DSA image id; other ids are returned unchanged. */
+export function liveImageId(imageId: string): string {
+  return imageId.startsWith(`${DSA_SCHEME}:`) ? imageId.slice(imageId.indexOf('/') + 1) : imageId;
+}
+
+/** Modality values (rescale applied) of an image, loading it when needed. */
+export async function modalityValues(imageId: string): Promise<{ values: Float32Array; image: Types.IImage }> {
+  const image = await imageLoader.loadAndCacheImage(imageId);
+  const pd = image.getPixelData() as ArrayLike<number>;
+  const scaled = Boolean((image as { preScale?: { scaled?: boolean } }).preScale?.scaled) || modalityLutApplied(image);
+  const slope = scaled ? 1 : (image.slope ?? 1);
+  const intercept = scaled ? 0 : (image.intercept ?? 0);
+  const values = new Float32Array(image.rows * image.columns);
+  for (let i = 0; i < values.length; i++) values[i] = pd[i]! * slope + intercept;
+  return { values, image };
+}
+
+/**
+ * Computes the subtracted frames of a run and puts them in the image cache (Cornerstone local images with the plane
+ * and spacing of their original frames, so measurements and overlays line up). Returns their image ids in frame
+ * order; `cancelled` stops early (the images made so far are released).
+ */
+export async function createDsaImages(liveIds: readonly string[], p: DsaParams, cancelled: () => boolean): Promise<string[] | undefined> {
+  const set = ++dsaKey;
+  const mask = await modalityValues(p.maskImageId);
+  const ids: string[] = [];
+  for (const liveId of liveIds) {
+    if (cancelled()) {
+      forgetDsa(ids);
+      return undefined;
+    }
+    const live = await modalityValues(liveId);
+    const { rows, columns } = live.image;
+    if (mask.image.rows !== rows || mask.image.columns !== columns) throw new Error('mask size differs');
+    const diff = subtractFrames(live.values, mask.values, columns, rows, p.shift, p.mode);
+    const plane = (metaData.get('imagePlaneModule', liveId) ?? {}) as {
+      imagePositionPatient?: number[];
+      rowCosines?: number[];
+      columnCosines?: number[];
+      rowPixelSpacing?: number;
+      columnPixelSpacing?: number;
+      frameOfReferenceUID?: string;
+    };
+    const id = dsaImageId(set, liveId);
+    imageLoader.createAndCacheLocalImage(id, {
+      scalarData: diff,
+      dimensions: [columns, rows],
+      spacing: [plane.columnPixelSpacing || 1, plane.rowPixelSpacing || 1],
+      ...(plane.imagePositionPatient ? { origin: plane.imagePositionPatient as Types.Point3 } : {}),
+      ...(plane.rowCosines && plane.columnCosines
+        ? { direction: [...plane.rowCosines, ...plane.columnCosines, 0, 0, 0] as unknown as Types.Mat3 }
+        : {}),
+      ...(plane.frameOfReferenceUID ? { frameOfReferenceUID: plane.frameOfReferenceUID } : {}),
+      // Before the image enters the cache: the cache records its quality then, and the stack viewport finds only
+      // full-resolution images there (others would be sent to an image loader, which DSA images do not have).
+      onCacheAdd: (image) => {
+        (image as { imageQualityStatus?: Enums.ImageQualityStatus }).imageQualityStatus = Enums.ImageQualityStatus.FULL_RESOLUTION;
+        // Grey at zero difference; the window covers the largest difference.
+        image.windowCenter = 0;
+        image.windowWidth = 2 * Math.max(1, Math.abs(image.minPixelValue), Math.abs(image.maxPixelValue));
+      },
+    });
+    ids.push(id);
+  }
+  return ids;
+}
+
+/**
+ * Metadata of DSA images: plane and pixel modules come from the local image (generic provider); values are already
+ * differences of modality values (no rescale, window set by the viewer); everything else is the original frame's.
+ */
+function dsaMetadataProvider(type: string, imageId: string): unknown {
+  if (typeof imageId !== 'string' || !imageId.startsWith(`${DSA_SCHEME}:`)) return undefined;
+  if (type === 'imagePlaneModule' || type === 'imagePixelModule') return undefined;
+  if (type === 'modalityLutModule') return { rescaleSlope: 1, rescaleIntercept: 0 };
+  if (type === 'voiLutModule') return {};
+  return metaData.get(type, liveImageId(imageId));
+}
+
+/** Releases DSA images that are no longer shown. */
+export function forgetDsa(imageIds: readonly string[]): void {
+  for (const id of imageIds) if (cache.getImageLoadObject(id)) cache.removeImageLoadObject(id, { force: true });
+}
+
 /** Why a volume could not be built: not enough cache memory, or images that failed to decode. */
 export class VolumeLoadError extends Error {
   constructor(readonly reason: 'tooLarge' | 'decodeFailed') {
@@ -432,6 +544,7 @@ export function initCornerstone(cacheSizeMB: number): void {
   });
   toolsInit();
   imageLoader.registerImageLoader(SCHEME, cdvLoader as unknown as Types.ImageLoaderFn);
+  metaData.addProvider(dsaMetadataProvider as Parameters<typeof metaData.addProvider>[0], 9000);
   volumeLoader.registerVolumeLoader(VOLUME_SCHEME, cornerstoneStreamingImageVolumeLoader as unknown as Types.VolumeLoaderFn);
   cache.setMaxCacheSize(cacheSizeMB * 1024 * 1024);
 

@@ -76,6 +76,8 @@ export interface InstanceRecord {
   convolutionKernel?: string;
   gantryDetectorTilt?: number;
   frameTime?: number;
+  /** Pixel Intensity Relationship (0028,1040): LIN (proportional to X-ray intensity), LOG or DISP (XA/XRF). */
+  pixelIntensityRelationship?: string;
   recommendedDisplayFrameRate?: number;
   cineRate?: number;
 

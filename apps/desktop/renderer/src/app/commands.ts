@@ -121,6 +121,23 @@ export function showView(view: ViewKind | 'mpr'): void {
   else s.setView(s.activeIndex, view);
 }
 
+/** Turns DSA (subtraction) on or off in the active viewport; on uses the first frame as mask. */
+export async function toggleDsa(): Promise<void> {
+  const s = useStore.getState();
+  const c = active();
+  if (!c) return;
+  if (c.getState().dsa) {
+    await c.setDsa(undefined);
+    return;
+  }
+  if (!c.dsaAvailable()) {
+    s.notify('warning', i18next.t('dsa.unavailable'));
+    return;
+  }
+  await c.setDsa({ mask: 0, shift: [0, 0] });
+  s.setRightTab('dsa');
+}
+
 export const COMMANDS: Command[] = [
   {
     id: 'next',
@@ -173,7 +190,30 @@ export const COMMANDS: Command[] = [
   { id: 'toolCursor3d', labelKey: 'tools.cursor3d', group: 'tools', shortcut: { key: 'x' }, run: () => selectTool('cursor3d') },
   { id: 'viewMpr', labelKey: 'view.mpr', group: 'tools', shortcut: { key: 'm', shift: true }, run: () => showView('mpr') },
   { id: 'view3d', labelKey: 'view.3d', group: 'tools', shortcut: { key: 'd', shift: true }, run: () => showView('3d') },
-  { id: 'viewStack', labelKey: 'view.stack', group: 'tools', shortcut: { key: 'o', alt: true }, run: () => showView('stack') },
+  { id: 'viewStack', labelKey: 'view.stack', group: 'tools', shortcut: { key: 'v', shift: true }, run: () => showView('stack') },
+  { id: 'dsa', labelKey: 'dsa.toggle', group: 'tools', shortcut: { key: 'a', shift: true }, run: () => void toggleDsa() },
+  {
+    id: 'dsaLeft',
+    labelKey: 'dsa.shiftKeys',
+    group: 'tools',
+    shortcut: { key: 'ArrowLeft', mod: true },
+    run: () => active()?.shiftDsa(-1, 0),
+  },
+  {
+    id: 'dsaRight',
+    labelKey: 'dsa.shiftKeys',
+    group: 'tools',
+    shortcut: { key: 'ArrowRight', mod: true },
+    run: () => active()?.shiftDsa(1, 0),
+  },
+  { id: 'dsaUp', labelKey: 'dsa.shiftKeys', group: 'tools', shortcut: { key: 'ArrowUp', mod: true }, run: () => active()?.shiftDsa(0, -1) },
+  {
+    id: 'dsaDown',
+    labelKey: 'dsa.shiftKeys',
+    group: 'tools',
+    shortcut: { key: 'ArrowDown', mod: true },
+    run: () => active()?.shiftDsa(0, 1),
+  },
   { id: 'toolLength', labelKey: 'measure.tool.length', group: 'tools', shortcut: { key: 'm' }, run: () => selectTool('length') },
   { id: 'toolEllipse', labelKey: 'measure.tool.ellipse', group: 'tools', shortcut: { key: 'e' }, run: () => selectTool('ellipse') },
   { id: 'toolAngle', labelKey: 'measure.tool.angle', group: 'tools', shortcut: { key: 'n' }, run: () => selectTool('angle') },

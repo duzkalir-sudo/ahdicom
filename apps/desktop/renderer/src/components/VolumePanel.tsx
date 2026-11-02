@@ -12,7 +12,7 @@ const FULL_BOX: ClipBox = { min: [0, 0, 0], max: [1, 1, 1] };
 const MIN_EXTENT = 0.02;
 
 /** Live state of the viewport at `index` (re-subscribes when viewports are created or destroyed). */
-function useActiveState(index: number): ViewState | undefined {
+export function useActiveState(index: number): ViewState | undefined {
   const [vs, setVs] = useState<{ index: number; state: ViewState }>();
   const [rev, setRev] = useState(0);
   useEffect(() => onControllersChanged(() => setRev((r) => r + 1)), []);

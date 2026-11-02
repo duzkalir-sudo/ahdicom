@@ -2,7 +2,7 @@
  * Read-only inspection hooks for the E2E suite. Installed only when the main process reports e2e mode
  * (CDV_E2E=1 in an unpackaged build); never available in packaged builds.
  */
-import { getShouldUseCPURendering } from '@cornerstonejs/core';
+import { cache, getShouldUseCPURendering } from '@cornerstonejs/core';
 import { useStore } from './state/store';
 import { cacheUsage } from './viewer/cornerstone';
 import { controllerAt } from './viewer/registry';
@@ -56,6 +56,15 @@ export function installTestHooks(): void {
     /** Reference lines and 3D cursor marker of viewport i (image pixel coordinates). */
     guides: (i: number) => controllerAt(i)?.getGuides(),
     sync: () => useStore.getState().sync,
+    /** Modality value of pixel (column, row) of the image shown in viewport i (DSA: the difference). */
+    pixelValue: (i: number, column: number, row: number): number | undefined => {
+      const id = controllerAt(i)?.currentImageId();
+      const img = id ? cache.getImage(id) : undefined;
+      if (!img) return undefined;
+      const scaled = Boolean((img as { preScale?: { scaled?: boolean } }).preScale?.scaled);
+      const v = Number((img.getPixelData() as ArrayLike<number>)[row * img.columns + column]);
+      return scaled ? v : v * (img.slope ?? 1) + (img.intercept ?? 0);
+    },
     /** Image cache + raw-bytes usage in bytes. */
     cacheBytes: () => cacheUsage().used,
     /**

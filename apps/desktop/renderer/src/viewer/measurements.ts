@@ -306,6 +306,8 @@ let refs = new Map<string, ImageRef>();
 
 /** Display set, image and instance of a `cdv:` image id (rebuilt when the display sets change). */
 export function imageRef(imageId: string): ImageRef | undefined {
+  // A DSA frame is measured as its original frame (same plane and spacing).
+  imageId = imageId.startsWith('cdvdsa:') ? imageId.slice(imageId.indexOf('/') + 1) : imageId;
   const { displaySets: sets, instances } = useStore.getState();
   if (sets !== refsFor) {
     refsFor = sets;
