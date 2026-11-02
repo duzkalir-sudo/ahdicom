@@ -12,7 +12,8 @@ _Last updated: 2026-10-30_
 | M1 viewer | Done except: concatenation merge, Presentation LUT INVERSE not E2E-asserted, pixel padding not excluded from auto ranges (see PLAN [~]). |
 | M2 | Done: all tools, list, undo/redo, persistence. CI green on Windows + macOS arm64. |
 | M3 | Done: sync, link, reference lines, 3D cursor, split volumes, compare with prior. CI green on Windows + macOS arm64. |
-| M4–M8 | Not started. M8 needs explicit approval. |
+| M4 | Part 1 done locally (Windows 11): MPR (reformats, crosshair/oblique, slabs, measurements), 3D (presets, curves, clipping box, scalpel, STL). Waiting for user test round 1; part 2 (DSA, SUV window) next. Not pushed. |
+| M5–M8 | Not started. M8 needs explicit approval. |
 
 ## How to resume
 1. Node 24.22.2 is installed portably at `%LOCALAPPDATA%\Programs\node-v24.22.2-win-x64` (not on PATH). Prepend it to PATH.

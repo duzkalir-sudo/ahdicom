@@ -218,8 +218,8 @@ Part 1 — Phase C: 3D
       save dialog, size limit
 
 Part 1 — Phase D: verification
-- [ ] Unit tests (Phase A); fixtures reused (ct-phantom, gantry-tilt, nonuniform, oblique, orient-*)
-- [ ] E2E: MPR of the orientation phantom (labels and marker positions in each plane), warnings and refusals,
+- [x] Unit tests (Phase A); fixtures reused (ct-phantom, gantry-tilt, nonuniform, oblique, orient-*)
+- [x] E2E: MPR of the orientation phantom (labels and marker positions in each plane), warnings and refusals,
       oblique rotation, slab MIP value, measurement in MPR, crosshair ↔ 2D sync, 3D render + preset, clip, scalpel
       undo, STL file written and parsed
 - [ ] Screenshots (1280×800, 1920×1080, dark/light, tr/en) inspected; user test round 1

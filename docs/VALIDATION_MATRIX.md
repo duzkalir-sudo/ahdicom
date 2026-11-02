@@ -121,6 +121,25 @@ fails on any console error). Screenshots: `artifacts/screenshots/{M0,M1}/`. CI (
 | Single-slice dynamics (bolus tracking, cine) are not split; nothing crosses Frames of Reference (reference line, 3D cursor); no sync between perpendicular planes; W/L sync only for the same modality; maximize keeps the zoom | unit + E2E "gating" | Pass |
 | Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M3` (19 files) | Inspected; fixed: refit on layout change, redundant "Part n" label, wrapped volumes link |
 
+## MPR and 3D (M4 part 1)
+
+| Requirement | Test | Evidence |
+|---|---|---|
+| MPR eligibility: refusals (too few slices, colour, missing geometry, repeated positions) and approximate-geometry warnings (missing slices, irregular spacing, gantry tilt) | unit `volume.test.ts`; E2E `m4-mpr` (XA refused with reason; gantry tilt warning) | Pass |
+| Volume grid as the renderer builds it (order along row × column, origin at the lowest slice, average spacing) | unit `volume.test.ts` | Pass |
+| Reformatted planes (axial/coronal/sagittal/oblique), screen axes, plane through a point | unit `volume.test.ts`; E2E plane counts 64/512/512, labels A/P/R/L, H/F/R/L, H/F/A/P | Pass |
+| Voxel values in reformats | E2E probe 1000 HU at the sphere centre (sagittal x = −50), 0 HU water (axial) | Pass |
+| Crosshair: move a plane, rotate (oblique), centre; plane intersection, rotation | unit (Rodrigues, three planes); E2E line drag → sagittal 156 / −50 mm; 30° oblique turn | Pass |
+| Thick slab MIP / MinIP / AvgIP (render + probe) | unit `slabOffsets`/`slabProject`; E2E MIP 20 mm reaches the sphere 2 mm outside the slice (0 → 1000 HU) | Pass |
+| Measurements on reformats (values from voxels; own plane only; none on approximate geometry; not saved) | E2E ROI mean 1000.0 HU SD 0 (sagittal), 20 mm length (axial, ± 1 CSS px), plane isolation, "No values" on tilt | Pass |
+| MPR ↔ 2D: slice sync, 3D cursor | E2E axial reformat plane 40 → image 23; cursor → image 32 / plane 31 / plane 335 | Pass |
+| 3D presets, curve shift/opacity, reset; orientation cube | E2E (bone shows the 1000 HU sphere; MIP, shift 200, opacity 150 %; reset) | Pass |
+| Clipping box (planes keep the box side) | unit `clipPlanes`; E2E patient-right half removed → sphere disappears | Pass |
+| Scalpel cuts a private copy only; undo | unit `rasterizePolygon`; E2E sphere removed in 3D, still 1000 HU in 2D images, undo restores | Pass |
+| STL export (iso-surface, patient mm, outward, ≤ 10 M triangles, save dialog in main) | unit STL round trip, cube volume 1, marching-cubes sphere ±1 %; E2E phantom sphere ±10 %, empty threshold message | Pass |
+| Overlay redraw after resize next to a 3D view | E2E crosshair centre within 3 px of the viewport centre after 1920 → 1280 | Pass |
+| Screenshots 1280×800 & 1920×1080 × dark/light × tr/en | `artifacts/screenshots/M4` (12 matrix + feature shots) | Inspected; fixed: stale crosshair after resize next to 3D |
+
 ## Performance (Windows 11 laptop, local GPU; `artifacts/perf-m1.json`)
 
 | Metric | Target | Measured |

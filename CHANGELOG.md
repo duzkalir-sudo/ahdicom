@@ -4,6 +4,17 @@ All notable changes. Format: Keep a Changelog; versions follow SemVer (pre-1.0).
 
 ## [Unreleased]
 
+### Added (M4 part 1 — MPR and 3D)
+- MPR: any series that forms a volume can be shown as axial, coronal or sagittal reformats (Shift+M opens all three);
+  series that cannot (missing geometry, colour, single projections) are refused with the reason; irregular slices or
+  gantry tilt show a warning.
+- Crosshair between reformats: drag a line to move a plane, a handle to turn it (oblique), the centre to move both.
+- Thick slab MIP / MinIP / average with 2–40 mm thickness.
+- Measurements on reformats (values from the volume; not saved).
+- Reformats and original images work together: slice sync, reference lines, 3D cursor.
+- 3D volume rendering (Shift+D) with presets, threshold shift and opacity, clipping box, scalpel with undo, orientation
+  cube, and STL export of a surface for 3D printing.
+
 ### Added (M3 — comparing series)
 - Automatic slice sync between series in the same frame of reference (planes within 5°), in both directions.
 - Manual link of all visible viewports keeping the slice offset (e.g. an earlier study); window/level (same modality) and zoom/pan sync.
