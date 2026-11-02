@@ -42,12 +42,12 @@ By the user's decision, fusion and time-intensity curves are deferred (D-057).
 | `npm run typecheck` / `npm run lint` | Pass | 0 warnings |
 | `npm run license:check` / `npm audit --audit-level=high` | Pass | `@kitware/vtk.js` 36.4.1 (BSD-3, already Cornerstone's renderer) pinned directly |
 | `npm run test` | Pass | 252 unit + fuzz |
-| `npm run test:e2e` | see full check below | M4 + M1 coverage: 24 passed |
+| `npm run test:e2e` | Pass | full `npm run check` at 879d09e: 61 E2E passed (6.5 min), 252 unit; installer built (`npm run dist`) |
 | Built app run manually | User test round 1 (MPR/3D) | User: "gördüğüm kadarıyla şimdilik bir sıkıntı yok"; round 2 (DSA/SUV) pending |
 | Screenshot inspection | Done | M4 matrix (MPR + 3D, DSA, PET W/L in SUV: 1280×800 / 1920×1080 × dark/light × tr/en) and feature shots opened |
 | Performance / memory | Not measured for volumes | M1 performance test still runs in the suite |
 | CI matrix (Windows, macOS) | Not run | waiting for push approval |
-| Verifier subagent | Pass 1 **FAIL** → fixed | Blocking fixed:<br>• M1 PET user-preset test broken by the SUV dialog → stored-values default with an SUVbw switch;<br>• SUV window math moved to `dicom-core` with tests;<br>• Part 2 docs and report written;<br>• PET dialog screenshots at 1920×1080.<br>Non-blocking fixed: DSA/STL error messages; scalpel undo as a bitmask; schema check guarded and tested; STL centroid check; "MPR" labels; shorter warning. Remaining non-blocking: see §6 |
+| Verifier subagent | Pass 1 **FAIL** → fixed; pass 2 **PASS** (conditional on the full check, which then passed) | Blocking fixed:<br>• M1 PET user-preset test broken by the SUV dialog → stored-values default with an SUVbw switch;<br>• SUV window math moved to `dicom-core` with tests;<br>• Part 2 docs and report written;<br>• PET dialog screenshots at 1920×1080.<br>Non-blocking fixed: DSA/STL error messages; scalpel undo as a bitmask; schema check guarded and tested; STL centroid check; "MPR" labels; shorter warning. Remaining non-blocking: probe SUV is a plain multiply in the viewport; the DSA free-space check counts the previous DSA set still cached; see §6 |
 
 ## 4. Measured performance
 | Metric | Target | Measured | Machine / method |
