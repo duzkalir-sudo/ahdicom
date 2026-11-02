@@ -3,7 +3,7 @@
  * motion of 3 px right and 2 px up from frame 12; Pixel Intensity Relationship LOG (linear subtraction).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { expectNoErrors, fixture, launch, openPaths, screenshot, vpState, waitReady, type Session } from './harness';
+import { cdvState, expectNoErrors, fixture, launch, openPaths, screenshot, setSize, vpState, waitReady, type Session } from './harness';
 
 interface DsaState {
   index: number;
@@ -84,5 +84,52 @@ test('DSA is refused for series that are not angiography runs', async () => {
     expectNoErrors(s);
   } finally {
     await s.close();
+  }
+});
+
+test('M4 part 2 screenshot matrix: DSA panel and PET W/L dialog in SUV (sizes × themes × languages)', async () => {
+  test.setTimeout(600_000);
+  for (const lang of ['tr', 'en'] as const) {
+    for (const theme of ['dark', 'light'] as const) {
+      const s = await launch({ lang, theme });
+      try {
+        await openPaths(s, [fixture('xa-dsa'), fixture('pet')]);
+        const st = await cdvState(s.page);
+        const xa = st.studies.flatMap((x) => x.series).find((x) => x.description === 'DSA RUN MOTION')!.displaySets[0]!;
+        const pet = st.studies.flatMap((x) => x.series).find((x) => x.description === 'PET AC')!.displaySets[0]!;
+        await s.page.getByTestId('viewport-0').click({ position: { x: 5, y: 5 } });
+        await s.page.locator(`[data-ds-id="${xa.id}"]`).click();
+        await waitReady(s.page);
+        await frame(s, 15);
+        await s.page.keyboard.press('Shift+A');
+        await expect.poll(async () => (await ds(s.page)).dsa?.mask).toBe(0);
+        await s.page.getByTestId('dsa-auto').click();
+        await expect.poll(async () => (await ds(s.page)).dsa?.shift).toEqual([3, -2]);
+        for (const [w, h] of [
+          [1280, 800],
+          [1920, 1080],
+        ] as const) {
+          await setSize(s.app, w, h);
+          await s.page.waitForTimeout(500);
+          await screenshot(s.page, 'M4', `dsa-${w}x${h}-${theme}-${lang}`);
+        }
+        await setSize(s.app, 1280, 800);
+        await s.page.locator(`[data-ds-id="${pet.id}"]`).click();
+        await waitReady(s.page);
+        await s.page.getByTestId('tb-presets').click();
+        await s.page.getByTestId('preset-suv10').click();
+        await expect(s.page.getByTestId('wl-text')).toContainText('SUVbw');
+        await expect
+          .poll(async () => (await s.page.getByTestId('wl-text').textContent())?.startsWith(lang === 'tr' ? 'P: 10,00' : 'W: 10.00'))
+          .toBe(true);
+        await s.page.keyboard.press('l');
+        await expect(s.page.getByTestId('wl-suv-hint')).toBeVisible();
+        await screenshot(s.page, 'M4', `pet-wl-suv-1280x800-${theme}-${lang}`);
+        await s.page.keyboard.press('Escape');
+        expectNoErrors(s);
+      } finally {
+        await s.close();
+      }
+    }
   }
 });

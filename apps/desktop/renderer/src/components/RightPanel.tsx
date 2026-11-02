@@ -418,6 +418,8 @@ export function RightPanel(): ReactNode {
     ...(active3d ? (['3d'] as const) : []),
     ...(activeDsa ? (['dsa'] as const) : []),
   ];
+  // The 3D and DSA tabs exist only while the active viewport shows 3D or DSA; otherwise Info is shown.
+  const shown = (tabs as readonly string[]).includes(tab) ? tab : 'info';
   if (!open) {
     return (
       <aside className="side right collapsed" data-testid="right-panel">
@@ -438,7 +440,7 @@ export function RightPanel(): ReactNode {
             type="button"
             className="tab"
             role="tab"
-            aria-selected={tab === k}
+            aria-selected={shown === k}
             onClick={() => useStore.getState().setRightTab(k)}
             data-testid={`tab-${k}`}
           >
@@ -450,11 +452,11 @@ export function RightPanel(): ReactNode {
         </IconButton>
       </div>
       <div className="side-body">
-        {tab === 'info' ? <InfoPanel /> : null}
-        {tab === 'tags' ? <TagBrowser /> : null}
-        {tab === 'measurements' ? <MeasurementsPanel /> : null}
-        {tab === '3d' ? <VolumePanel /> : null}
-        {tab === 'dsa' ? <DsaPanel /> : null}
+        {shown === 'info' ? <InfoPanel /> : null}
+        {shown === 'tags' ? <TagBrowser /> : null}
+        {shown === 'measurements' ? <MeasurementsPanel /> : null}
+        {shown === '3d' ? <VolumePanel /> : null}
+        {shown === 'dsa' ? <DsaPanel /> : null}
       </div>
     </aside>
   );

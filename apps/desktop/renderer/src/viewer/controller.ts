@@ -394,7 +394,8 @@ export class ViewportController {
       // Subtracted frames: grey at zero difference (Cornerstone cannot derive a window centred on 0 by itself).
       const img = cache.getImage(this.imageIds[index]!);
       const half = img ? Math.max(1, Math.abs(img.minPixelValue), Math.abs(img.maxPixelValue)) : 1;
-      this.viewport.setProperties({ voiRange: { lower: -half, upper: half } });
+      // DICOM linear window: centre = (lower + upper + 1) / 2, so this range reads as level 0.
+      this.viewport.setProperties({ voiRange: { lower: -half - 0.5, upper: half - 0.5 } });
     }
     this.viewport.render();
     if (old) forgetDsa(old.ids);
