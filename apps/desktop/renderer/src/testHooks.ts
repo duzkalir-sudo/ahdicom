@@ -27,6 +27,7 @@ export function installTestHooks(): void {
           })),
         })),
         slots: s.slots.slice(0, 25),
+        views: s.views.slice(0, 25),
         activeIndex: s.activeIndex,
         layout: s.layout,
         scans: Object.keys(s.scans).length,

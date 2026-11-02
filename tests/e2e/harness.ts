@@ -132,7 +132,9 @@ export interface CdvState {
     series: { description?: string; displaySets: { id: string; images: number; kind: string; warnings: string[] }[] }[];
   }[];
   slots: (string | null)[];
+  views: string[];
   activeIndex: number;
+  layout: { kind: string; rows?: number; cols?: number };
   scans: number;
   lastSummary?: {
     instances: number;
