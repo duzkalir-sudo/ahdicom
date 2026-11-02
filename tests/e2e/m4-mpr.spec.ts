@@ -248,3 +248,36 @@ test('MPR refusals and approximate geometry', async () => {
     await s.close();
   }
 });
+
+test('MPR and 2D together: slice sync and the 3D cursor between reformats and the original images', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('ct-phantom')]);
+    await waitReady(s.page);
+    await openMpr(s);
+    // Fourth viewport: the original axial images of the same series.
+    await s.page.getByTestId('tb-layout').click();
+    await s.page.getByTestId('layout-2x2').click();
+    const ds = (await cdvState(s.page)).studies[0]!.series[0]!.displaySets[0]!;
+    await s.page.getByTestId('viewport-3').click({ position: { x: 5, y: 5 } });
+    await s.page.locator(`[data-ds-id="${ds.id}"]`).click();
+    await waitReady(s.page, 3);
+    expect((await cdvState(s.page)).views.slice(0, 4)).toEqual(['axial', 'coronal', 'sagittal', 'stack']);
+    // Axial reformat plane k is at z = 77.5 − 2.5k (seen from the feet); original image i at z = −80 + 2.5i.
+    await scrollTo(s, 0, 40); // z = −22.5
+    await expect.poll(async () => (await vpState(s.page, 3)).index).toBe(23);
+    // 3D cursor in the sagittal reformat at the sphere centre (−50, −40, 0): the 2D stack goes to z = 0 (image 32),
+    // the axial reformat to plane 31 and the coronal reformat to y = −40 (plane (127.5 + 40) / 0.5 = 335).
+    await scrollTo(s, 2, 156);
+    await s.page.keyboard.press('x');
+    const p = await pixelToClient(s.page, 2, 176, 155);
+    await s.page.mouse.click(p.x, p.y);
+    await expect.poll(async () => (await vpState(s.page, 3)).index).toBe(32);
+    await expect.poll(async () => (await rs(s.page, 0)).index).toBe(31);
+    await expect.poll(async () => (await rs(s.page, 1)).index).toBe(335);
+    await screenshot(s.page, 'M4', 'mpr-with-2d-1280x800-dark-en');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
