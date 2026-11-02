@@ -484,6 +484,29 @@ function ViewportCell(props: { index: number; style?: CSSProperties }): ReactNod
   );
 }
 
+/**
+ * Resizes every viewport, renders them all once more, then redraws the overlays. Viewports that share a WebGL
+ * context map world to canvas with the layout of their last render, which another viewport's render after a resize
+ * can change (seen with a 3D view next to reformats); one full render pass makes every mapping current.
+ */
+function resizeAll(): void {
+  try {
+    getEngine().resize(true, true);
+  } catch {
+    return;
+  }
+  requestAnimationFrame(() => {
+    try {
+      getEngine().render();
+    } catch {
+      return;
+    }
+    requestAnimationFrame(() => {
+      for (const c of allControllers()) c.resizeOverlay();
+    });
+  });
+}
+
 /** Purges images of display sets that left all viewports for longer than PURGE_DELAY_MS. */
 const PURGE_DELAY_MS = 30000;
 
@@ -506,14 +529,7 @@ export function ViewportGrid(): ReactNode {
     let raf = 0;
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        try {
-          getEngine().resize(true, true);
-        } catch {
-          return;
-        }
-        for (const c of allControllers()) c.resizeOverlay();
-      });
+      raf = requestAnimationFrame(resizeAll);
     });
     ro.observe(el);
     return () => {
@@ -523,14 +539,7 @@ export function ViewportGrid(): ReactNode {
   }, []);
 
   useEffect(() => {
-    requestAnimationFrame(() => {
-      try {
-        getEngine().resize(true, true);
-      } catch {
-        return;
-      }
-      for (const c of allControllers()) c.resizeOverlay();
-    });
+    requestAnimationFrame(resizeAll);
   }, [layout, maximized]);
 
   const laidOut = useRef(false);

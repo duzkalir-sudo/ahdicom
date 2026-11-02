@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { cdvState, expectNoErrors, fixture, launch, openPaths, screenshot, vpState, waitReady, type Session } from './harness';
+import { cdvState, expectNoErrors, fixture, launch, openPaths, screenshot, setSize, vpState, waitReady, type Session } from './harness';
 import { grab, type Gray } from './pixels';
 
 interface View3d {
@@ -202,6 +202,84 @@ test('STL export of the iso-surface: the 1000 HU sphere at 500 HU encloses 4/3·
     await s.page.getByTestId('vr-stl-export').click();
     await expect(s.page.getByTestId('vr-stl-status')).toHaveText('No surface at this threshold.');
     await screenshot(s.page, 'M4', '3d-stl-1280x800-dark-en');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});
+
+test('M4 screenshot matrix: MPR + 3D (sizes × themes × languages), view menu', async () => {
+  test.setTimeout(600_000);
+  for (const lang of ['tr', 'en'] as const) {
+    for (const theme of ['dark', 'light'] as const) {
+      const s = await launch({ lang, theme });
+      try {
+        await openPaths(s, [fixture('ct-phantom')]);
+        await waitReady(s.page);
+        // Axial, coronal and sagittal reformats, then the fourth viewport in 3D with its panel open.
+        await s.page.keyboard.press('Shift+M');
+        for (const i of [0, 1, 2]) await expect.poll(async () => (await v(s.page, i)).status, { timeout: 30000 }).toBe('ready');
+        await s.page.getByTestId('tb-layout').click();
+        await s.page.getByTestId('layout-2x2').click();
+        const ds = (await cdvState(s.page)).studies[0]!.series[0]!.displaySets[0]!;
+        await s.page.getByTestId('viewport-3').click({ position: { x: 5, y: 5 } });
+        await s.page.locator(`[data-ds-id="${ds.id}"]`).click();
+        await waitReady(s.page, 3);
+        await s.page.keyboard.press('Shift+D');
+        await expect.poll(async () => (await v(s.page, 3)).status, { timeout: 30000 }).toBe('ready');
+        await s.page.getByTestId('vr-cut-inside').click();
+        for (const [w, h] of [
+          [1280, 800],
+          [1920, 1080],
+        ] as const) {
+          await setSize(s.app, w, h);
+          await s.page.waitForTimeout(600);
+          await screenshot(s.page, 'M4', `mpr-3d-${w}x${h}-${theme}-${lang}`);
+        }
+        await setSize(s.app, 1280, 800);
+        await s.page.getByTestId('viewport-0').click({ position: { x: 5, y: 5 } });
+        await s.page.getByTestId('tb-view').click();
+        await expect(s.page.getByTestId('view-menu')).toBeVisible();
+        await screenshot(s.page, 'M4', `view-menu-1280x800-${theme}-${lang}`);
+        await s.page.keyboard.press('Escape');
+        expectNoErrors(s);
+      } finally {
+        await s.close();
+      }
+    }
+  }
+});
+
+test('crosshair stays on the reformat after a window resize with a 3D view in the layout', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('ct-phantom')]);
+    await waitReady(s.page);
+    await s.page.keyboard.press('Shift+M');
+    for (const i of [0, 1, 2]) await expect.poll(async () => (await v(s.page, i)).status, { timeout: 30000 }).toBe('ready');
+    await s.page.getByTestId('tb-layout').click();
+    await s.page.getByTestId('layout-2x2').click();
+    const ds = (await cdvState(s.page)).studies[0]!.series[0]!.displaySets[0]!;
+    await s.page.getByTestId('viewport-3').click({ position: { x: 5, y: 5 } });
+    await s.page.locator(`[data-ds-id="${ds.id}"]`).click();
+    await waitReady(s.page, 3);
+    await s.page.keyboard.press('Shift+D');
+    await expect.poll(async () => (await v(s.page, 3)).status, { timeout: 30000 }).toBe('ready');
+    await setSize(s.app, 1920, 1080);
+    await setSize(s.app, 1280, 800);
+    // The axial crosshair centre (column 255, row 256) is the middle of the fitted image, i.e. of the viewport.
+    const centre = async (): Promise<number> => {
+      const p = await s.page.evaluate(() => {
+        const w = window as unknown as {
+          __cdv: { guides(i: number): { center?: number[] }; pixelToClient(i: number, c: number, r: number): { x: number; y: number } };
+        };
+        const c = w.__cdv.guides(0).center!;
+        return w.__cdv.pixelToClient(0, c[0]!, c[1]!);
+      });
+      const box = (await s.page.getByTestId('viewport-element-0').boundingBox())!;
+      return Math.hypot(p.x - (box.x + box.width / 2), p.y - (box.y + box.height / 2));
+    };
+    await expect.poll(centre).toBeLessThan(3);
     expectNoErrors(s);
   } finally {
     await s.close();
