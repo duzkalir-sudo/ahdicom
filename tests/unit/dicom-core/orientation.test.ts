@@ -136,7 +136,19 @@ describe('camera-based labels (viewer path)', () => {
 });
 
 describe('spacing basis and helpers', () => {
-  const base = { fileId: 'x', fileName: 'x', fileSize: 1, transferSyntaxUid: '', sopClassUid: '', sopInstanceUid: '', studyInstanceUid: '', seriesInstanceUid: '', numberOfFrames: 1, hasPixelData: true, charsetUncertain: false };
+  const base = {
+    fileId: 'x',
+    fileName: 'x',
+    fileSize: 1,
+    transferSyntaxUid: '',
+    sopClassUid: '',
+    sopInstanceUid: '',
+    studyInstanceUid: '',
+    seriesInstanceUid: '',
+    numberOfFrames: 1,
+    hasPixelData: true,
+    charsetUncertain: false,
+  };
   it('prefers Pixel Spacing, then magnification-corrected Imager Pixel Spacing', () => {
     expect(spacingBasis({ ...base, geometry: { pixelSpacing: [0.5, 0.4] } })).toEqual({ kind: 'pixelSpacing', rowMm: 0.5, columnMm: 0.4 });
     const mag = spacingBasis({ ...base, geometry: {}, imagerPixelSpacing: [0.2, 0.2], estimatedRadiographicMagnificationFactor: 1.1 });
@@ -150,7 +162,8 @@ describe('spacing basis and helpers', () => {
     expect(planeKind({ ...base, geometry: { imageOrientationPatient: [1, 0, 0, 0, 1, 0] } })).toBe('axial');
     expect(planeKind({ ...base, geometry: { imageOrientationPatient: [0, 1, 0, 0, 0, -1] } })).toBe('sagittal');
     expect(planeKind({ ...base, geometry: { imageOrientationPatient: [1, 0, 0, 0, 0, -1] } })).toBe('coronal');
-    const c = Math.cos(0.6), s = Math.sin(0.6);
+    const c = Math.cos(0.6),
+      s = Math.sin(0.6);
     expect(planeKind({ ...base, geometry: { imageOrientationPatient: [1, 0, 0, 0, c, s] } })).toBe('oblique');
     expect(planeKind({ ...base, geometry: {}, patientOrientation: ['L', 'F'] })).toBe('projection');
   });

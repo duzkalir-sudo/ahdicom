@@ -11,6 +11,7 @@ import {
   type ImagePlane,
   type MprRefusal,
   type ReformatStack,
+  type SlabMode,
   type SpacingBasis,
   type StackWarning,
   type Vec3,
@@ -32,7 +33,10 @@ import {
   rangeToWindow,
   reformatIndex,
   reformatStack,
+  rotateAbout,
   sliceLocation,
+  slabOffsets,
+  slabProject,
   spacingBasis,
   vec3,
   viewLabels,
@@ -81,6 +85,8 @@ export interface ViewState {
   refusal?: VolumeRefusal;
   /** Reformat details: slice position, spacing between reformatted slices, volume geometry warnings. */
   reformat?: { location?: { mm: number; towards: string }; spacing: number; warnings: StackWarning[] };
+  /** Thick-slab projection of a reformat. */
+  slab?: { mode: SlabMode; thickness: number };
   displaySetId?: string;
   index: number;
   total: number;
@@ -112,6 +118,7 @@ const EMPTY: ViewState = {
   progress: undefined,
   refusal: undefined,
   reformat: undefined,
+  slab: undefined,
   displaySetId: undefined,
   imageId: undefined,
   voi: undefined,
@@ -380,6 +387,68 @@ export class ViewportController {
     vp.render();
   }
 
+  private isReformat(): boolean {
+    return this.kind !== 'stack' && this.kind !== '3d' && this.hasImage();
+  }
+
+  /**
+   * Thick slab of a reformat: maximum, minimum or average intensity over `thickness` mm centred on the slice;
+   * undefined returns to the single slice.
+   */
+  setSlab(mode: SlabMode | undefined, thickness = 10): void {
+    if (!this.isReformat()) return;
+    const vp = this.volumeViewport;
+    const { BlendModes } = Enums;
+    const blend =
+      mode === 'mip'
+        ? BlendModes.MAXIMUM_INTENSITY_BLEND
+        : mode === 'minip'
+          ? BlendModes.MINIMUM_INTENSITY_BLEND
+          : mode === 'avg'
+            ? BlendModes.AVERAGE_INTENSITY_BLEND
+            : BlendModes.COMPOSITE;
+    vp.setBlendMode(blend);
+    if (mode) vp.setSlabThickness(thickness);
+    else vp.resetSlabThickness();
+    vp.render();
+    this.emit({ slab: mode ? { mode, thickness } : undefined });
+  }
+
+  /** Moves a reformat onto the slice nearest to a patient point. */
+  moveThrough(point: Vec3): void {
+    const stack = this.vol?.stack;
+    if (this.isReformat() && stack) this.moveToSlice(reformatIndex(stack, point));
+  }
+
+  /** Turns a reformat rigidly about an axis through a patient point (oblique MPR); zoom and pan are kept. */
+  rotateView(axis: Vec3, angle: number, center: Vec3): void {
+    if (!this.isReformat() || angle === 0) return;
+    const vp = this.viewport;
+    const cam = vp.getCamera();
+    if (!cam.focalPoint || !cam.position || !cam.viewUp || !cam.viewPlaneNormal) return;
+    const turn = (p: Vec3): Vec3 => vec3.add(center, rotateAbout(vec3.sub(p, center), axis, angle));
+    vp.setCamera({
+      focalPoint: turn(cam.focalPoint as unknown as Vec3) as unknown as Types.Point3,
+      position: turn(cam.position as unknown as Vec3) as unknown as Types.Point3,
+      viewUp: rotateAbout(cam.viewUp as unknown as Vec3, axis, angle) as unknown as Types.Point3,
+      viewPlaneNormal: rotateAbout(cam.viewPlaneNormal as unknown as Vec3, axis, angle) as unknown as Types.Point3,
+    });
+    vp.render();
+  }
+
+  /** Patient point under a canvas point (on the displayed slice). */
+  canvasToPatient(x: number, y: number): Vec3 | undefined {
+    if (!this.hasImage()) return undefined;
+    return this.viewport.canvasToWorld([x, y]) as unknown as Vec3;
+  }
+
+  /** Canvas point of a patient point. */
+  patientToCanvas(p: Vec3): [number, number] | undefined {
+    if (!this.hasImage()) return undefined;
+    const c = this.viewport.worldToCanvas(p as unknown as Types.Point3);
+    return [c[0], c[1]];
+  }
+
   /** Plane of the image shown now (original or reformatted); undefined in 3D or before the image is ready. */
   currentPlane(): ImagePlane | undefined {
     if (this.state.status !== 'ready' || !this.ds) return undefined;
@@ -582,6 +651,7 @@ export class ViewportController {
     if (!this.hasImage()) return;
     const vp = this.viewport;
     if (this.kind !== 'stack') {
+      if (this.state.slab) this.setSlab(undefined);
       vp.resetProperties();
       if (this.kind === '3d') this.apply3dDefaults();
       else this.applyStandardView(this.kind);
@@ -647,12 +717,32 @@ export class ViewportController {
   private guides: Guides = { lines: [] };
 
   setGuides(g: Guides): void {
-    const same =
-      g.marker?.[0] === this.guides.marker?.[0] &&
-      g.marker?.[1] === this.guides.marker?.[1] &&
-      JSON.stringify(g.lines) === JSON.stringify(this.guides.lines);
+    const same = JSON.stringify(g) === JSON.stringify(this.guides);
     this.guides = g;
     if (!same) this.drawGuides();
+  }
+
+  /** Crosshair lines in canvas coordinates with their rotation handles (for drawing and hit testing). */
+  crosshairOnCanvas(): { source: number; color: string; a: [number, number]; b: [number, number]; handles: [number, number][] }[] {
+    const center = this.guides.center ? this.pixelToCanvas(this.guides.center[0], this.guides.center[1]) : undefined;
+    const out: ReturnType<ViewportController['crosshairOnCanvas']> = [];
+    for (const x of this.guides.crosshair ?? []) {
+      const a = this.pixelToCanvas(x.line[0][0], x.line[0][1]);
+      const b = this.pixelToCanvas(x.line[1][0], x.line[1][1]);
+      if (!a || !b) continue;
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len < 1) continue;
+      const u: [number, number] = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+      // Handles sit a fixed distance from the crosshair centre (or near the line ends), clamped to the line.
+      const c = center ?? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const t0 = (c[0] - a[0]) * u[0] + (c[1] - a[1]) * u[1];
+      const handles = [-HANDLE_DISTANCE_PX, HANDLE_DISTANCE_PX].map((d): [number, number] => {
+        const t = Math.min(len - 8, Math.max(8, t0 + d));
+        return [a[0] + u[0] * t, a[1] + u[1] * t];
+      });
+      out.push({ source: x.source, color: x.color, a, b, handles });
+    }
+    return out;
   }
 
   getGuides(): Guides {
@@ -677,6 +767,29 @@ export class ViewportController {
       ctx.beginPath();
       ctx.moveTo(p[0], p[1]);
       ctx.lineTo(q[0], q[1]);
+      ctx.stroke();
+    }
+    // MPR crosshair: the planes of the other reformats of this volume, in their colours, with rotation handles.
+    for (const x of this.crosshairOnCanvas()) {
+      ctx.strokeStyle = x.color;
+      ctx.fillStyle = x.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x.a[0], x.a[1]);
+      ctx.lineTo(x.b[0], x.b[1]);
+      ctx.stroke();
+      for (const h of x.handles) {
+        ctx.beginPath();
+        ctx.arc(h[0], h[1], 4, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+    const center = this.guides.center ? this.pixelToCanvas(this.guides.center[0], this.guides.center[1]) : undefined;
+    if (center) {
+      ctx.strokeStyle = GUIDE_CENTER_COLOR;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(center[0], center[1], 6, 0, 2 * Math.PI);
       ctx.stroke();
     }
     const m = this.guides.marker ? this.pixelToCanvas(this.guides.marker[0], this.guides.marker[1]) : undefined;
@@ -994,10 +1107,23 @@ export class ViewportController {
       this.emit({ probe: { column, row, unit } });
       return;
     }
-    const v = Number(volume.voxelManager?.getAtIJK(ijk[0], ijk[1], ijk[2]));
+    const at = (p: Vec3): number | undefined => {
+      const v = nearestVoxel(vol.geometry, p);
+      return v ? Number(volume.voxelManager?.getAtIJK(v[0], v[1], v[2])) : undefined;
+    };
+    const slab = this.state.slab;
+    const stack = vol.stack;
+    // In a thick slab the value is the projection of the voxels along the normal through the point.
+    const v =
+      slab && stack
+        ? (slabProject(
+            slabOffsets(slab.thickness, stack.spacing).map((d) => at(vec3.add(world, vec3.scale(stack.normal, d)))),
+            slab.mode,
+          ) ?? Number.NaN)
+        : Number(volume.voxelManager?.getAtIJK(ijk[0], ijk[1], ijk[2]));
     const pad = inst.pixelPaddingValue;
     const padding = pad !== undefined && v === pad * (inst.geometry.rescaleSlope ?? 1) + (inst.geometry.rescaleIntercept ?? 0);
-    this.emit({ probe: { column, row, unit, value: v, ...(padding ? { padding } : {}) } });
+    this.emit({ probe: { column, row, unit, value: Math.round(v * 100) / 100, ...(padding ? { padding } : {}) } });
   }
 
   private probeAt(x: number, y: number): void {
@@ -1139,9 +1265,15 @@ function toolGroupKind(kind: ViewKind): ToolGroupKind {
 export interface Guides {
   lines: [readonly [number, number], readonly [number, number]][];
   marker?: readonly [number, number];
+  /** MPR crosshair: each other reformat's plane on this one (its colour, its viewport index) and their common point. */
+  crosshair?: { line: [readonly [number, number], readonly [number, number]]; color: string; source: number }[];
+  center?: readonly [number, number];
 }
 
 const GUIDE_LINE_COLOR = 'rgba(56, 189, 248, 0.9)';
+const GUIDE_CENTER_COLOR = 'rgba(255, 255, 255, 0.9)';
+/** Distance of the crosshair rotation handles from the crosshair centre (CSS pixels). */
+export const HANDLE_DISTANCE_PX = 70;
 const GUIDE_CURSOR_COLOR = 'rgba(74, 222, 128, 0.95)';
 
 export type ProbeUnit = 'hu' | 'bqml' | 'cnts' | 'gml' | 'raw';

@@ -10,8 +10,12 @@ import {
   patientToVoxel,
   planePixel,
   planePoint,
+  planesIntersection,
   reformatIndex,
   reformatStack,
+  rotateAbout,
+  slabOffsets,
+  slabProject,
   spacingAlong,
   vec3,
   volumeCorners,
@@ -190,5 +194,55 @@ describe('reformatted planes', () => {
 
   it('rejects a view-up parallel to the normal', () => {
     expect(reformatStack(v, [0, 0, 1], [0, 0, 1])).toBeUndefined();
+  });
+});
+
+describe('oblique MPR and slabs', () => {
+  it('rotates about an axis by the right-hand rule', () => {
+    const r = rotateAbout([1, 0, 0], [0, 0, 1], Math.PI / 2);
+    expect(r[0]).toBeCloseTo(0, 12);
+    expect(r[1]).toBeCloseTo(1, 12);
+    expect(r[2]).toBeCloseTo(0, 12);
+    // A vector on the axis does not move; lengths are kept.
+    expect(rotateAbout([0, 0, 2], [0, 0, 1], 1.234)).toEqual([0, 0, 2]);
+    const q = rotateAbout([1, 2, 3], vec3.normalize([1, 1, 0]), 0.7);
+    expect(vec3.length(q)).toBeCloseTo(Math.sqrt(14), 12);
+  });
+
+  it('finds the point shared by three planes', () => {
+    const p = planesIntersection(
+      { normal: [1, 0, 0], point: [3, 9, 9] },
+      { normal: [0, 1, 0], point: [9, -2, 9] },
+      { normal: [0, 0, 1], point: [9, 9, 5] },
+    )!;
+    expect(p).toEqual([3, -2, 5]);
+    // Oblique: x + y = 2, y = 1, z = 0 → (1, 1, 0).
+    const q = planesIntersection(
+      { normal: vec3.normalize([1, 1, 0]), point: [2, 0, 0] },
+      { normal: [0, 1, 0], point: [0, 1, 0] },
+      { normal: [0, 0, 1], point: [0, 0, 0] },
+    )!;
+    expect(q[0]).toBeCloseTo(1, 12);
+    expect(q[1]).toBeCloseTo(1, 12);
+    expect(q[2]).toBeCloseTo(0, 12);
+    expect(
+      planesIntersection(
+        { normal: [0, 0, 1], point: [0, 0, 0] },
+        { normal: [0, 0, 1], point: [0, 0, 1] },
+        { normal: [1, 0, 0], point: [0, 0, 0] },
+      ),
+    ).toBeUndefined();
+  });
+
+  it('samples a slab symmetrically and projects MIP / MinIP / average', () => {
+    expect(slabOffsets(10, 2.5)).toEqual([-5, -2.5, 0, 2.5, 5]);
+    expect(slabOffsets(4, 2.5)).toEqual([0]);
+    expect(slabOffsets(0, 1)).toEqual([0]);
+    // A ray crossing a 1000 HU sphere edge, water and air.
+    const ray = [0, 1000, 0, -1000, undefined];
+    expect(slabProject(ray, 'mip')).toBe(1000);
+    expect(slabProject(ray, 'minip')).toBe(-1000);
+    expect(slabProject(ray, 'avg')).toBe(0);
+    expect(slabProject([undefined], 'mip')).toBeUndefined();
   });
 });

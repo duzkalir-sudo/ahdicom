@@ -143,6 +143,11 @@ export const tr = {
     slice: '{{view}} {{index}} / {{total}}',
     loading: 'Hacim oluşturuluyor… %{{percent}}',
     approximate: 'Yeniden yapılandırma geometrisi yaklaşık',
+    slabMenu: 'Kalın kesit (yeniden yapılandırma)',
+    slab: { off: 'Tek kesit', mip: 'MIP (en yüksek)', minip: 'MinIP (en düşük)', avg: 'Ortalama' },
+    slabShort: { mip: 'MIP', minip: 'MinIP', avg: 'AvgIP' },
+    slabText: '{{mode}} {{value}} mm',
+    mm: '{{value}} mm',
     cannot: 'Hacim olarak gösterilemiyor',
     refusal: {
       notImage: 'Bu nesnede görüntü yok.',

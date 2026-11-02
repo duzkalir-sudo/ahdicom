@@ -8,13 +8,7 @@ import {
   sliceNormal,
   vec3,
 } from './geometry.js';
-import type {
-  DisplayImage,
-  SortDirection,
-  SortKey,
-  StackGeometrySummary,
-  StackWarning,
-} from './types.js';
+import type { DisplayImage, SortDirection, SortKey, StackGeometrySummary, StackWarning } from './types.js';
 
 /** Tolerances used by stack analysis. Documented in docs/VALIDATION_MATRIX.md. */
 export const STACK_TOLERANCES = {
@@ -95,11 +89,7 @@ export interface SortResult {
  * 'spatial' projects ImagePositionPatient onto the slice normal (row × column). If geometry is missing or
  * orientations differ, it falls back to InstanceNumber and reports `sortFallback`.
  */
-export function sortImages(
-  images: readonly DisplayImage[],
-  key: SortKey = 'spatial',
-  direction: SortDirection = 'asc',
-): SortResult {
+export function sortImages(images: readonly DisplayImage[], key: SortKey = 'spatial', direction: SortDirection = 'asc'): SortResult {
   const list = [...images];
   let sortedBy: SortKey = key;
   let sortFallback = false;
@@ -120,11 +110,7 @@ export function sortImages(
   } else if (key === 'instanceNumber') {
     list.sort(tieBreak);
   } else if (key === 'acquisitionTime') {
-    list.sort(
-      (a, b) =>
-        compareOptionalNumbers(parseDicomTime(a.acquisitionTime), parseDicomTime(b.acquisitionTime)) ||
-        tieBreak(a, b),
-    );
+    list.sort((a, b) => compareOptionalNumbers(parseDicomTime(a.acquisitionTime), parseDicomTime(b.acquisitionTime)) || tieBreak(a, b));
   } else {
     list.sort((a, b) => collator.compare(a.fileName, b.fileName) || tieBreak(a, b));
   }

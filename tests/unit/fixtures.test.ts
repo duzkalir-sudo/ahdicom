@@ -78,7 +78,8 @@ describe('fixture headers', () => {
   });
 
   it('gantry-tilt, nonuniform, no-geometry, mixed-orient warnings', () => {
-    const load = (id: string) => buildStudies(filesIn(id).map((f) => (parseFile(f) as { ok: true; instance: never }).instance))[0]!.series[0]!;
+    const load = (id: string) =>
+      buildStudies(filesIn(id).map((f) => (parseFile(f) as { ok: true; instance: never }).instance))[0]!.series[0]!;
     const tilt = load('gantry-tilt').displaySets[0]!;
     expect(tilt.geometry.tiltDeg).toBeCloseTo(15, 3);
     expect(tilt.warnings.map((w) => w.code)).toContain('gantryTilt');
@@ -241,7 +242,11 @@ describe('fixture transfer syntaxes decode losslessly to the reference image', (
     const mod = (await import('@cornerstonejs/jpeg-lossless-decoder-js')) as unknown as {
       Decoder: new () => { decode(buf: ArrayBuffer, off: number, len: number): ArrayBuffer | Uint8Array };
     };
-    const out = new mod.Decoder().decode(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, 0, bytes.length);
+    const out = new mod.Decoder().decode(
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
+      0,
+      bytes.length,
+    );
     const arr = out instanceof ArrayBuffer ? new Uint16Array(out) : new Uint16Array(out.buffer, out.byteOffset, out.byteLength / 2);
     expect(Array.from(arr)).toEqual(Array.from(reference));
   });
@@ -256,7 +261,7 @@ describe('fixture transfer syntaxes decode losslessly to the reference image', (
       const end = s + 1 < nSeg ? dv.getUint32(8 + s * 4, true) : bytes.length;
       const out = new Uint8Array(rows * cols);
       let o = 0;
-      for (let i = start; i < end && o < out.length; ) {
+      for (let i = start; i < end && o < out.length;) {
         const n = (bytes[i++]! << 24) >> 24;
         if (n >= 0) for (let k = 0; k <= n; k++) out[o++] = bytes[i++]!;
         else if (n !== -128) {

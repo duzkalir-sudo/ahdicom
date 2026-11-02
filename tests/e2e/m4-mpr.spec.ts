@@ -86,3 +86,77 @@ test('MPR of the CT phantom: three reformats with patient-correct planes, labels
     await s.close();
   }
 });
+
+interface Crosshair {
+  crosshair?: { line: [[number, number], [number, number]]; color: string; source: number }[];
+  center?: [number, number];
+}
+
+async function crosshair(page: Page, i: number): Promise<Crosshair> {
+  return (await page.evaluate((idx) => (window as unknown as { __cdv: { guides(i: number): unknown } }).__cdv.guides(idx), i)) as Crosshair;
+}
+
+test('MPR crosshair: a dragged line moves its plane, a dragged handle turns it (oblique), slab MIP', async () => {
+  const s = await launch({ lang: 'en' });
+  try {
+    await openPaths(s, [fixture('ct-phantom')]);
+    await waitReady(s.page);
+    await openMpr(s);
+    // Axial shows the coronal (y = 0 → row 256) and sagittal (x = −0.5 → column 255) planes, crossing at (255, 256).
+    await expect.poll(async () => (await crosshair(s.page, 0)).crosshair?.map((x) => x.source).sort()).toEqual([1, 2]);
+    const g = await crosshair(s.page, 0);
+    expect(g.center?.map((v) => Math.round(v * 10) / 10)).toEqual([255, 256]);
+
+    // Drag the sagittal line (column 255) to column 156 (x = −50): the sagittal view follows.
+    const from = await pixelToClient(s.page, 0, 255, 400);
+    const to = await pixelToClient(s.page, 0, 156, 400);
+    await s.page.mouse.move(from.x, from.y);
+    await s.page.mouse.down();
+    await s.page.mouse.move(to.x, to.y, { steps: 5 });
+    await s.page.mouse.up();
+    await expect.poll(async () => (await rs(s.page, 2)).index).toBe(156);
+    expect((await rs(s.page, 2)).reformat?.location).toEqual({ mm: -50, towards: 'L' });
+
+    // Turn the coronal plane: drag its handle 30° clockwise on screen around the centre (once the crosshair has
+    // followed the sagittal move: guides are redrawn on the next frame).
+    await expect.poll(async () => (await crosshair(s.page, 0)).center?.map((v) => Math.round(v))).toEqual([156, 256]);
+    const center = (await crosshair(s.page, 0)).center!;
+    const c = await pixelToClient(s.page, 0, center[0], center[1]);
+    const coronalLine = (await crosshair(s.page, 0)).crosshair!.find((x) => x.source === 1)!.line;
+    const dir = Math.sign(coronalLine[1][0] - coronalLine[0][0]);
+    const r = 70; // handle distance (CSS px)
+    await s.page.mouse.move(c.x + dir * r, c.y);
+    await s.page.mouse.down();
+    for (let k = 1; k <= 6; k++) {
+      const a = ((5 * k) / 180) * Math.PI;
+      await s.page.mouse.move(c.x + dir * r * Math.cos(a), c.y + dir * r * Math.sin(a));
+    }
+    await s.page.mouse.up();
+    await expect
+      .poll(async () => {
+        const l = (await crosshair(s.page, 0)).crosshair!.find((x) => x.source === 1)!.line;
+        const deg = (Math.atan2(l[1][1] - l[0][1], l[1][0] - l[0][0]) * 180) / Math.PI;
+        return Math.round((((deg % 180) + 180) % 180) * 10) / 10;
+      })
+      .toBeCloseTo(30, 0);
+    await screenshot(s.page, 'M4', 'mpr-oblique-1280x800-dark-en');
+
+    // Slab: sagittal at x = −62 lies 2 mm outside the 1000 HU sphere (x −60…−40); a 20 mm MIP slab reaches into it.
+    await scrollTo(s, 2, 132);
+    const p = await pixelToClient(s.page, 2, 176, 155);
+    await s.page.mouse.move(p.x, p.y);
+    await expect.poll(async () => (await rs(s.page, 2)).probe?.value).toBe(0);
+    await s.page.getByTestId('tb-view').click();
+    await s.page.getByTestId('slab-mip').click();
+    await s.page.getByTestId('tb-view').click();
+    await s.page.getByTestId('slab-mm-20').click();
+    await expect(s.page.getByTestId('viewport-2').getByTestId('slab-text')).toHaveText('MIP 20.0 mm');
+    await s.page.mouse.move(p.x + 1, p.y);
+    await s.page.mouse.move(p.x, p.y);
+    await expect.poll(async () => (await rs(s.page, 2)).probe?.value).toBe(1000);
+    await screenshot(s.page, 'M4', 'mpr-slab-mip-1280x800-dark-en');
+    expectNoErrors(s);
+  } finally {
+    await s.close();
+  }
+});

@@ -48,23 +48,13 @@ describe('VOI LUT functions (PS3.3 C.11.2.1.2)', () => {
   it('CT presets are present with expected values', () => {
     const brain = CT_PRESETS.find((p) => p.id === 'brain')!;
     expect([brain.width, brain.center]).toEqual([80, 40]);
-    expect(CT_PRESETS.map((p) => p.id)).toEqual([
-      'brain',
-      'subdural',
-      'stroke',
-      'bone',
-      'lung',
-      'abdomen',
-      'mediastinum',
-      'angio',
-    ]);
+    expect(CT_PRESETS.map((p) => p.id)).toEqual(['brain', 'subdural', 'stroke', 'bone', 'lung', 'abdomen', 'mediastinum', 'angio']);
   });
 });
 
 // Byte sequences for "ÇAĞLAR^Şükrü İğneada" in ISO-8859-9 (Latin-5).
 const LATIN5 = Uint8Array.from([
-  0xc7, 0x41, 0xd0, 0x4c, 0x41, 0x52, 0x5e, 0xde, 0xfc, 0x6b, 0x72, 0xfc, 0x20, 0xdd, 0xf0, 0x6e, 0x65, 0x61, 0x64,
-  0x61,
+  0xc7, 0x41, 0xd0, 0x4c, 0x41, 0x52, 0x5e, 0xde, 0xfc, 0x6b, 0x72, 0xfc, 0x20, 0xdd, 0xf0, 0x6e, 0x65, 0x61, 0x64, 0x61,
 ]);
 const EXPECTED = 'ÇAĞLAR^Şükrü İğneada';
 

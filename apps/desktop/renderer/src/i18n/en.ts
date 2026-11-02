@@ -150,6 +150,11 @@ export const en: Shape<Resources> = {
     slice: '{{view}} {{index}} / {{total}}',
     loading: 'Building volume… {{percent}}%',
     approximate: 'Reformat geometry approximate',
+    slabMenu: 'Slab (reformats)',
+    slab: { off: 'Single slice', mip: 'MIP (maximum)', minip: 'MinIP (minimum)', avg: 'Average' },
+    slabShort: { mip: 'MIP', minip: 'MinIP', avg: 'AvgIP' },
+    slabText: '{{mode}} {{value}} mm',
+    mm: '{{value}} mm',
     cannot: 'Cannot be shown as a volume',
     refusal: {
       notImage: 'This object has no images.',

@@ -10,9 +10,7 @@ export type UiLocale = 'tr' | 'en';
 export function formatPersonName(pn: string | undefined, locale: UiLocale = 'tr'): string {
   if (!pn) return '';
   const alphabetic = pn.split('=')[0] ?? '';
-  const [family = '', given = '', middle = '', prefix = '', suffix = ''] = alphabetic
-    .split('^')
-    .map((s) => s.trim());
+  const [family = '', given = '', middle = '', prefix = '', suffix = ''] = alphabetic.split('^').map((s) => s.trim());
   const tag = locale === 'tr' ? 'tr-TR' : 'en-US';
   const givenPart = [prefix, given, middle].filter(Boolean).join(' ');
   const fam = family.toLocaleUpperCase(tag);

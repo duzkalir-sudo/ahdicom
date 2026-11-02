@@ -91,7 +91,7 @@ function buildLevel(ds: DataSet, opts: Required<Omit<TagTreeOptions, 'inflater'>
     const dict = opts.lookup(tagHex);
     const isPrivate = parseInt(tagHex.slice(0, 4), 16) % 2 === 1;
     const isGroupLength = tagHex.endsWith('0000');
-    const vr = el.vr ?? (el.items ? 'SQ' : dict?.vr?.split('|')[0] ?? 'UN');
+    const vr = el.vr ?? (el.items ? 'SQ' : (dict?.vr?.split('|')[0] ?? 'UN'));
     const name = dict?.name ?? (isGroupLength ? 'GroupLength' : isPrivate ? 'Private' : 'Unknown');
     const node: TagNode = { tag: fmtTag(key), name, vr, length: el.length, value: '' };
     if (el.items) {
@@ -188,9 +188,7 @@ export function extractOverlays(bytes: Uint8Array, frame: number, inflater?: Tag
 // DICOMDIR
 // ---------------------------------------------------------------------------------------------
 
-export type DicomdirResult =
-  | { ok: true; files: string[][]; fileSetId?: string }
-  | { ok: false; error: 'notDicomdir' | 'malformed' };
+export type DicomdirResult = { ok: true; files: string[][]; fileSetId?: string } | { ok: false; error: 'notDicomdir' | 'malformed' };
 
 const SAFE_COMPONENT = /^[^\\/:*?"<>|\0]{1,255}$/;
 
@@ -208,7 +206,10 @@ export function readDicomdir(bytes: Uint8Array): DicomdirResult {
   for (const item of records) {
     const ref = item.dataSet?.string('x00041500');
     if (!ref) continue;
-    const parts = ref.split('\\').map((p) => p.trim()).filter(Boolean);
+    const parts = ref
+      .split('\\')
+      .map((p) => p.trim())
+      .filter(Boolean);
     if (parts.length === 0 || parts.some((p) => p === '.' || p === '..' || !SAFE_COMPONENT.test(p))) continue;
     files.push(parts);
   }

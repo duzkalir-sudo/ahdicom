@@ -78,7 +78,13 @@ function decoder(label: string, fatal: boolean): InstanceType<typeof TextDecoder
 export function parseSpecificCharacterSet(value: string | readonly string[] | undefined): string[] {
   if (value === undefined) return [];
   const parts = typeof value === 'string' ? value.split('\\') : [...value];
-  return parts.map((p) => p.trim().toUpperCase().replace(/\s+/g, ' ').replace(/^ISO_IR_/, 'ISO_IR '));
+  return parts.map((p) =>
+    p
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, ' ')
+      .replace(/^ISO_IR_/, 'ISO_IR '),
+  );
 }
 
 function isAscii(bytes: Uint8Array): boolean {

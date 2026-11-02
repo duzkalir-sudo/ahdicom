@@ -1570,3 +1570,48 @@ kbd {
 .series-volumes:hover {
   text-decoration: underline;
 }
+
+/* MPR: colour key of each reformat (matches its crosshair line on the other reformats). */
+.mpr-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+.mpr-dot[data-view='axial'] {
+  background: rgb(96, 165, 250);
+}
+.mpr-dot[data-view='coronal'] {
+  background: rgb(74, 222, 128);
+}
+.mpr-dot[data-view='sagittal'] {
+  background: rgb(251, 191, 36);
+}
+
+.menu-thickness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 300px;
+  padding: 4px 10px 8px;
+}
+.menu-thickness .chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.menu-thickness .chip.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.menu-thickness .chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

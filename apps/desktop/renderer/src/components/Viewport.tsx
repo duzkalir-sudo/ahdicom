@@ -17,6 +17,7 @@ import { MAX_VIEWPORTS, isVolumeView, useStore, viewportCount, type ViewKind } f
 import { ViewportController, type ViewState } from '../viewer/controller';
 import { getEngine, imageIdsFor, isMeasureTool, purgeImages, purgeVolume } from '../viewer/cornerstone';
 import { allControllers, controllerAt, registerController, unregisterController } from '../viewer/registry';
+import { MPR_COLORS } from '../viewer/sync';
 import { MenuItem, PointMenu } from './ui';
 
 const DS_MIME = 'application/x-cdv-displayset';
@@ -100,12 +101,18 @@ function Corners(props: { ds: DisplaySet; vs: ViewState }): ReactNode {
       {o.image ? (
         <div className="corner bl" data-testid="corner-bl">
           <div className="strong" data-testid="image-index">
+            {reformat && MPR_COLORS[vs.view] ? <span className="mpr-dot" data-view={vs.view} aria-hidden /> : null}
             {indexText}
           </div>
           {location ? (
             <div>{t('viewport.location', { value: `${formatNumber(location.mm, 2, locale)} (${location.towards})` })}</div>
           ) : null}
           {thickness !== undefined ? <div>{t('viewport.thickness', { value: formatNumber(thickness, 2, locale) })}</div> : null}
+          {vs.slab ? (
+            <div data-testid="slab-text">
+              {t('view.slabText', { mode: t(`view.slabShort.${vs.slab.mode}`), value: formatNumber(vs.slab.thickness, 1, locale) })}
+            </div>
+          ) : null}
           {spacing !== undefined ? <div>{t('viewport.spacing', { value: formatNumber(spacing, 2, locale) })}</div> : null}
           {o.probe && probeText ? <div data-testid="probe">{probeText}</div> : null}
         </div>

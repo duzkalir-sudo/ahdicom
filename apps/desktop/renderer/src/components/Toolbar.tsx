@@ -50,7 +50,7 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { CT_PRESETS, PET_PERCENT_PRESETS, percentRange } from '@ahdicom/dicom-core';
+import { CT_PRESETS, PET_PERCENT_PRESETS, percentRange, type SlabMode } from '@ahdicom/dicom-core';
 import {
   applyPreset,
   closeAll,
@@ -162,9 +162,20 @@ function MeasureMenu(props: { anchor: HTMLElement | null; onClose: () => void })
   );
 }
 
+const SLAB_THICKNESSES = [2, 5, 10, 20, 40] as const;
+
 function ViewMenu(props: { anchor: HTMLElement | null; onClose: () => void }): ReactNode {
   const { t } = useTranslation();
   const current = useStore((s) => s.views[s.activeIndex]);
+  const activeIndex = useStore((s) => s.activeIndex);
+  const ctrl = controllerAt(activeIndex);
+  const vs = ctrl?.getState();
+  const reformat = vs?.status === 'ready' && vs.view !== 'stack' && vs.view !== '3d';
+  const slab = vs?.slab;
+  const setSlab = (mode: SlabMode | undefined, thickness = slab?.thickness ?? 10): void => {
+    ctrl?.setSlab(mode, thickness);
+    props.onClose();
+  };
   const item = (view: ViewKind | 'mpr', label: string, command?: string): ReactNode => (
     <MenuItem
       key={view}
@@ -188,6 +199,27 @@ function ViewMenu(props: { anchor: HTMLElement | null; onClose: () => void }): R
       {item('coronal', t('view.coronal'))}
       {item('sagittal', t('view.sagittal'))}
       {item('3d', t('view.3d'), 'view3d')}
+      <div className="menu-sep" />
+      <div className="menu-hint">{t('view.slabMenu')}</div>
+      {([undefined, 'mip', 'minip', 'avg'] as const).map((m) => (
+        <MenuItem key={m ?? 'off'} checked={slab?.mode === m} disabled={!reformat} onClick={() => setSlab(m)} testId={`slab-${m ?? 'off'}`}>
+          {t(`view.slab.${m ?? 'off'}`)}
+        </MenuItem>
+      ))}
+      <div className="menu-thickness">
+        {SLAB_THICKNESSES.map((mm) => (
+          <button
+            key={mm}
+            type="button"
+            className={`chip${slab?.thickness === mm ? ' on' : ''}`}
+            disabled={!reformat || !slab}
+            onClick={() => setSlab(slab?.mode, mm)}
+            data-testid={`slab-mm-${mm}`}
+          >
+            {t('view.mm', { value: mm })}
+          </button>
+        ))}
+      </div>
     </Popover>
   );
 }

@@ -14,12 +14,13 @@ import {
   planeFromGeometry,
   planePixel,
   planePoint,
+  planesIntersection,
   referenceLine,
   sliceAtPosition,
   slicePosition,
   vec3,
 } from '@ahdicom/dicom-core';
-import { useStore } from '../state/store';
+import { useStore, type ViewKind } from '../state/store';
 import type { Guides, ViewportController, ViewState } from './controller';
 import { allControllers, controllerAt, onControllersChanged } from './registry';
 
@@ -212,6 +213,41 @@ function scheduleGuides(): void {
   });
 }
 
+/** Colour of each reformat's plane in the MPR crosshair. */
+export const MPR_COLORS: Partial<Record<ViewKind, string>> = {
+  axial: 'rgb(96, 165, 250)',
+  coronal: 'rgb(74, 222, 128)',
+  sagittal: 'rgb(251, 191, 36)',
+};
+
+function isReformat(c: ViewportController): boolean {
+  return c.view in MPR_COLORS;
+}
+
+/** The other reformats of the same volume as `c` (its MPR partners). */
+export function mprPartners(c: ViewportController): ViewportController[] {
+  if (!isReformat(c) || !ready(c)) return [];
+  return allControllers().filter((o) => o !== c && isReformat(o) && ready(o) && o.displaySet?.id === c.displaySet?.id);
+}
+
+/**
+ * The crosshair centre of a reformat: the point its plane shares with two partner planes; with one partner, the
+ * point of the common line nearest to the centre of `c`'s own plane.
+ */
+export function crosshairCenter(c: ViewportController): Vec3 | undefined {
+  const p = currentPlane(c);
+  const partners = mprPartners(c)
+    .map(currentPlane)
+    .filter((x): x is ImagePlane => x !== undefined);
+  if (!p || partners.length === 0) return undefined;
+  const a = { normal: p.normal, point: p.origin };
+  const b = { normal: partners[0]!.normal, point: partners[0]!.origin };
+  const third = partners[1]
+    ? { normal: partners[1].normal, point: partners[1].origin }
+    : { normal: vec3.normalize(vec3.cross(a.normal, b.normal)), point: planeCenter(p) };
+  return planesIntersection(a, b, third);
+}
+
 /** Guides each viewport should show now (exported for tests). */
 export function computeGuides(): Map<number, Guides> {
   const s = useStore.getState();
@@ -221,7 +257,28 @@ export function computeGuides(): Map<number, Guides> {
   for (const c of allControllers()) {
     const g: Guides = { lines: [] };
     const tp = ready(c) ? currentPlane(c) : undefined;
-    if (tp && sp && c !== active && s.sync.referenceLines && sp.frameOfReferenceUid && sp.frameOfReferenceUid === tp.frameOfReferenceUid) {
+    const partners = tp ? mprPartners(c) : [];
+    if (tp && partners.length > 0) {
+      // MPR crosshair: always shown between reformats of one volume (the reference-line option does not apply).
+      g.crosshair = [];
+      for (const o of partners) {
+        const op = currentPlane(o);
+        const line = op ? referenceLine(op, tp) : undefined;
+        if (line) g.crosshair.push({ line, color: MPR_COLORS[o.view]!, source: o.index });
+      }
+      const center = crosshairCenter(c);
+      if (center) g.center = planePixel(tp, center);
+    }
+    const partnerOfActive = active !== undefined && partners.includes(active);
+    if (
+      tp &&
+      sp &&
+      c !== active &&
+      !partnerOfActive &&
+      s.sync.referenceLines &&
+      sp.frameOfReferenceUid &&
+      sp.frameOfReferenceUid === tp.frameOfReferenceUid
+    ) {
       const line = referenceLine(sp, tp);
       if (line) g.lines.push(line);
     }

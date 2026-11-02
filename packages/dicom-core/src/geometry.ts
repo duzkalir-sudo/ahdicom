@@ -10,11 +10,7 @@ export const vec3 = {
   sub: (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
   scale: (a: Vec3, s: number): Vec3 => [a[0] * s, a[1] * s, a[2] * s],
   dot: (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
-  cross: (a: Vec3, b: Vec3): Vec3 => [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
-  ],
+  cross: (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
   length: (a: Vec3): number => Math.hypot(a[0], a[1], a[2]),
   negate: (a: Vec3): Vec3 => [-a[0], -a[1], -a[2]],
   normalize(a: Vec3): Vec3 {
@@ -76,13 +72,7 @@ export function sameOrientation(a: ImageOrientation, b: ImageOrientation, tolera
  * Patient coordinate of the centre of pixel (column c, row r), both 0-based,
  * per PS3.3 C.7.6.2.1.1: P = IPP + row·Δc·c + column·Δr·r, where pixelSpacing = [Δr (row spacing), Δc (column spacing)].
  */
-export function pixelToPatient(
-  ipp: Vec3,
-  o: ImageOrientation,
-  pixelSpacing: readonly [number, number],
-  column: number,
-  row: number,
-): Vec3 {
+export function pixelToPatient(ipp: Vec3, o: ImageOrientation, pixelSpacing: readonly [number, number], column: number, row: number): Vec3 {
   const [rowSpacing, colSpacing] = pixelSpacing;
   return vec3.add(ipp, vec3.add(vec3.scale(o.row, colSpacing * column), vec3.scale(o.column, rowSpacing * row)));
 }
@@ -91,12 +81,7 @@ export function pixelToPatient(
  * Inverse of pixelToPatient: continuous (column, row) of a patient point projected onto the image plane.
  * Pixel centres are at integer coordinates; the containing pixel is (round(column), round(row)).
  */
-export function patientToPixel(
-  p: Vec3,
-  ipp: Vec3,
-  o: ImageOrientation,
-  pixelSpacing: readonly [number, number],
-): [number, number] {
+export function patientToPixel(p: Vec3, ipp: Vec3, o: ImageOrientation, pixelSpacing: readonly [number, number]): [number, number] {
   const [rowSpacing, colSpacing] = pixelSpacing;
   const d = vec3.sub(p, ipp);
   return [vec3.dot(d, o.row) / colSpacing, vec3.dot(d, o.column) / rowSpacing];

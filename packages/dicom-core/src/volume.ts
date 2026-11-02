@@ -210,3 +210,58 @@ export const STANDARD_VIEWS: Record<'axial' | 'coronal' | 'sagittal', { normal: 
   // Sagittal: seen from the patient's left, head up, anterior on screen left.
   sagittal: { normal: [1, 0, 0], viewUp: [0, 0, 1] },
 };
+
+/** Rotates a vector about a unit axis by an angle in radians (right-hand rule, Rodrigues' formula). */
+export function rotateAbout(v: Vec3, axis: Vec3, angle: number): Vec3 {
+  const k = vec3.normalize(axis);
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return vec3.add(vec3.add(vec3.scale(v, c), vec3.scale(vec3.cross(k, v), s)), vec3.scale(k, vec3.dot(k, v) * (1 - c)));
+}
+
+/** A plane as a unit normal and a point on it. */
+export interface PlaneEquation {
+  normal: Vec3;
+  point: Vec3;
+}
+
+/**
+ * The single point shared by three planes, or undefined when two of them are (nearly) parallel.
+ * Solves n_i · x = n_i · p_i with Cramer's rule.
+ */
+export function planesIntersection(a: PlaneEquation, b: PlaneEquation, c: PlaneEquation): Vec3 | undefined {
+  const det = vec3.dot(a.normal, vec3.cross(b.normal, c.normal));
+  if (Math.abs(det) < 1e-6) return undefined;
+  const da = vec3.dot(a.normal, a.point);
+  const db = vec3.dot(b.normal, b.point);
+  const dc = vec3.dot(c.normal, c.point);
+  const x = vec3.add(
+    vec3.add(vec3.scale(vec3.cross(b.normal, c.normal), da), vec3.scale(vec3.cross(c.normal, a.normal), db)),
+    vec3.scale(vec3.cross(a.normal, b.normal), dc),
+  );
+  return vec3.scale(x, 1 / det);
+}
+
+/** Thick-slab projection: maximum (MIP), minimum (MinIP) or average intensity along the view normal. */
+export type SlabMode = 'mip' | 'minip' | 'avg';
+
+/**
+ * Sample offsets (mm, along the normal, centred on the plane) covering a slab of the given thickness at the given
+ * step: the plane itself and every step up to half the thickness on both sides.
+ */
+export function slabOffsets(thickness: number, step: number): number[] {
+  if (!(step > 0)) return [0];
+  const half = Math.floor(thickness / 2 / step + 1e-9);
+  const out: number[] = [];
+  for (let i = -half; i <= half; i++) out.push(i * step + 0);
+  return out;
+}
+
+/** Projects the samples of one ray through a slab (undefined samples, outside the volume, are skipped). */
+export function slabProject(values: readonly (number | undefined)[], mode: SlabMode): number | undefined {
+  const v = values.filter((x): x is number => x !== undefined && Number.isFinite(x));
+  if (v.length === 0) return undefined;
+  if (mode === 'mip') return Math.max(...v);
+  if (mode === 'minip') return Math.min(...v);
+  return v.reduce((s, x) => s + x, 0) / v.length;
+}

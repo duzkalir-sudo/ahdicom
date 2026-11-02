@@ -35,6 +35,7 @@ import { applyLutSequences, forgetLuts, registerLuts } from './lut';
 import { MEASURE_TOOLS, measureToolConfigs, toolNameOf, type MeasureTool } from './measurements';
 import { initAnnotationEvents } from './annotations';
 import { initSync } from './sync';
+import { initCrosshair } from './crosshair';
 
 export const RENDERING_ENGINE_ID = 'cdv-engine';
 export const TOOL_GROUP_ID = 'cdv-stack-tools';
@@ -468,6 +469,7 @@ export function initCornerstone(cacheSizeMB: number): void {
   applyLeftTool('windowLevel');
   initAnnotationEvents();
   initSync();
+  initCrosshair();
   // Measurement text on a dark translucent box stays readable over bright structures (bone, contrast).
   csAnnotation.config.style.setDefaultToolStyles({
     global: { ...csAnnotation.config.style.getDefaultToolStyles()?.global, textBoxBackground: 'rgba(0, 0, 0, 0.75)' },
